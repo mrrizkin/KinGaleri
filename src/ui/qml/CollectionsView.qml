@@ -25,12 +25,16 @@ Item {
     property bool showRebuild: false
     /// People cards get rename / merge actions.
     property bool editableTitles: false
+    /// Tag cards get rename / delete actions.
+    property bool editableTags: false
 
     signal activated(var item)
     signal setupRequested()
     signal rebuildRequested()
     signal renameRequested(int id, string currentName)
     signal mergeRequested(int id)
+    signal renameTagRequested(int id, string currentName)
+    signal deleteTagRequested(int id)
 
     /// Smart collections carry only a stable key; the label is translated here so
     /// the model stays language-agnostic.
@@ -156,8 +160,11 @@ Item {
                                        ? ["avatar-default-symbolic", "avatar-default"]
                                        : (card.modelData.kind === "place"
                                           ? ["mark-location-symbolic", "mark-location"]
-                                          : ["image-x-generic-symbolic", "image-x-generic"])
-                            fallbackGlyph: card.modelData.kind === "smart" ? "✦" : "◉"
+                                          : (card.modelData.kind === "tag"
+                                             ? ["tag-symbolic", "tag"]
+                                             : ["image-x-generic-symbolic", "image-x-generic"]))
+                            fallbackGlyph: card.modelData.kind === "smart" ? "✦"
+                                           : (card.modelData.kind === "tag" ? "#" : "◉")
                             iconSize: 36
                             color: Theme.textFaint
                         }
@@ -192,9 +199,9 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     onClicked: function (mouse) {
-                        if (mouse.button === Qt.RightButton && root.editableTitles) {
+                        if (mouse.button === Qt.RightButton && (root.editableTitles || root.editableTags)) {
                             cardMenu.currentName = card.modelData.name || ""
-                            cardMenu.personId = card.modelData.id
+                            cardMenu.itemId = card.modelData.id
                             cardMenu.popup()
                         } else if (mouse.button === Qt.LeftButton) {
                             root.activated(card.modelData)
@@ -204,15 +211,27 @@ Item {
 
                 Menu {
                     id: cardMenu
-                    property int personId: 0
+                    property int itemId: 0
                     property string currentName: ""
                     MenuItem {
+                        visible: root.editableTitles
                         text: qsTr("Rename…")
-                        onTriggered: root.renameRequested(cardMenu.personId, cardMenu.currentName)
+                        onTriggered: root.renameRequested(cardMenu.itemId, cardMenu.currentName)
                     }
                     MenuItem {
+                        visible: root.editableTitles
                         text: qsTr("Merge into…")
-                        onTriggered: root.mergeRequested(cardMenu.personId)
+                        onTriggered: root.mergeRequested(cardMenu.itemId)
+                    }
+                    MenuItem {
+                        visible: root.editableTags
+                        text: qsTr("Rename tag…")
+                        onTriggered: root.renameTagRequested(cardMenu.itemId, cardMenu.currentName)
+                    }
+                    MenuItem {
+                        visible: root.editableTags
+                        text: qsTr("Delete tag")
+                        onTriggered: root.deleteTagRequested(cardMenu.itemId)
                     }
                 }
             }

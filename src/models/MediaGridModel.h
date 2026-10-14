@@ -133,12 +133,16 @@ class MediaGridModel : public QAbstractListModel
     Q_PROPERTY(qint64 personId READ personId WRITE setPersonId NOTIFY filterChanged)
     Q_PROPERTY(qint64 eventId READ eventId WRITE setEventId NOTIFY filterChanged)
     Q_PROPERTY(QString smartCategory READ smartCategory WRITE setSmartCategory NOTIFY filterChanged)
+    /** Single-tag filter, matched case-insensitively. Empty = no tag filter. */
+    Q_PROPERTY(QString tag READ tag WRITE setTag NOTIFY filterChanged)
     /** Occurrence lists for the People / Places / Events / Smart pages. Each entry
      *  is {kind, id, name, subtitle, count, coverId, coverUrl}. */
     Q_PROPERTY(QVariantList places READ places NOTIFY collectionsChanged)
     Q_PROPERTY(QVariantList events READ events NOTIFY collectionsChanged)
     Q_PROPERTY(QVariantList people READ people NOTIFY collectionsChanged)
     Q_PROPERTY(QVariantList smartCategories READ smartCategories NOTIFY collectionsChanged)
+    /** Tags that have at least one live media item: {kind:"tag", id, name, count, coverUrl}. */
+    Q_PROPERTY(QVariantList tags READ tags NOTIFY collectionsChanged)
     /** Multi-selection state (PRD F-3.7 / F-5.7). */
     Q_PROPERTY(int selectionCount READ selectionCount NOTIFY selectionChanged)
     Q_PROPERTY(bool selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
@@ -295,6 +299,8 @@ public:
     void setEventId(qint64 eventId);
     QString smartCategory() const { return m_smartCategory; }
     void setSmartCategory(const QString &category);
+    QString tag() const { return m_tag; }
+    void setTag(const QString &tag);
 
     /// Cached-busting cover URL for a smart-grouping cover id, reusing the
     /// thumbnail revision map so a regenerated thumbnail refreshes the card.
@@ -305,6 +311,17 @@ public:
     QVariantList people() const;
     /// The fixed heuristic smart albums, with live counts.
     QVariantList smartCategories() const;
+    /// Tags ordered by item count, each {kind:"tag", id, name, count, coverId, coverUrl}.
+    QVariantList tags() const;
+    /// Tag names attached to one media item, alphabetically.
+    Q_INVOKABLE QStringList mediaTags(qint64 mediaId) const;
+    /// Adds `name` to every media id in the list, creating the tag when needed.
+    Q_INVOKABLE void addTagToMedia(const QVariantList &mediaIds, const QString &name);
+    /// Removes `name` from every media id in the list, dropping the tag when it
+    /// no longer labels anything.
+    Q_INVOKABLE void removeTagFromMedia(const QVariantList &mediaIds, const QString &name);
+    Q_INVOKABLE void renameTag(qint64 tagId, const QString &name);
+    Q_INVOKABLE void deleteTag(qint64 tagId);
     /// Renames a person (PRD F-2.4 manual tidy-up). Empty names are ignored.
     Q_INVOKABLE void renamePerson(qint64 personId, const QString &name);
     /// Merges `sourceId` into `targetId`, moving faces and removing the source.
@@ -435,6 +452,7 @@ private:
     qint64 m_personId = 0;
     qint64 m_eventId = 0;
     QString m_smartCategory;
+    QString m_tag;
     bool m_selectionMode = false;
     QSet<qint64> m_selected;
     /// Cover media ids produced by albumCards(), so onThumbnailReady knows which

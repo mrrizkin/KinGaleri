@@ -320,7 +320,7 @@ QString AppController::smartSourceSignature() const
 void AppController::rebuildSmartGrouping()
 {
     if (!m_settings || !m_settings->smartEnabled()) {
-        Q_EMIT infoMessage(QStringLiteral("Enable smart grouping in Settings first."));
+        Q_EMIT infoMessage(tr("Enable smart grouping in Settings first."));
         return;
     }
     runSmartGrouping();
@@ -366,7 +366,7 @@ void AppController::runSmartGrouping()
                 }
             }
             setSmartStatus(text);
-            Q_EMIT infoMessage(QStringLiteral("Smart grouping updated: %1").arg(text));
+            Q_EMIT infoMessage(tr("Smart grouping updated: %1").arg(text));
         }
         // Places/events/people membership may have changed under an active filter,
         // so re-read the grid and let the collection lists refresh.
@@ -422,7 +422,7 @@ void AppController::downloadFaceModels()
     if (m_faceModelDownloading)
         return;
     if (!smartFacesAvailable()) {
-        Q_EMIT errorOccurred(QStringLiteral("This build has no ML backend."));
+        Q_EMIT errorOccurred(tr("This build has no ML backend."));
         return;
     }
 
@@ -430,7 +430,7 @@ void AppController::downloadFaceModels()
     m_faceModelDownloading = true;
     Q_EMIT faceModelsChanged();
     setSmartStatus(QStringLiteral("Downloading face model…"));
-    Q_EMIT infoMessage(QStringLiteral("Downloading face models…"));
+    Q_EMIT infoMessage(tr("Downloading face models…"));
 
     const auto manager = new QNetworkAccessManager(this);
     // Two small, well-known files straight from the OpenCV Zoo. Sequential: the
@@ -455,7 +455,7 @@ void AppController::downloadFaceModels()
             m_faceModelDownloading = false;
             Q_EMIT faceModelsChanged();
             setSmartStatus(QStringLiteral("Face model ready"));
-            Q_EMIT infoMessage(QStringLiteral("Face model downloaded."));
+            Q_EMIT infoMessage(tr("Face model downloaded."));
             manager->deleteLater();
             return;
         }
@@ -480,7 +480,7 @@ void AppController::downloadFaceModels()
                 m_faceModelDownloading = false;
                 Q_EMIT faceModelsChanged();
                 setSmartStatus(QStringLiteral("Download failed"));
-                Q_EMIT errorOccurred(QStringLiteral("Could not save the face model to %1").arg(item.file));
+                Q_EMIT errorOccurred(tr("Could not save the face model to %1").arg(item.file));
                 return;
             }
             (*startNext)(index + 1);
@@ -576,7 +576,7 @@ bool AppController::removeRoot(const QString &path)
 
     QString error;
     if (!m_database->begin(&error)) {
-        Q_EMIT errorOccurred(QStringLiteral("Could not remove folder: %1").arg(error));
+        Q_EMIT errorOccurred(tr("Could not remove folder: %1").arg(error));
         return false;
     }
     QSqlQuery removeMedia(m_database->connection());
@@ -587,11 +587,11 @@ bool AppController::removeRoot(const QString &path)
     removeRootQuery.addBindValue(rootId);
     if (!removeMedia.exec() || !removeRootQuery.exec() || !m_database->commit(&error)) {
         m_database->rollback();
-        Q_EMIT errorOccurred(QStringLiteral("Could not remove folder: %1").arg(error));
+        Q_EMIT errorOccurred(tr("Could not remove folder: %1").arg(error));
         return false;
     }
 
-    Q_EMIT infoMessage(QStringLiteral("Removed '%1' from the library").arg(normalised));
+    Q_EMIT infoMessage(tr("Removed '%1' from the library").arg(normalised));
     Q_EMIT rootsChanged();
     reload();
     return true;
@@ -604,7 +604,7 @@ void AppController::rescanLibrary()
     }
     const QStringList roots = m_model->rootPaths();
     if (roots.isEmpty()) {
-        Q_EMIT infoMessage(QStringLiteral("No folders to rescan"));
+        Q_EMIT infoMessage(tr("No folders to rescan"));
         return;
     }
     indexFolders(roots);
@@ -622,7 +622,7 @@ void AppController::onLibraryChanged()
     if (roots.isEmpty()) {
         return;
     }
-    setStatus(QStringLiteral("Library changed — rescanning…"));
+    setStatus(tr("Library changed — rescanning…"));
     indexFolders(roots);
 }
 
@@ -675,7 +675,7 @@ void AppController::runStartupRequests()
         if (!home.isEmpty() && home != QLatin1String("/") && QFileInfo(home).isDir()) {
             m_database->setMetaValue(QStringLiteral("default_home_root_added"),
                                      QStringLiteral("1"));
-            setStatus(QStringLiteral("First run — indexing %1…").arg(home));
+            setStatus(tr("First run — indexing %1…").arg(home));
             m_startupChainActive = true;
             indexFolders({home});
             return;
@@ -687,7 +687,7 @@ void AppController::runStartupRequests()
     if (m_settings && m_settings->rescanOnStartup() && m_model) {
         const QStringList roots = m_model->rootPaths();
         if (!roots.isEmpty()) {
-            setStatus(QStringLiteral("Rescanning library…"));
+            setStatus(tr("Rescanning library…"));
             m_startupChainActive = true;
             indexFolders(roots);
             return;
@@ -774,7 +774,7 @@ void AppController::seedBenchmark(int rows)
 
     setBusy(true);
     setIndexing(true);
-    setStatus(QStringLiteral("Generating %1 synthetic rows…").arg(rows));
+    setStatus(tr("Generating %1 synthetic rows…").arg(rows));
     setProgress(0, rows);
 
     auto *watch = new QFutureWatcher<BenchmarkSeeder::Result>(this);
@@ -787,12 +787,12 @@ void AppController::seedBenchmark(int rows)
         setProgress(0, 0);
 
         if (!result.ok()) {
-            setStatus(QStringLiteral("Benchmark seeding failed"));
+            setStatus(tr("Benchmark seeding failed"));
             Q_EMIT errorOccurred(result.error);
             return;
         }
 
-        setStatus(QStringLiteral("Seeded %1 rows in %2 ms (%3 rows/s)")
+        setStatus(tr("Seeded %1 rows in %2 ms (%3 rows/s)")
                       .arg(result.inserted)
                       .arg(result.elapsedMs)
                       .arg(result.rowsPerSecond(), 0, 'f', 0));
@@ -828,10 +828,10 @@ void AppController::clearBenchmark()
     QString error;
     BenchmarkSeeder seeder(m_database.get());
     if (!seeder.clear(&error)) {
-        Q_EMIT errorOccurred(QStringLiteral("Could not clear the benchmark library: %1").arg(error));
+        Q_EMIT errorOccurred(tr("Could not clear the benchmark library: %1").arg(error));
         return;
     }
-    Q_EMIT infoMessage(QStringLiteral("Benchmark library cleared"));
+    Q_EMIT infoMessage(tr("Benchmark library cleared"));
     reload();
 }
 
@@ -851,7 +851,7 @@ void AppController::indexFolders(const QStringList &folders)
 
     setBusy(true);
     setIndexing(true);
-    setStatus(QStringLiteral("Scanning %1 folder(s)…").arg(folders.size()));
+    setStatus(tr("Scanning %1 folder(s)…").arg(folders.size()));
     setProgress(0, 0);
     m_cancel.store(false);
 
@@ -865,7 +865,7 @@ void AppController::indexFolders(const QStringList &folders)
         setProgress(0, 0);
 
         if (!result.ok()) {
-            setStatus(QStringLiteral("Indexing stopped"));
+            setStatus(tr("Indexing stopped"));
             Q_EMIT errorOccurred(result.error);
         } else {
             setStatus(formatIndexerResult(result));
@@ -895,7 +895,7 @@ void AppController::indexFolders(const QStringList &folders)
                     this,
                     [this, scanned, upserted, current]() {
                         setProgress(scanned, 0);
-                        setStatus(QStringLiteral("Scanning… %1 seen, %2 indexed\n%3")
+                        setStatus(tr("Scanning… %1 seen, %2 indexed\n%3")
                                       .arg(scanned)
                                       .arg(upserted)
                                       .arg(current));
@@ -920,7 +920,7 @@ void AppController::indexFolders(const QStringList &folders)
 void AppController::cancelCurrentJob()
 {
     m_cancel.store(true);
-    setStatus(QStringLiteral("Cancelling…"));
+    setStatus(tr("Cancelling…"));
 }
 
 double AppController::readMemoryStatMb(const char *key) const
@@ -1048,7 +1048,7 @@ void AppController::finishScrollBenchmark(double seconds, double distancePx, int
                  m_thumbnails ? m_thumbnails->diskCacheBytes() / (1024.0 * 1024.0) : 0.0);
     std::fflush(stderr);
 
-    setStatus(QStringLiteral("Scroll benchmark: %1 fps, avg %2 ms, worst %3 ms, %4/%5 frames over budget")
+    setStatus(tr("Scroll benchmark: %1 fps, avg %2 ms, worst %3 ms, %4/%5 frames over budget")
                   .arg(snapshot.fps, 0, 'f', 1)
                   .arg(snapshot.frameMs, 0, 'f', 2)
                   .arg(snapshot.worstFrameMs, 0, 'f', 1)
@@ -1060,7 +1060,7 @@ void AppController::finishScrollBenchmark(double seconds, double distancePx, int
 
 QString AppController::formatIndexerResult(const FolderIndexer::Result &result) const
 {
-    return QStringLiteral("Indexed %1 files (%2 changed, %3 unchanged, %4 failed) in %5 s")
+    return tr("Indexed %1 files (%2 changed, %3 unchanged, %4 failed) in %5 s")
         .arg(result.scanned)
         .arg(result.upserted)
         .arg(result.unchanged)
@@ -1078,11 +1078,11 @@ void AppController::clearThumbnailCache()
     }
     QString error;
     if (!m_thumbnails->clearDiskCache(&error)) {
-        Q_EMIT errorOccurred(QStringLiteral("Could not clear the thumbnail cache: %1").arg(error));
+        Q_EMIT errorOccurred(tr("Could not clear the thumbnail cache: %1").arg(error));
         return;
     }
     m_thumbnails->resetStats();
-    Q_EMIT infoMessage(QStringLiteral("Thumbnail cache cleared"));
+    Q_EMIT infoMessage(tr("Thumbnail cache cleared"));
     reload();
 }
 

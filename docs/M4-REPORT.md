@@ -144,4 +144,5 @@ dari perubahan M4.
 - **AppImage/Flatpak/.deb belum dibangun** di lingkungan ini (§7.4). Skrip/manifest siap.
 - **Terjemahan C++**: string yang dibangun di C++ (mis. ringkasan `"5 items · 508 B"`) masih Inggris.
   Untuk melokalkannya perlu `QCoreApplication::translate` di model/AppController.
-- **HEIC/HEIF** fallback `heif-convert` masih belum ada (risiko PRD §8).
+- **HEIC/HEIF** fallback `heif-convert` — **sudah ditutup**: `ImageLoader::decodeHeif` dipakai
+  `ThumbnailService` dan `FullImageProvider` (lihat `src/core/thumbs/ImageLoader.cpp`).

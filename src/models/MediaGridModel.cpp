@@ -415,6 +415,17 @@ void MediaGridModel::setSmartCategory(const QString &category)
     reload();
 }
 
+void MediaGridModel::setTag(const QString &tag)
+{
+    const QString trimmed = tag.trimmed();
+    if (trimmed == m_tag) {
+        return;
+    }
+    m_tag = trimmed;
+    Q_EMIT filterChanged();
+    reload();
+}
+
 void MediaGridModel::setLimit(int limit)
 {
     const int clamped = std::max(0, limit);
@@ -506,6 +517,7 @@ void MediaGridModel::clearFilters()
     m_personId = 0;
     m_eventId = 0;
     m_smartCategory.clear();
+    m_tag.clear();
     Q_EMIT filterChanged();
     reload();
 }
@@ -632,6 +644,12 @@ void MediaGridModel::reload()
             sql += QStringLiteral("AND taken_at >= :recentCutoff ");
         }
     }
+    // Tag filter (migration v8 turned tags into a real feature).
+    if (!m_tag.isEmpty()) {
+        sql += QStringLiteral("AND id IN (SELECT mt.media_id FROM media_tags mt "
+                              "JOIN tags t ON t.id = mt.tag_id "
+                              "WHERE t.name = :tag COLLATE NOCASE) ");
+    }
 
     // Search is a full-text query against the FTS5 index when SQLite has one, and
     // falls back to a LIKE scan when it does not. LIKE '%x%' can never use an
@@ -687,6 +705,9 @@ void MediaGridModel::reload()
     }
     if (m_eventId > 0) {
         query.bindValue(QStringLiteral(":eventId"), m_eventId);
+    }
+    if (!m_tag.isEmpty()) {
+        query.bindValue(QStringLiteral(":tag"), m_tag);
     }
     if (m_smartCategory == QLatin1String("recent")) {
         query.bindValue(QStringLiteral(":recentCutoff"),
@@ -1075,6 +1096,7 @@ FROM media WHERE id = :id)SQL"));
                                           map.value(QStringLiteral("fileName")).toString());
     }
     map.insert(QStringLiteral("sourceAlbum"), storedAlbum);
+    map.insert(QStringLiteral("tags"), mediaTags(mediaId).join(QStringLiteral(", ")));
     map.insert(QStringLiteral("thumbUrl"), thumbUrlForId(mediaId));
     return map;
 }
@@ -1462,6 +1484,206 @@ QVariantList MediaGridModel::smartCategories() const
         list.append(map);
     }
     return list;
+}
+
+QVariantList MediaGridModel::tags() const
+{
+    QVariantList list;
+    if (!m_database) {
+        return list;
+    }
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "SELECT t.id, t.name, COUNT(DISTINCT mt.media_id) AS n, "
+        "  COALESCE((SELECT mt2.media_id FROM media_tags mt2 "
+        "            JOIN media m ON m.id = mt2.media_id "
+        "            WHERE mt2.tag_id = t.id AND m.deleted_at IS NULL AND m.is_hidden = 0 "
+        "            ORDER BY m.taken_at DESC, m.id DESC LIMIT 1), 0) "
+        "FROM tags t "
+        "JOIN media_tags mt ON mt.tag_id = t.id "
+        "JOIN media m ON m.id = mt.media_id AND m.deleted_at IS NULL AND m.is_hidden = 0 "
+        "GROUP BY t.id, t.name HAVING n > 0 "
+        "ORDER BY n DESC, t.name COLLATE NOCASE"));
+    if (!query.exec()) {
+        qWarning("kin-galeri: could not list tags: %s", qUtf8Printable(query.lastError().text()));
+        return list;
+    }
+    while (query.next()) {
+        const qint64 coverId = query.value(3).toLongLong();
+        QVariantMap map;
+        map.insert(QStringLiteral("kind"), QStringLiteral("tag"));
+        map.insert(QStringLiteral("id"), query.value(0).toLongLong());
+        map.insert(QStringLiteral("name"), query.value(1).toString());
+        map.insert(QStringLiteral("count"), query.value(2).toInt());
+        map.insert(QStringLiteral("coverId"), coverId);
+        map.insert(QStringLiteral("coverUrl"), coverUrl(coverId));
+        list.append(map);
+    }
+    return list;
+}
+
+QStringList MediaGridModel::mediaTags(qint64 mediaId) const
+{
+    QStringList names;
+    if (!m_database || mediaId <= 0) {
+        return names;
+    }
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "SELECT t.name FROM tags t JOIN media_tags mt ON mt.tag_id = t.id "
+        "WHERE mt.media_id = ? ORDER BY t.name COLLATE NOCASE"));
+    query.addBindValue(mediaId);
+    if (query.exec()) {
+        while (query.next()) {
+            names.append(query.value(0).toString());
+        }
+    }
+    return names;
+}
+
+void MediaGridModel::addTagToMedia(const QVariantList &mediaIds, const QString &name)
+{
+    const QString trimmed = name.trimmed();
+    if (!m_database || trimmed.isEmpty() || mediaIds.isEmpty()) {
+        return;
+    }
+    if (!m_database->begin()) {
+        return;
+    }
+
+    // Reuse a case-insensitively equal tag rather than creating a second row
+    // that differs only in case (the UNIQUE constraint is case-sensitive).
+    QSqlQuery lookup(m_database->connection());
+    lookup.prepare(QStringLiteral("SELECT id, name FROM tags WHERE name = ? COLLATE NOCASE"));
+    lookup.addBindValue(trimmed);
+    qint64 tagId = 0;
+    QString canonical = trimmed;
+    if (lookup.exec() && lookup.next()) {
+        tagId = lookup.value(0).toLongLong();
+        canonical = lookup.value(1).toString();
+    } else {
+        QSqlQuery insert(m_database->connection());
+        insert.prepare(QStringLiteral("INSERT INTO tags(name) VALUES (?)"));
+        insert.addBindValue(trimmed);
+        if (!insert.exec()) {
+            m_database->rollback();
+            return;
+        }
+        tagId = insert.lastInsertId().toLongLong();
+    }
+
+    QSqlQuery link(m_database->connection());
+    link.prepare(QStringLiteral("INSERT OR IGNORE INTO media_tags(media_id, tag_id) VALUES (?, ?)"));
+    for (const QVariant &value : mediaIds) {
+        const qint64 mediaId = value.toLongLong();
+        if (mediaId <= 0) {
+            continue;
+        }
+        link.bindValue(0, mediaId);
+        link.bindValue(1, tagId);
+        if (!link.exec()) {
+            m_database->rollback();
+            return;
+        }
+    }
+    m_database->commit();
+
+    Q_EMIT collectionsChanged();
+    Q_EMIT infoMessage(tr("Tagged %1 item(s) “%2”.").arg(mediaIds.size()).arg(canonical));
+}
+
+void MediaGridModel::removeTagFromMedia(const QVariantList &mediaIds, const QString &name)
+{
+    const QString trimmed = name.trimmed();
+    if (!m_database || trimmed.isEmpty() || mediaIds.isEmpty()) {
+        return;
+    }
+    if (!m_database->begin()) {
+        return;
+    }
+    QSqlQuery remove(m_database->connection());
+    remove.prepare(QStringLiteral(
+        "DELETE FROM media_tags WHERE media_id = ? "
+        "AND tag_id = (SELECT id FROM tags WHERE name = ? COLLATE NOCASE)"));
+    for (const QVariant &value : mediaIds) {
+        const qint64 mediaId = value.toLongLong();
+        if (mediaId <= 0) {
+            continue;
+        }
+        remove.bindValue(0, mediaId);
+        remove.bindValue(1, trimmed);
+        if (!remove.exec()) {
+            m_database->rollback();
+            return;
+        }
+    }
+    // Drop the tag entirely once nothing labels it any more.
+    QSqlQuery sweep(m_database->connection());
+    sweep.prepare(QStringLiteral(
+        "DELETE FROM tags WHERE name = ? COLLATE NOCASE "
+        "AND NOT EXISTS (SELECT 1 FROM media_tags WHERE tag_id = tags.id)"));
+    sweep.addBindValue(trimmed);
+    sweep.exec();
+    m_database->commit();
+
+    Q_EMIT collectionsChanged();
+    Q_EMIT infoMessage(tr("Removed tag “%1”.").arg(trimmed));
+    if (!m_tag.isEmpty() && m_tag.compare(trimmed, Qt::CaseInsensitive) == 0) {
+        reload();
+    }
+}
+
+void MediaGridModel::renameTag(qint64 tagId, const QString &name)
+{
+    const QString trimmed = name.trimmed();
+    if (!m_database || tagId <= 0 || trimmed.isEmpty()) {
+        return;
+    }
+    QSqlQuery read(m_database->connection());
+    read.prepare(QStringLiteral("SELECT name FROM tags WHERE id = ?"));
+    read.addBindValue(tagId);
+    const QString previous = (read.exec() && read.next()) ? read.value(0).toString() : QString();
+
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral("UPDATE tags SET name = ? WHERE id = ?"));
+    query.addBindValue(trimmed);
+    query.addBindValue(tagId);
+    if (!query.exec()) {
+        Q_EMIT infoMessage(tr("Could not rename tag: %1").arg(query.lastError().text()));
+        return;
+    }
+    Q_EMIT collectionsChanged();
+    Q_EMIT infoMessage(tr("Renamed tag to “%1”.").arg(trimmed));
+    if (!m_tag.isEmpty() && !previous.isEmpty()
+        && m_tag.compare(previous, Qt::CaseInsensitive) == 0) {
+        m_tag = trimmed;
+        reload();
+    }
+}
+
+void MediaGridModel::deleteTag(qint64 tagId)
+{
+    if (!m_database || tagId <= 0) {
+        return;
+    }
+    QSqlQuery read(m_database->connection());
+    read.prepare(QStringLiteral("SELECT name FROM tags WHERE id = ?"));
+    read.addBindValue(tagId);
+    const QString name = (read.exec() && read.next()) ? read.value(0).toString() : QString();
+
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral("DELETE FROM tags WHERE id = ?"));
+    query.addBindValue(tagId);
+    if (!query.exec()) {
+        return;
+    }
+    Q_EMIT collectionsChanged();
+    Q_EMIT infoMessage(tr("Deleted tag “%1”.").arg(name));
+    if (!m_tag.isEmpty() && !name.isEmpty()
+        && m_tag.compare(name, Qt::CaseInsensitive) == 0) {
+        m_tag.clear();
+        reload();
+    }
 }
 
 void MediaGridModel::renamePerson(qint64 personId, const QString &name)

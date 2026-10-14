@@ -145,7 +145,9 @@ bool rebuildFts(Database &database, QString *error)
                 "INSERT INTO media_fts(rowid, filename, camera_model, album, tags) "
                 "SELECT m.id, m.filename, "
                 "       trim(COALESCE(m.camera_make, '') || ' ' || COALESCE(m.camera_model, '')), "
-                "       COALESCE(m.source_album, ''), '' "
+                "       COALESCE(m.source_album, ''), "
+                "       COALESCE((SELECT group_concat(t.name, ' ') FROM media_tags mt "
+                "                 JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = m.id), '') "
                 "FROM media m"),
             error)) {
         database.rollback();

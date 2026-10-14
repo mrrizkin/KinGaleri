@@ -68,11 +68,11 @@ kin-galeri --db ~/.local/share/kin-galeri/library.db --index ~/Pictures --no-ui
 
 ## 4. Mencari & memfilter
 
-- **Pencarian** (`Ctrl+F`): cocokkan nama file, merek/model kamera, dan nama album. Hasil muncul
-  setelah ±0,2 detik.
+- **Pencarian** (`Ctrl+F`): cocokkan nama file, merek/model kamera, nama album, dan nama tag. Hasil
+  muncul setelah ±0,2 detik.
 - **Filter tanggal** (**Tanggal ▾**): Hari ini / 7 hari terakhir / 30 hari terakhir / Tahun ini /
   Kapan saja. Tombol **✕** membersihkan filter.
-- **Filter cepat** dari sidebar: Semua foto, Gambar, Video, Favorit, Tong sampah, dan album.
+- **Filter cepat** dari sidebar: Semua foto, Gambar, Video, Favorit, Tong sampah, album, dan tag.
 
 ## 5. Melihat
 
@@ -98,6 +98,19 @@ favorit.
    pilih album (atau ketik nama baru → **Buat + tambah**).
 3. Klik kanan album di sidebar untuk **Rename…** atau **Delete album**. Menghapus album **tidak**
    menghapus file.
+
+### Tag
+
+- Untuk menandai: klik kanan satu item → **Tambahkan tag…**, atau aktifkan **Pilih** lalu tombol
+  **Tag…** di bilah bawah untuk banyak item sekaligus. Ketik nama baru lalu **Tambahkan**, atau pilih
+  dari daftar **Semua tag** yang sudah ada.
+- Item yang sudah ditandai menampilkan chip tag yang bisa dilepas (tombol **✕**) langsung di dialog
+  yang sama — berguna untuk memperbaiki tag yang salah.
+- Halaman **Tag** di sidebar (bagian COLLECTIONS) menampilkan satu kartu per tag: cover, nama, dan
+  jumlah item. Klik kartu untuk memfilter grid; klik kanan kartu untuk **Rename tag…** atau
+  **Hapus tag**. Menghapus tag tidak menghapus file.
+- Tag tersimpan di database dan ikut terindeks pencarian, jadi mengetik nama tag di kotak cari
+  menampilkan semua itemnya.
 
 ### Seleksi & aksi massal
 

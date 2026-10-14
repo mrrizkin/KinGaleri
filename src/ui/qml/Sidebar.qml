@@ -30,6 +30,7 @@ Rectangle {
         root.app.model.personId = 0
         root.app.model.eventId = 0
         root.app.model.smartCategory = ""
+        root.app.model.tag = ""
         root.app.model.favoritesOnly = favoritesOnly
         root.app.model.filterKind = kind
         root.app.model.sourceAlbum = album
@@ -47,6 +48,7 @@ Rectangle {
         root.app.model.personId = 0
         root.app.model.eventId = 0
         root.app.model.smartCategory = ""
+        root.app.model.tag = ""
         root.app.model.trashOnly = true
     }
 
@@ -98,6 +100,7 @@ Rectangle {
                         && root.app.model.personId === 0
                         && root.app.model.eventId === 0
                         && root.app.model.smartCategory === ""
+                        && root.app.model.tag === ""
             onTapped: root.applyFilter("", false, "")
         }
         NavEntry {
@@ -163,6 +166,14 @@ Rectangle {
             iconNames: ["view-calendar-symbolic", "view-calendar", "x-office-calendar-symbolic"]
             selected: root.currentPage === "events"
             onTapped: root.collectionsRequested("events")
+        }
+        NavEntry {
+            Layout.fillWidth: true
+            text: qsTr("Tags")
+            glyph: "#"
+            iconNames: ["tag-symbolic", "tag"]
+            selected: root.currentPage === "tags"
+            onTapped: root.collectionsRequested("tags")
         }
         NavEntry {
             Layout.fillWidth: true

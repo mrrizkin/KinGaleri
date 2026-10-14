@@ -22,7 +22,7 @@ dipertimbangkan), dan **`m_totalBytes` menjumlahkan baris yang seharusnya tersar
 
 ---
 
-## 2. Skema: sekarang di v6
+## 2. Skema: sekarang di v8
 
 `struct Migration` mendapat field baru **`bool requiresFts5 = false`**, menggantikan pengecekan string
 `migration.name == "full_text_search"` yang di-hardcode di `Database::migrate()`. Field ini di-set pada
@@ -36,6 +36,8 @@ v2, v4, v5.
 | v4 | fts_sync_triggers | 3 trigger sinkronisasi FTS | **ya** |
 | v5 | fts_camera_identity | recreate trigger, index `camera_make || ' ' || camera_model` | **ya** |
 | v6 | media_album_recency_index | `CREATE INDEX idx_media_album_taken ON media(source_album COLLATE NOCASE, taken_at DESC, id DESC) WHERE deleted_at IS NULL` | tidak |
+| v7 | smart_grouping | kolom `places.country/media_count/cover_media_id`, tabel `events` + `media_events`, kolom `faces.model_marker`, tabel `face_scans`, index `idx_media_gps` | tidak |
+| v8 | fts_tags | index `idx_media_tags_tag` + 8 trigger (media, media_tags, tags) agar kolom `tags` di FTS mengikuti `media_tags` | **ya** |
 
 Tiga keputusan di sini yang layak dicatat:
 
@@ -342,14 +344,13 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
 
 ### Masih terbuka
 
-- **Kolom `tags` di FTS selalu kosong** — fitur tag belum ada. Saat tag masuk, ia butuh trigger sendiri
-  pada `media_tags`, bukan memperlebar trigger yang ada.
 - **Tampilan trash** (`deleted_at IS NOT NULL`) tidak memakai partial index — dapat diterima karena
   recycle bin secara alami kecil.
 - **`Database` menamai koneksi per-thread, bukan per-file/instance.** Aman untuk aplikasi saat ini,
   tetapi kalau suatu saat dua library dibuka bersamaan dalam satu thread, `connection()` akan diam-diam
   mengembalikan koneksi pertama. Destruktor menutup celah untuk pemakaian berurutan.
-- **HEIC/HEIF** belum punya fallback `heif-convert` (risiko PRD §8).
+- **HEIC/HEIF**: sudah ditutup, `heif-convert` dipakai sebagai fallback on-demand (migration tidak
+  terlibat; lihat `src/core/thumbs/ImageLoader.cpp`).
 - **Smart grouping (M3)** selesai, tetapi menyisakan utang kecil: rename/merge orang memakai model
   `MediaGridModel` yang sama dengan grid, jadi keduanya membaca `people` secara live (properti
   `people`) yang dapat memicu query ketika halaman People sedang tidak terlihat. Belum menjadi masalah

@@ -54,8 +54,8 @@ Nama *kin* berarti keluarga/kerabat — mengacu ke fitur **People grouping** yan
   backend alternatif yang bisa dipilih saat build.
 - **Thumbnail cache 3 tingkat** — LRU memori → disk (sharded) → generator on-demand ber-thread-pool.
   Thumbnail muncul secara asinkron tanpa memblokir UI.
-- **Pencarian full-text (FTS5)** atas nama file dan identitas kamera (`make` + `model`), dengan
-  prefix matching dan debounce 220 ms. Input pengguna selalu diperlakukan sebagai data literal —
+- **Pencarian full-text (FTS5)** atas nama file, identitas kamera (`make` + `model`), dan **nama tag**,
+  dengan prefix matching dan debounce 220 ms. Input pengguna selalu diperlakukan sebagai data literal —
   operator FTS5 seperti `AND`/`OR`/`NEAR` tidak bisa disuntikkan. Fallback ke `LIKE` otomatis bila
   SQLite dibangun tanpa FTS5. Pada 100k item: term selektif **0,03 ms**, query luas **~45 ms**.
 - **Recycle bin** — soft delete di database dengan restore dan empty. **File di disk tidak pernah disentuh.**
@@ -64,6 +64,13 @@ Nama *kin* berarti keluarga/kerabat — mengacu ke fitur **People grouping** yan
   dan diterapkan **di SQL** (bukan di memori). Daftar album di sidebar dibaca dari database, jadi album
   apa pun yang benar-benar ada di library Anda ikut muncul.
 - **Favorit** — toggle dari grid, viewer, atau menu konteks.
+- **Tag** — beri label pada satu atau banyak item sekaligus (klik kanan → **Tambahkan tag…**, atau
+  tombol **Tag…** di bilah seleksi). Halaman **Tag** di sidebar menampilkan satu kartu per tag dengan
+  cover dan jumlah item, klik untuk memfilter grid, klik kanan untuk rename/hapus. Nama tag disimpan
+  di `media_tags` dan ikut diindeks FTS5, jadi mencari dengan nama tag langsung menemukan fotonya.
+- **Fallback HEIC/HEIF** — bila Qt tidak punya plugin HEIC (umum di banyak distro), thumbnail dan
+  viewer menjalankan `heif-convert` (libheif) on-demand lalu membaca JPEG hasilnya. Tanpa tool itu
+  perilakunya tetap seperti sebelumnya (placeholder), jadi tidak ada dependensi wajib baru.
 - **Benchmark bawaan** — seeding data sintetis deterministik + scroll benchmark terukur,
   dengan output machine-readable di stderr.
 - **`--no-ui`** untuk smoke test headless dan pekerjaan batch.

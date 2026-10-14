@@ -100,3 +100,19 @@ Model (~40 MB) diunduh dari **Settings → Smart → Download model** ke
   diproses inkremental.
 - Deteksi hanya pada gambar, bukan frame video.
 - Model int8 belum disediakan; fp32 dipakai karena totalnya sudah kecil (~40 MB).
+
+## Addendum: tag + fallback HEIC (penutup utang)
+
+Dua item yang sebelumnya tercatat sebagai utang ditutup setelah M3:
+
+- **Tag** — migrasi v8 (`fts_tags`) menambah index `media_tags` dan 8 trigger sehingga kolom
+  `tags` di `media_fts` mengikuti `media_tags` (dan diperbarui saat tag dibuat, di-rename, atau
+  dihapus). `MediaGridModel` mendapat filter `tag`, daftar `tags`, serta operasi
+  `addTagToMedia` / `removeTagFromMedia` / `renameTag` / `deleteTag`; sidebar punya halaman
+  **Tag**. Nama tag kini ikut `MATCH` pencarian.
+- **HEIC/HEIF** — `ImageLoader::decodeHeif` menjalankan `heif-convert` on-demand dan dipakai
+  `ThumbnailService` + `FullImageProvider` bila Qt tidak bisa membaca file. Tetap opsional:
+  tanpa tool itu perilakunya placeholder seperti sebelumnya.
+
+`LibraryMaintenance::kFtsIndexVersion` naik 2 → 3 agar library lama membangun ulang indeks
+sekali. Test: `tst_mediagridmodel::taggingFiltersAndIndexesFts`, `tst_imageloader` (10/10 lulus).

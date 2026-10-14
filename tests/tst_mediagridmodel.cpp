@@ -143,6 +143,8 @@ private slots:
 
     void trashSelectionSoftDeletesAndUndoRestores();
     void batchFavoritePersists();
+
+    void taggingFiltersAndIndexesFts();
 };
 
 void TestMediaGridModel::reloadLoadsRows()
@@ -593,6 +595,71 @@ void TestMediaGridModel::batchFavoritePersists()
     model.setSelectionFavorite(false);
     QCOMPARE(fixture.scalar(QStringLiteral("SELECT is_favorite FROM media WHERE id = ?"), {a}).toInt(),
              0);
+}
+
+void TestMediaGridModel::taggingFiltersAndIndexesFts()
+{
+    LibraryFixture fixture;
+    QString error;
+    QVERIFY2(fixture.open(&error), qUtf8Printable(error));
+    const qint64 first = fixture.addMedia(QStringLiteral("one.png"), kJan2020);
+    const qint64 second = fixture.addMedia(QStringLiteral("two.png"), kJun2020);
+    QVERIFY(first > 0 && second > 0);
+
+    MediaGridModel model;
+    model.attachDatabase(fixture.db.get());
+    model.reload();
+    QCOMPARE(model.itemCount(), 2);
+
+    model.addTagToMedia({first, second}, QStringLiteral("Family"));
+    model.addTagToMedia({first}, QStringLiteral("Holiday"));
+    QCOMPARE(model.tags().length(), 2);
+    QCOMPARE(model.mediaTags(first), QStringList({QStringLiteral("Family"), QStringLiteral("Holiday")}));
+
+    // The tag filter is a case-insensitive membership test.
+    model.setTag(QStringLiteral("holiday"));
+    QCOMPARE(model.itemCount(), 1);
+    model.setTag(QStringLiteral("FAMILY"));
+    QCOMPARE(model.itemCount(), 2);
+    model.setTag(QString());
+    QCOMPARE(model.itemCount(), 2);
+
+    // The FTS index carries the tag list (migration v8).
+    auto ftsMatches = [&fixture](const QString &term) {
+        QSqlQuery query(fixture.db->connection());
+        query.prepare(QStringLiteral("SELECT rowid FROM media_fts WHERE media_fts MATCH ?"));
+        query.addBindValue(term);
+        if (!query.exec()) {
+            return QList<qint64>{};
+        }
+        QList<qint64> ids;
+        while (query.next()) {
+            ids.append(query.value(0).toLongLong());
+        }
+        return ids;
+    };
+    QCOMPARE(ftsMatches(QStringLiteral("Holiday")), QList<qint64>{first});
+    const QList<qint64> familyExpected = {first, second};
+    QCOMPARE(ftsMatches(QStringLiteral("Family")), familyExpected);
+
+    // Renaming rewrites the indexed text through the tags trigger.
+    qint64 holidayId = 0;
+    for (const QVariant &entry : model.tags()) {
+        const QVariantMap map = entry.toMap();
+        if (map.value(QStringLiteral("name")).toString() == QLatin1String("Holiday")) {
+            holidayId = map.value(QStringLiteral("id")).toLongLong();
+        }
+    }
+    QVERIFY(holidayId > 0);
+    model.renameTag(holidayId, QStringLiteral("Vacation"));
+    QVERIFY(ftsMatches(QStringLiteral("Holiday")).isEmpty());
+    QCOMPARE(ftsMatches(QStringLiteral("Vacation")), QList<qint64>{first});
+
+    // Removing the last use drops the tag and clears it from the index.
+    model.removeTagFromMedia({first}, QStringLiteral("Vacation"));
+    QCOMPARE(model.tags().length(), 1);
+    QVERIFY(ftsMatches(QStringLiteral("Vacation")).isEmpty());
+    QCOMPARE(model.mediaTags(first), QStringList({QStringLiteral("Family")}));
 }
 
 QTEST_MAIN(TestMediaGridModel)

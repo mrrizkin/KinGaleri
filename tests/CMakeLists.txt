@@ -38,6 +38,9 @@ add_library(kin-galeri-testcore STATIC
     ${CMAKE_SOURCE_DIR}/src/core/metadata/ExifReader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/metadata/ExifReader.h
 
+    ${CMAKE_SOURCE_DIR}/src/core/thumbs/ImageLoader.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/thumbs/ImageLoader.h
+
     ${CMAKE_SOURCE_DIR}/src/core/indexer/FolderIndexer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/indexer/FolderIndexer.h
     ${CMAKE_SOURCE_DIR}/src/core/indexer/LibraryWatcher.cpp
@@ -83,3 +86,4 @@ kg_add_test(tst_mediagridmodel)
 kg_add_test(tst_librarymaintenance)
 kg_add_test(tst_folderindexer)
 kg_add_test(tst_grouping)
+kg_add_test(tst_imageloader)

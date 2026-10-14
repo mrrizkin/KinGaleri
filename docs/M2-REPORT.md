@@ -306,7 +306,8 @@ Jadi dengan `keep-open=yes`, sinyal "selesai" yang benar adalah **`eof-reached`*
       offscreen): startup 1003 ms, `rss=330MB` saat scroll, `rssPeak=351MB`, 1/811 frame drop.
       Ini **memenuhi** target §4.1.1 (< 550 MB), bahkan target asli < 400 MB. Pada 50k: rss=263MB.
       (Angka headless tanpa decode thumbnail nyata; angka 467 MB lama berasal dari sesi video.)
-- [ ] Trigger FTS untuk `media_tags` saat tagging masuk
+- [x] Trigger FTS untuk `media_tags` saat tagging masuk — migrasi v8 menambah 8 trigger; nama tag
+      kini ikut `MATCH` dan diperbarui saat tag dibuat/di-rename/dihapus.
 - [ ] `tests/` masih tidak ada → `KG_BUILD_TESTS` **harus tetap OFF**
 - [ ] Belum ada yang di-commit (bukan repo git)
 

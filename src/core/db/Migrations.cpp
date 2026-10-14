@@ -388,6 +388,100 @@ CREATE TABLE face_scans (
     };
     list.append(v7);
 
+    // ---------------------------------------------------------------------
+    // v8 - make tags searchable (FTS `tags` column was always empty)
+    //
+    // The `tags` / `media_tags` tables have existed since v1, but nothing ever
+    // wrote them, so the FTS `tags` column stayed '' forever. Now that tagging
+    // is exposed, the index has to follow it - including when a tag is renamed
+    // or deleted, which touches many media rows at once.
+    //
+    // The media triggers are recreated (v5 did the same) so a row inserted or
+    // edited after this migration carries its tag list. media_tags/tags have
+    // their own triggers, exactly as the v4 comment predicted, rather than
+    // widening the media triggers beyond their own table.
+    //
+    // `tags_bd` is BEFORE DELETE on purpose: the media_tags rows cascade away
+    // with the tag, so by AFTER DELETE the affected media ids are gone. Rewriting
+    // the FTS rows before the cascade sees them still in place.
+    // ---------------------------------------------------------------------
+    Migration v8;
+    v8.version = 8;
+    v8.name = QStringLiteral("fts_tags");
+    v8.requiresFts5 = true;
+    v8.statements = {
+        QStringLiteral("CREATE INDEX IF NOT EXISTS idx_media_tags_tag ON media_tags(tag_id, media_id)"),
+
+        QStringLiteral("DROP TRIGGER IF EXISTS media_fts_ai"),
+        QStringLiteral("DROP TRIGGER IF EXISTS media_fts_ad"),
+        QStringLiteral("DROP TRIGGER IF EXISTS media_fts_au"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_fts_ai AFTER INSERT ON media BEGIN
+    INSERT INTO media_fts(rowid, filename, camera_model, album, tags)
+    VALUES (new.id, new.filename,
+            trim(COALESCE(new.camera_make, '') || ' ' || COALESCE(new.camera_model, '')),
+            COALESCE(new.source_album, ''),
+            COALESCE((SELECT group_concat(t.name, ' ') FROM media_tags mt
+                      JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.id), ''));
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_fts_ad AFTER DELETE ON media BEGIN
+    DELETE FROM media_fts WHERE rowid = old.id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_fts_au AFTER UPDATE OF filename, camera_make, camera_model, source_album ON media BEGIN
+    DELETE FROM media_fts WHERE rowid = old.id;
+    INSERT INTO media_fts(rowid, filename, camera_model, album, tags)
+    VALUES (new.id, new.filename,
+            trim(COALESCE(new.camera_make, '') || ' ' || COALESCE(new.camera_model, '')),
+            COALESCE(new.source_album, ''),
+            COALESCE((SELECT group_concat(t.name, ' ') FROM media_tags mt
+                      JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.id), ''));
+END)SQL"),
+
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_tags_ai AFTER INSERT ON media_tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.media_id), '')
+    WHERE rowid = new.media_id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_tags_ad AFTER DELETE ON media_tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = old.media_id), '')
+    WHERE rowid = old.media_id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_tags_au AFTER UPDATE ON media_tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = old.media_id), '')
+    WHERE rowid = old.media_id;
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.media_id), '')
+    WHERE rowid = new.media_id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER tags_au AFTER UPDATE OF name ON tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t2.name, ' ') FROM media_tags mt
+         JOIN tags t2 ON t2.id = mt.tag_id WHERE mt.media_id = media_fts.rowid), '')
+    WHERE rowid IN (SELECT media_id FROM media_tags WHERE tag_id = new.id);
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER tags_bd BEFORE DELETE ON tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t2.name, ' ') FROM media_tags mt
+         JOIN tags t2 ON t2.id = mt.tag_id
+         WHERE mt.media_id = media_fts.rowid AND t2.id <> old.id), '')
+    WHERE rowid IN (SELECT media_id FROM media_tags WHERE tag_id = old.id);
+END)SQL"),
+    };
+    list.append(v8);
+
     return list;
 }
 
@@ -407,12 +501,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS media_fts USING fts5(
         QStringLiteral("DROP TRIGGER IF EXISTS media_fts_ai"),
         QStringLiteral("DROP TRIGGER IF EXISTS media_fts_ad"),
         QStringLiteral("DROP TRIGGER IF EXISTS media_fts_au"),
+        QStringLiteral("DROP TRIGGER IF EXISTS media_tags_ai"),
+        QStringLiteral("DROP TRIGGER IF EXISTS media_tags_ad"),
+        QStringLiteral("DROP TRIGGER IF EXISTS media_tags_au"),
+        QStringLiteral("DROP TRIGGER IF EXISTS tags_au"),
+        QStringLiteral("DROP TRIGGER IF EXISTS tags_bd"),
         QStringLiteral(R"SQL(
 CREATE TRIGGER media_fts_ai AFTER INSERT ON media BEGIN
     INSERT INTO media_fts(rowid, filename, camera_model, album, tags)
     VALUES (new.id, new.filename,
             trim(COALESCE(new.camera_make, '') || ' ' || COALESCE(new.camera_model, '')),
-            COALESCE(new.source_album, ''), '');
+            COALESCE(new.source_album, ''),
+            COALESCE((SELECT group_concat(t.name, ' ') FROM media_tags mt
+                      JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.id), ''));
 END)SQL"),
         QStringLiteral(R"SQL(
 CREATE TRIGGER media_fts_ad AFTER DELETE ON media BEGIN
@@ -424,7 +525,49 @@ CREATE TRIGGER media_fts_au AFTER UPDATE OF filename, camera_make, camera_model,
     INSERT INTO media_fts(rowid, filename, camera_model, album, tags)
     VALUES (new.id, new.filename,
             trim(COALESCE(new.camera_make, '') || ' ' || COALESCE(new.camera_model, '')),
-            COALESCE(new.source_album, ''), '');
+            COALESCE(new.source_album, ''),
+            COALESCE((SELECT group_concat(t.name, ' ') FROM media_tags mt
+                      JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.id), ''));
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_tags_ai AFTER INSERT ON media_tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.media_id), '')
+    WHERE rowid = new.media_id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_tags_ad AFTER DELETE ON media_tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = old.media_id), '')
+    WHERE rowid = old.media_id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER media_tags_au AFTER UPDATE ON media_tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = old.media_id), '')
+    WHERE rowid = old.media_id;
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t.name, ' ') FROM media_tags mt
+         JOIN tags t ON t.id = mt.tag_id WHERE mt.media_id = new.media_id), '')
+    WHERE rowid = new.media_id;
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER tags_au AFTER UPDATE OF name ON tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t2.name, ' ') FROM media_tags mt
+         JOIN tags t2 ON t2.id = mt.tag_id WHERE mt.media_id = media_fts.rowid), '')
+    WHERE rowid IN (SELECT media_id FROM media_tags WHERE tag_id = new.id);
+END)SQL"),
+        QStringLiteral(R"SQL(
+CREATE TRIGGER tags_bd BEFORE DELETE ON tags BEGIN
+    UPDATE media_fts SET tags = COALESCE(
+        (SELECT group_concat(t2.name, ' ') FROM media_tags mt
+         JOIN tags t2 ON t2.id = mt.tag_id
+         WHERE mt.media_id = media_fts.rowid AND t2.id <> old.id), '')
+    WHERE rowid IN (SELECT media_id FROM media_tags WHERE tag_id = old.id);
 END)SQL"),
     };
 }

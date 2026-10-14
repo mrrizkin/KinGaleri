@@ -31,6 +31,7 @@ Item {
     signal trashRequested(var payload)
     signal restoreRequested(var payload)
     signal addToAlbumRequested(var payloads)
+    signal addTagRequested(var ids)
     signal renameRequested(var payload)
     signal moveRequested(var ids)
 
@@ -251,6 +252,14 @@ Item {
             onTriggered: {
                 if (contextMenu.payload)
                     root.addToAlbumRequested([contextMenu.payload.mediaId])
+            }
+        }
+        MenuItem {
+            text: qsTr("Add tag…")
+            enabled: !root.trashView && contextMenu.payload && !contextMenu.payload.isSynthetic
+            onTriggered: {
+                if (contextMenu.payload)
+                    root.addTagRequested([contextMenu.payload.mediaId])
             }
         }
         MenuItem {

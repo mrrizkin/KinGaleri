@@ -27,8 +27,8 @@ inline constexpr int kSourceAlbumRulesVersion = 1;
 
 /// Bump when the FTS row layout or the trigger definitions change, so existing
 /// libraries are rebuilt instead of silently keeping a stale index.
-/// v2 indexes camera_make together with camera_model (migration v5).
-inline constexpr int kFtsIndexVersion = 2;
+/// v3 indexes the tag list (migration v8).
+inline constexpr int kFtsIndexVersion = 3;
 
 /**
  * Derives `media.source_album` for every row whose value is missing, and for all

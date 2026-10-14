@@ -1,5 +1,7 @@
 #include "ui/quick/FullImageProvider.h"
 
+#include "core/thumbs/ImageLoader.h"
+
 #include <QByteArray>
 #include <QFileInfo>
 #include <QImage>
@@ -93,6 +95,10 @@ QImage FullImageProvider::requestImage(const QString &id, QSize *size, const QSi
     }
 
     QImage image = reader.read();
+    if (image.isNull() && ImageLoader::isHeifPath(filePath)) {
+        // No Qt HEIC plugin: convert with heif-convert when available.
+        image = ImageLoader::decodeHeif(filePath, targetEdge, 1024);
+    }
     if (!image.isNull() && size) {
         *size = image.size();
     }

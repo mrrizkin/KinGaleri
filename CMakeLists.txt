@@ -196,6 +196,9 @@ set(KG_SOURCES
     src/core/thumbs/ThumbnailService.cpp
     src/core/thumbs/ThumbnailService.h
 
+    src/core/thumbs/ImageLoader.cpp
+    src/core/thumbs/ImageLoader.h
+
     src/core/thumbs/VideoFrameExtractor.cpp
     src/core/thumbs/VideoFrameExtractor.h
 
@@ -286,11 +289,39 @@ qt_add_qml_module(kin-galeri
 # ---------------------------------------------------------------------------
 find_package(Qt6 6.5 QUIET COMPONENTS LinguistTools)
 if(Qt6LinguistTools_FOUND)
+    # NOTE: lupdate is a *manual* tool (`cmake --build build --target update_translations`).
+    # It must be built with QML/JavaScript support, otherwise it silently ignores
+    # every qsTr() in QML and - with the old `-no-obsolete` flag - deleted all 256
+    # of them. `-no-obsolete` is deliberately gone: keeping obsolete entries is
+    # recoverable, deleting them is not. The probe below warns about the broken
+    # toolchain before anyone runs it.
+    if(TARGET Qt6::lupdate)
+        get_target_property(_kg_lupdate Qt6::lupdate IMPORTED_LOCATION)
+    endif()
+    if(_kg_lupdate AND EXISTS "${_kg_lupdate}")
+        set(_kg_lupdate_probe_qml "${CMAKE_CURRENT_BINARY_DIR}/.kg_lupdate_probe.qml")
+        file(WRITE "${_kg_lupdate_probe_qml}"
+             "import QtQuick\nItem { property string s: qsTr(\"probe\") }\n")
+        execute_process(
+            COMMAND "${_kg_lupdate}" -verbose "${_kg_lupdate_probe_qml}"
+                    -ts "${CMAKE_CURRENT_BINARY_DIR}/.kg_lupdate_probe.ts"
+            OUTPUT_VARIABLE _kg_lupdate_probe
+            ERROR_VARIABLE _kg_lupdate_probe
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        file(REMOVE "${_kg_lupdate_probe_qml}"
+             "${CMAKE_CURRENT_BINARY_DIR}/.kg_lupdate_probe.ts")
+        if(_kg_lupdate_probe MATCHES "missing qml/javascript support")
+            message(WARNING
+                "kin-galeri: this lupdate has no QML support. Do NOT run the "
+                "update_translations target - it would strip every qsTr() string. "
+                "Install a Qt LinguistTools built with QML support instead.")
+        endif()
+    endif()
     qt_add_translations(kin-galeri
         TS_FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n/kin-galeri_id.ts
         RESOURCE_PREFIX "/i18n"
-        LUPDATE_OPTIONS -locations relative -no-obsolete
+        LUPDATE_OPTIONS -locations relative
     )
 else()
     message(STATUS "kin-galeri: Qt LinguistTools not found - Indonesian translation disabled")

@@ -1,6 +1,7 @@
 #include "core/thumbs/ThumbnailService.h"
 
 #include "app/Paths.h"
+#include "core/thumbs/ImageLoader.h"
 #include "core/thumbs/VideoFrameExtractor.h"
 
 #include <QDir>
@@ -389,6 +390,11 @@ QImage ThumbnailService::renderSource(const SourceEntry &entry, int edge) const
     reader.setAllocationLimit(256);
 
     QImage image = reader.read();
+    if (image.isNull() && ImageLoader::isHeifPath(entry.path)) {
+        // Qt has no HEIC/HEIF plugin installed; fall back to heif-convert when
+        // libheif-examples is present. No-op when the tool is missing.
+        image = ImageLoader::decodeHeif(entry.path, edge, 256);
+    }
     if (image.isNull()) {
         return image;
     }

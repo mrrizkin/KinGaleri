@@ -150,6 +150,11 @@ ApplicationWindow {
         model.clearDateRange()
         model.clearSelection()
         searchField.text = ""
+        model.placeId = 0
+        model.personId = 0
+        model.eventId = 0
+        model.smartCategory = ""
+        model.tag = ""
         if (kind === "manual") {
             model.sourceAlbum = ""
             model.albumId = id
@@ -178,7 +183,18 @@ ApplicationWindow {
         model.personId = item.kind === "person" ? item.id : 0
         model.eventId = item.kind === "event" ? item.id : 0
         model.smartCategory = item.kind === "smart" ? item.key : ""
+        model.tag = item.kind === "tag" ? item.name : ""
         window.libraryPage = "photos"
+    }
+
+    /// Opens the tag picker for a set of media ids (context menu passes one,
+    /// the batch bar passes nothing and falls back to the selection).
+    function openTagPicker(ids) {
+        window.tagTargetIds = (ids && ids.length > 0) ? ids : window.app.model.selectedIds()
+        if (window.tagTargetIds.length === 0)
+            return
+        tagNameField.text = ""
+        tagPicker.open()
     }
 
     /// Turns the detail map into label/value rows, skipping anything absent so the
@@ -194,6 +210,7 @@ ApplicationWindow {
         }
         add(qsTr("Path"), d.path)
         add(qsTr("Album"), d.sourceAlbum)
+        add(qsTr("Tags"), d.tags)
         add(qsTr("Type"), d.mimeType)
         add(qsTr("Size"), d.sizeText)
         add(qsTr("Dimensions"), d.dimensions)
@@ -271,10 +288,12 @@ ApplicationWindow {
                 text: window.libraryPage === "albums"
                       ? qsTr("%1 album(s)").arg(window.app.model.albumCards.length)
                       : (window.libraryPage === "settings" ? qsTr("Settings")
-                        : (window.libraryPage === "people" || window.libraryPage === "places"
-                           || window.libraryPage === "events" || window.libraryPage === "smart"
-                           ? window.app.smartStatus
-                           : window.app.summary))
+                        : (window.libraryPage === "tags"
+                           ? qsTr("%1 tag(s)").arg(window.app.model.tags.length)
+                           : (window.libraryPage === "people" || window.libraryPage === "places"
+                              || window.libraryPage === "events" || window.libraryPage === "smart"
+                              ? window.app.smartStatus
+                              : window.app.summary)))
                 color: Theme.textMuted
                 elide: Text.ElideRight
                 leftPadding: 8
@@ -441,6 +460,9 @@ ApplicationWindow {
                 onAddToAlbumRequested: function (ids) {
                     window.openAlbumPicker(ids)
                 }
+                onAddTagRequested: function (ids) {
+                    window.openTagPicker(ids)
+                }
                 onRenameRequested: function (payload) {
                     window.renameTarget = payload
                     renameField.text = payload ? payload.fileName : ""
@@ -538,6 +560,27 @@ ApplicationWindow {
                 onSetupRequested: window.libraryPage = "settings"
             }
 
+            CollectionsView {
+                anchors.fill: parent
+                visible: window.libraryPage === "tags"
+                app: window.app
+                title: qsTr("Tags")
+                items: window.app.model.tags
+                editableTags: true
+                emptyTitle: qsTr("No tags yet")
+                emptyHint: qsTr("Tag photos from the grid: right-click one, or select several and use Tag… in the toolbar.")
+                onActivated: function (item) { window.openCollection(item) }
+                onRenameTagRequested: function (id, currentName) {
+                    window.tagRenameTarget = id
+                    tagRenameField.text = currentName
+                    tagRenameDialog.open()
+                }
+                onDeleteTagRequested: function (id) {
+                    window.confirmThen(qsTr("Delete this tag from every photo? The photos themselves are not touched."),
+                                       function () { window.app.model.deleteTag(id) })
+                }
+            }
+
             SettingsView {
                 id: settingsView
                 anchors.fill: parent
@@ -586,6 +629,11 @@ ApplicationWindow {
                         text: qsTr("Add to album…")
                         enabled: window.app.model.selectionCount > 0
                         onClicked: window.openAlbumPicker([])
+                    }
+                    Button {
+                        text: qsTr("Tag…")
+                        enabled: window.app.model.selectionCount > 0
+                        onClicked: window.openTagPicker([])
                     }
                     Button {
                         text: qsTr("Remove from album")
@@ -784,6 +832,8 @@ ApplicationWindow {
     property var moveTargetIds: []
     property int personRenameTarget: 0
     property int personMergeSource: 0
+    property var tagTargetIds: []
+    property int tagRenameTarget: 0
     property string lastError: ""
     property var pendingConfirmAction: null
     property string confirmMessage: ""
@@ -902,6 +952,119 @@ ApplicationWindow {
             if (mergeTargetBox.currentValue)
                 window.app.model.mergePeople(mergeTargetBox.currentValue, window.personMergeSource)
         }
+    }
+
+    // ---- tags ----------------------------------------------------------------
+    Dialog {
+        id: tagPicker
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        title: qsTr("Add tag")
+        width: 440
+        standardButtons: Dialog.Close
+
+        ColumnLayout {
+            width: 380
+            spacing: 8
+
+            Label {
+                text: qsTr("%1 item(s)").arg(window.tagTargetIds.length)
+                color: Theme.textMuted
+                font.pixelSize: 11
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                TextField {
+                    id: tagNameField
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("New tag name…")
+                    onAccepted: tagAddButton.clicked()
+                }
+                Button {
+                    id: tagAddButton
+                    text: qsTr("Add")
+                    enabled: tagNameField.text.trim().length > 0
+                    onClicked: {
+                        window.app.model.addTagToMedia(window.tagTargetIds, tagNameField.text)
+                        tagNameField.text = ""
+                    }
+                }
+            }
+
+            // Tags already on the first selected item, each removable. For a
+            // multi-selection this is a representative, not the intersection -
+            // good enough to undo a mistaken tag without a second query.
+            Label {
+                visible: window.tagTargetIds.length > 0
+                         && window.app.model.mediaTags(window.tagTargetIds[0]).length > 0
+                text: qsTr("On this selection")
+                color: Theme.textFaint
+                font.pixelSize: 11
+                topPadding: 4
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    // Referencing `tags` on purpose: it makes this binding re-run
+                    // when a tag is added or removed, so the removable chips below
+                    // stay in step without a dedicated signal.
+                    model: window.tagTargetIds.length > 0 && window.app.model.tags !== undefined
+                           ? window.app.model.mediaTags(window.tagTargetIds[0]) : []
+                    delegate: Button {
+                        required property string modelData
+                        text: modelData + "  ✕"
+                        onClicked: window.app.model.removeTagFromMedia(window.tagTargetIds, modelData)
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: Theme.border
+                visible: window.app.model.tags.length > 0
+            }
+
+            Label {
+                text: qsTr("All tags")
+                visible: window.app.model.tags.length > 0
+                color: Theme.textFaint
+                font.pixelSize: 11
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: window.app.model.tags
+                    delegate: Button {
+                        required property var modelData
+                        text: modelData.name + "  (" + modelData.count + ")"
+                        onClicked: window.app.model.addTagToMedia(window.tagTargetIds, modelData.name)
+                    }
+                }
+            }
+        }
+    }
+
+    Dialog {
+        id: tagRenameDialog
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        title: qsTr("Rename tag")
+        width: 400
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        TextField {
+            id: tagRenameField
+            width: 320
+            selectByMouse: true
+            placeholderText: qsTr("Tag name")
+        }
+
+        onAccepted: window.app.model.renameTag(window.tagRenameTarget, tagRenameField.text)
     }
 
     FolderDialog {

@@ -112,13 +112,13 @@ sekali lagi sebelum `xdotool type`. `xdotool type` lebih andal daripada clipboar
    QML; konteks C++ `AppController`/`ShortcutRegistry`/`MediaGridModel` belum ada). **Jangan**
    jalankan target `update_translations` di mesin ini — `lupdate` dari `qt6-tools` 6.12.0 tidak
    punya dukungan QML dan akan menghapus ke-258 pesan QML. Sunting `.ts` dengan tangan.
-6. **HiDPI/fractional scaling** belum diverifikasi visual. Uji:
-   ```bash
-   QT_SCALE_FACTOR=1.25 DISPLAY=:0.0 ./build/kin-galeri ...   # lalu 1.5, 2.0
-   ```
-   Cari teks terpotong / kontrol tumpang tindih / ikon blur.
-7. **`--software-render`** (`QT_QUICK_BACKEND=software`) belum diuji visual — jalankan dan
-   cek tidak ada artefak render.
+6. ~~**HiDPI/fractional scaling** belum diverifikasi visual.~~ **Sudah diverifikasi.**
+   `QT_SCALE_FACTOR=1.25` (jendela jadi 1800×1150) dan `1.5` (1920×1053) dirender tanpa teks
+   terpotong, tanpa kontrol tumpang tindih, dan tanpa ikon buram. Bukti: `/tmp/kgv/scale125.png`,
+   `/tmp/kgv/scale150.png`, montase `/tmp/kgv/montage.png`.
+7. ~~**`--software-render`** belum diuji visual.~~ **Sudah diverifikasi**, lewat dua jalur:
+   `QT_QUICK_BACKEND=software` dan flag `--software-render`. Keduanya menghasilkan frame identik
+   tanpa artefak render (`/tmp/kgv/s-env.png`, `/tmp/kgv/s-flag.png`).
 8. **Aksesibilitas** hanya bisa dicek dengan inspector (Accerciser/AT-SPI), bukan visual.
 
 ## 5. Peta file UI

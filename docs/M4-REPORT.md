@@ -64,11 +64,17 @@ dibuat (kebijakan dibaca di konstruktor). Ini menjaga faktor 1.25×/1.5× tidak 
 bulat, yang membuat UI terlihat "chunky". Variabel dihormati bila pengguna sudah menetapkannya, dan
 di Wayland faktor ditentukan kompositor.
 
+**Diverifikasi visual:** `QT_SCALE_FACTOR=1.25` (jendela 1800×1150) dan `1.5` (1920×1053) dirender
+tanpa teks terpotong, kontrol tumpang tindih, atau ikon buram.
+
 ## 4. Fallback `--software-render`
 
 Menutup risiko PRD §8 (driver Wayland/GPU bermasalah). Flag dibaca langsung dari `argv` di
 `applyPreAppEnvironment()` dan men-set `QT_QUICK_BACKEND=software` sebelum `QGuiApplication` memilih
 backend scenegraph. Ini penting: sesudah konstruktor, perubahan sudah terlambat.
+
+**Diverifikasi visual:** baik `QT_QUICK_BACKEND=software` maupun `--software-render` merender UI
+lengkap tanpa artefak.
 
 ## 5. Aksesibilitas
 

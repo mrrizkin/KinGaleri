@@ -351,6 +351,15 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
 
 ### Masih terbuka
 
+- **Warm start 100k melebihi budget (PRD §9).** Diukur 2026-10-15 pada Ryzen 7 PRO 5850U:
+  process spawn → frame pertama **1,82 s** (library sintetis) dan **3,09–3,35 s** (100.000 berkas
+  PNG nyata), sedangkan targetnya **< 1,5 s**. Scroll-nya sendiri lolos (166–172 fps, drop ≤ 0,4%).
+  Instrumentasi sementara melokalisasi biayanya: migrasi & query SQL ≈ 0 ms (SQL 20 ms di sqlite3),
+  loop materialisasi 100k baris **776–817 ms**, sisanya Qt Quick + frame pertama yang menunggu
+  thumbnail. Sifatnya linier (~8 µs/baris). `--limit 5000` menurunkannya ke 1,14 s, tetapi `--limit`
+  hanya knob CLI benchmark dan belum ada di Settings. Tiga arah perbaikan (progressive population;
+  hindari `query.value()` 18× per baris; tunda thumbnail frame pertama) ditulis di
+  `docs/M4-REPORT.md` §11.1.
 - ~~**Terjemahan C++ (M4)**~~ — **sudah ditutup.** 43 string dibungkus `tr()`, ketiga konteks C++
   ada di `.ts`. Konteksnya adalah nama metaobject (`kg::AppController`), bukan nama kelas —
   kesalahan itu sempat mematikan seluruh terjemahan C++ tanpa terlihat, dan sekarang dijaga

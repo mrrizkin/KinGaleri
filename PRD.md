@@ -601,12 +601,34 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 
 ## 9. Metrik Keberhasilan (Definition of Done v1)
 
-- [ ] Index 100.000 media tanpa crash; DB & cache konsisten setelah restart.
-- [ ] Warm start < 1.5 s; scroll 60 fps pada 100k item di hardware mid-range.
-- [ ] Semua grouping P0 (date, source, favorite, recycle) berfungsi & akurat.
-- [ ] Tidak ada operasi network tanpa persetujuan user.
-- [ ] AppImage bisa dijalankan di Ubuntu 24.04 & Fedora 40 tanpa dependency manual.
-- [ ] Dokumentasi build + user guide tersedia.
+> Diukur 2026-10-15 di laptop **AMD Ryzen 7 PRO 5850U** (8C/16T, yaitu "hardware mid-range" yang
+> dimaksud kriteria), build Release, `QT_QPA_PLATFORM=offscreen`, library **100.000 berkas PNG
+> nyata** di `/tmp/kg100k` (bukan baris sintetis). Metode, angka mentah, dan analisis:
+> `docs/M4-REPORT.md` §11.
+
+- [x] **Index 100.000 media tanpa crash; DB & cache konsisten setelah restart.** 100.000 berkas
+  nyata terindeks dalam **8 s** (rc=0). Sesudahnya: `media`=100.000, `media_fts`=100.000,
+  `PRAGMA integrity_check`=`ok`, `foreign_key_check` bersih; tiga restart berikutnya rc=0, jumlah
+  baris tidak berubah, cache thumbnail konsisten (1.274 berkas / 5 MB).
+- [ ] **Warm start < 1.5 s; scroll 60 fps pada 100k item.** Scroll **lolos** (166–172 fps, frame
+  drop ≤ 0,4%, worst 15,4 ms vs budget 16,67 ms). Start **belum lolos**: process spawn sampai frame
+  pertama **1,82 s** pada library sintetis dan **3,09–3,35 s** pada library 100.000 berkas nyata.
+  Bottleneck sudah dilokalisasi (SQL 20 ms, loop model 780 ms, sisanya frame pertama + thumbnail);
+  dicatat sebagai utang di `docs/TECH-DEBT-REPORT.md`. `--limit 5000` menurunkan start ke 1,14 s,
+  tetapi `--limit` hanya knob CLI untuk benchmark, belum ada di Settings.
+- [x] **Semua grouping P0 (date, source, favorite, recycle) berfungsi & akurat.**
+  `tst_mediagridmodel` (`dateRangeFiltersInclusive`, `dateRangeSwapsReversedBounds`,
+  `trashSelectionSoftDeletesAndUndoRestores`, `batchFavoritePersists`,
+  `albumCardsMergeManualAndSource`, `albumCrudAndFiltering`) plus verifikasi GUI di
+  `docs/M2-REPORT.md` §10 (filter tanggal, recycle bin, favorite, album).
+- [x] **Tidak ada operasi network tanpa persetujuan user.** Audit `src/`: hanya satu pemakai network
+  — `AppController::downloadFaceModels()` (dua berkas model dari OpenCV Zoo) — dan satu-satunya
+  pemanggil adalah tombol di `SettingsView.qml` (`onClicked: root.app.downloadFaceModels()`).
+  Tidak ada unduhan otomatis; saat model belum ada, pass wajah dilewati.
+- [ ] **AppImage bisa dijalankan di Ubuntu 24.04 & Fedora 40 tanpa dependency manual.** Belum
+  dibangun — ini pekerjaan packaging, ditunda atas instruksi user.
+- [x] **Dokumentasi build + user guide tersedia.** `README.md` (prasyarat, build, test, CLI) dan
+  `docs/USER-GUIDE.md`; `CONTRIBUTING.md` untuk gate (lint, i18n, a11y, test).
 
 ---
 

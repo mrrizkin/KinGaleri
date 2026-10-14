@@ -18,17 +18,24 @@ dikerjakan di sini karena ia menutup celah yang ditemukan saat M2 (§5–§6).
 - Nilai `theme`: `system` / `light` / `dark`. Untuk `system`, `dark()` mengikuti
   `QStyleHints::colorScheme()`, dan `colorSchemeChanged` diteruskan agar tema ikut berubah saat
   desktop berganti mode ketika aplikasi berjalan.
-- `src/ui/qml/Theme.qml` sekarang menurunkan **seluruh palet** dari satu properti `dark`. Ia tetap
-  singleton tanpa logika per-frame; hanya satu boolean yang berubah.
-- `Main.qml` mengikat `Theme.dark` ke `app.settings.dark` lewat `Binding`, dan menu ⚙ (kanan atas)
-  berisi pilihan System / Light / Dark.
+- `src/ui/qml/Theme.qml` sekarang menurunkan **seluruh palet** dari dua properti kecil: `dark`
+  (boolean) dan `accent` (nama preset, bukan warna). Ia tetap singleton tanpa logika per-frame.
+  Ke-enam preset aksen — `blue`, `teal`, `purple`, `pink`, `orange`, `green` — mendefinisikan
+  varian terang/gelapnya masing-masing di satu tempat, dan `systemIcons` (dari
+  `interface/system_icons`) memilih antara ikon bawaan sistem atau ikon bertema. Ke-enam aksen itu
+  juga yang tercantum di `packaging/io.github.mrrizkin.KinGaleri.metainfo.xml`.
+- `Main.qml` mengikat `Theme.dark` ke `app.settings.dark` lewat `Binding`. Pilihan System / Light /
+  Dark, warna aksen, dan bahasa tinggal di halaman **Settings → Interface** (`SettingsView`), bukan
+  di dropdown header; tombol paling kanan header hanya tombol navigasi ke Settings.
 
 Kontras kedua palet: latar `#14161a`↔`#f6f7f9`, teks `#eef1f6`↔`#1b1f27`, aksen `#4c8dff`↔`#2f6fe4`.
 
 ## 2. i18n EN / ID
 
-- Semua string antarmuka sudah dibungkus `qsTr()` (129 pesan di QML + 1 di C++).
-- Katalog Indonesia: `resources/i18n/kin-galeri_id.ts` (124 pesan diterjemahkan).
+- Seluruh string QML sudah dibungkus `qsTr()`. Katalog Indonesia:
+  `resources/i18n/kin-galeri_id.ts` — **258 pesan, semuanya diterjemahkan** (0 `unfinished`),
+  tersebar di 10 konteks: `Main`, `Sidebar`, `MediaGrid`, `AlbumsView`, `AlbumCard`,
+  `SettingsView`, `ViewerOverlay`, `MpvVideoSurface`, `PerfOverlay`, `KinMpvItem`.
 - Digabungkan saat build oleh `qt_add_translations()` (lihat `CMakeLists.txt`) ke resource
   `:/i18n/kin-galeri_id.qm`. `AppSettings::applyLanguage()` memuatnya saat preferensi berubah;
   mengganti bahasa memicu `LanguageChange` sehingga binding `qsTr()` di QML dievaluasi ulang **tanpa
@@ -37,6 +44,18 @@ Kontras kedua palet: latar `#14161a`↔`#f6f7f9`, teks `#eef1f6`↔`#1b1f27`, ak
 - Bahasa Inggris adalah bahasa sumber, jadi tidak butuh `.qm`; memilih English menghapus translator.
 
 Penerjemahan sebagian tidak apa-apa: entri yang belum diterjemahkan jatuh ke teks sumber (Inggris).
+
+**Belum (lihat §10):** tiga konteks C++ — `AppController`, `ShortcutRegistry`, `MediaGridModel` —
+belum ada di katalog, dan beberapa string dibangun dengan `QStringLiteral` sehingga tidak bisa
+diterjemahkan sama sekali (mis. status `"Ready"` dan ringkasan grid `"%1 items · %2"`). Terlihat di
+UI Indonesia: sidebar dan halaman Pengaturan sudah Indonesia, sementara isi status bar tetap
+Inggris.
+
+> **Peringatan tool.** `lupdate` dari `qt6-tools` 6.12.0 di mesin dev **tidak** dibangun dengan
+dukungan QML/JavaScript ("missing qml/javascript support"). Menjalankan target `update_translations`
+di sana akan menghapus seluruh 258 pesan QML; itulah kenapa `CMakeLists.txt` menambahkan probe saat
+konfigurasi. `lupdate-pro` di mesin yang sama punya dukungan QML tetapi hanya menerima berkas
+`.pro`, jadi `.ts` disunting dengan tangan (lihat `CONTRIBUTING.md`).
 
 ## 3. HiDPI & fractional scaling (F-3.10)
 
@@ -59,13 +78,18 @@ backend scenegraph. Ini penting: sesudah konstruktor, perubahan sudah terlambat.
   kolom pencarian. Kontrol berteks sudah otomatis punya nama dari `text`.
 - Seluruh aksi penting tetap punya jalan pintas papan tombol (lihat user guide).
 
-**Belum:** kustomisasi shortcut oleh pengguna (PRD M4 menyebutnya). Aksi saat ini memakai `Shortcut`
-statis di QML; menjadikannya dapat dikonfigurasi butuh halaman pengaturan + skema tombol sendiri.
-Ditandai sebagai item M5, bukan diklaim selesai.
+**Kustomisasi shortcut — sudah ditutup (sebelumnya ditandai item M5).**
+`src/app/ShortcutRegistry.{h,cpp}` memegang skema aksi → sequence yang persisten di `QSettings`,
+normalisasi sequence, deteksi konflik (`conflictsFor()`), penangkapan dari key event
+(`sequenceFromKey()`), dan `resetAll()`. `SettingsView` punya halaman **Shortcuts** dengan satu
+tombol per aksi; menekan tombol membuka popup penangkap tombol yang langsung menampilkan konflik.
+Semua `Shortcut` di `Main.qml` memakai `app.shortcuts.sequences["…"]`, jadi perubahan berlaku tanpa
+restart. Dikunci oleh `tests/tst_shortcuts.cpp` dan diverifikasi visual (popup ter-center, tombol
+Reset all).
 
 ## 6. Unit test (item 1)
 
-Direktori `tests/` (sebelumnya tidak ada) berisi 7 target Qt Test + CTest, diaktifkan dengan
+Direktori `tests/` (sebelumnya tidak ada) berisi 10 target Qt Test + CTest, diaktifkan dengan
 `-DKG_BUILD_TESTS=ON`. `kin-galeri-testcore` (static library) mengompilasi subset sumber non-QML
 sehingga target aplikasi tidak terganggu.
 
@@ -78,6 +102,9 @@ sehingga target aplikasi tidak terganggu.
 | `tst_mediagridmodel` | album CRUD, seleksi, filter tanggal, rename/move + rollback + undo, trash + undo |
 | `tst_librarymaintenance` | pemulihan FTS |
 | `tst_folderindexer` | index awal, incremental skip, upsert, rekonsiliasi file hilang |
+| `tst_shortcuts` | skema default, rebind persisten, konflik ditolak, reset satu aksi vs `resetAll`, tangkapan key event, sampah tersimpan diabaikan |
+| `tst_grouping` | jarak haversine, merge/pisah klaster geo, label kota bawaan, pemisahan event per jeda waktu & lompatan tempat, urutan, penulisan tempat+event |
+| `tst_imageloader` | deteksi `heif-convert` per platform, decode berkas hilang, decode round-trip |
 
 Semua memakai `QTemporaryDir`; library pengguna tidak tersentuh. Dua bug ditemukan oleh test ini:
 `Database` tidak punya destruktor (koneksi bocor antar-instance), dan ekspektasi `scanned` menghitung
@@ -140,9 +167,23 @@ dari perubahan M4.
 
 ## 10. Yang masih terbuka
 
-- **Kustomisasi shortcut** (PRD M4) — belum; lihat §5.
+- **Kustomisasi shortcut** (PRD M4) — **sudah ditutup**; lihat §5.
 - **AppImage/Flatpak/.deb belum dibangun** di lingkungan ini (§7.4). Skrip/manifest siap.
-- **Terjemahan C++**: string yang dibangun di C++ (mis. ringkasan `"5 items · 508 B"`) masih Inggris.
-  Untuk melokalkannya perlu `QCoreApplication::translate` di model/AppController.
+- **Terjemahan C++**: `AppController`, `ShortcutRegistry`, dan `MediaGridModel` belum ada di katalog
+  `.ts`, dan sebagian string dibangun dengan `QStringLiteral("…")` sehingga mustahil diterjemahkan
+  (mis. `"Ready"`, `"%1 items · %2"`). Ada 61 pemanggilan `tr()` di C++, nol yang punya terjemahan.
+  Jalur perbaikannya: bungkus string yang masih `QStringLiteral` dengan `tr()`, lalu tambahkan
+  konteksnya ke `.ts`.
+- **`UnqualifiedAccess` QML**: 241 peringatan qmllint berasal dari komponen bersarang yang membaca id
+  `root` milik komponen luarnya. Persis itu yang dilarang `pragma ComponentBehavior: Bound`.
+  Perbaikannya bukan satu-baris: delegate inline tidak bisa menerima `required` property dari view,
+  jadi tiap delegate harus dipindah ke berkasnya sendiri. Kategori ini untuk sementara dimatikan di
+  `.qmllint.ini` (dengan komentar alasannya); kategori lain tetap aktif dan gate
+  `./scripts/qml-lint.sh` sekarang keluar dengan **0 peringatan** (memakai `-W 0`, yang juga
+  menangkap peringatan yang tidak dicetak mode teks).
+- **`KinGaleri.Mpv` tanpa qmldir**: `MpvItem` didaftarkan saat runtime lewat `qmlRegisterType()`,
+  sehingga `MpvVideoSurface.qml` tidak bisa di-resolve pada waktu lint maupun kompilasi. Perbaikan
+  yang benar adalah modul QML statis (`qt_add_qml_module` + `QML_ELEMENT`) untuk tipe itu; untuk
+  sekarang berkasnya mematikan empat kategori qmllint dengan komentar yang menjelaskan alasannya.
 - **HEIC/HEIF** fallback `heif-convert` — **sudah ditutup**: `ImageLoader::decodeHeif` dipakai
   `ThumbnailService` dan `FullImageProvider` (lihat `src/core/thumbs/ImageLoader.cpp`).

@@ -7,15 +7,18 @@ Galeri foto & video **lokal-first** untuk Linux desktop — dibangun dengan **Qt
 
 Tanpa server, tanpa akun, tanpa network call wajib. Library Anda tetap di disk Anda.
 
-> **Status: M4 selesai** — versi `0.1.0`, diuji pada Qt 6.12.0 (+ libmpv/mpvqt).
+> **Status: M0–M4 selesai**, plus tag dengan indeks FTS5 dan fallback HEIC/HEIF di luar roadmap
+> milestone awal — versi `0.1.0`, diuji pada Qt 6.12.0 (+ libmpv/mpvqt).
 > Yang sudah jalan: schema DB + migrasi, indexing folder dengan **EXIF**, thumbnail cache,
 > grid bertimeline dengan **sticky header + scrollbar tanggal**, **viewer layar penuh**, pencarian **FTS5**,
 > **recycle bin**, filter album **di SQL**, **poster frame video** (FFmpeg), **pemutaran video
 > (libmpv)**, album manual + seleksi batch, move/rename/delete + **undo**, inotify watcher, filter
-> rentang tanggal, **tema terang/gelap**, **i18n EN/ID**, HiDPI/fractional scaling, unit test, dan
-> skrip pemaketan AppImage/Flatpak/.deb.
-> Belum ada: People/Places/Smart (M3) dan kustomisasi shortcut.
-> Laporan: [`docs/M4-REPORT.md`](docs/M4-REPORT.md) · [`docs/M2-REPORT.md`](docs/M2-REPORT.md) · [`docs/M1-REPORT.md`](docs/M1-REPORT.md) · [`docs/M0-REPORT.md`](docs/M0-REPORT.md) · [`docs/TECH-DEBT-REPORT.md`](docs/TECH-DEBT-REPORT.md) · [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) · [`PRD.md`](PRD.md).
+> rentang tanggal, **tema terang/gelap**, **i18n EN/ID**, HiDPI/fractional scaling, unit test,
+> skrip pemaketan AppImage/Flatpak/.deb, **smart grouping (People/Places/Events, M3)**, dan
+> **kustomisasi keyboard shortcut**.
+> Belum ada: artefak AppImage/Flatpak/.deb yang sudah dibangun (skrip siap, belum divalidasi di
+> lingkungan paket nyata) dan split manual klaster wajah (M5).
+> Laporan: [`docs/M4-REPORT.md`](docs/M4-REPORT.md) · [`docs/M3-REPORT.md`](docs/M3-REPORT.md) · [`docs/M2-REPORT.md`](docs/M2-REPORT.md) · [`docs/M1-REPORT.md`](docs/M1-REPORT.md) · [`docs/M0-REPORT.md`](docs/M0-REPORT.md) · [`docs/TECH-DEBT-REPORT.md`](docs/TECH-DEBT-REPORT.md) · [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) · [`PRD.md`](PRD.md).
 
 ---
 

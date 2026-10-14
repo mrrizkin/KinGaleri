@@ -46,6 +46,34 @@ Add a test next to the existing ones in `tests/` when you fix a bug or add
 behaviour that can be checked without a display. New settings must be covered in
 `tst_appsettings.cpp`.
 
+## QML lint
+
+Run the gate from the repo root:
+
+```bash
+cmake -S . -B build -G Ninja        # once, to generate the lint response file
+./scripts/qml-lint.sh               # exit 0 == zero warnings
+```
+
+`scripts/qml-lint.sh` must finish with **zero warnings**. Two traps it works
+around, so prefer it over calling `qmllint` yourself:
+
+* `qt5-declarative` ships its own `qmllint` at `/usr/bin/qmllint`, which shadows
+the Qt 6 binary (`/usr/lib/qt6/bin/qmllint`) and produces nothing useful.
+* `cmake --build build --target all_qmllint` runs qmllint through CMake, does
+**not** fail on warnings, and is skipped when its stamp file is up to date — its
+empty output is easy to mistake for "clean". The script reuses the response file
+CMake generates (`<build>/.rcc/qmllint/kin-galeri.rsp`) and adds `-W 0`, which
+turns any warning into a non-zero exit code. It also parses warnings that plain
+text output hides, e.g. `block-scope-var-declaration` for a `var` in a block.
+
+`.qmllint.ini` switches off exactly one category, `UnqualifiedAccess`, because
+its 241 hits all come from nested components reading an outer `root` id, and a
+proper fix means moving inline delegates into their own files. Everything else
+stays enabled; if a new warning appears, fix it, or silence it narrowly with a
+`// qmllint disable <category>` comment that states the reason (`MpvVideoSurface.qml`
+and `ViewerOverlay.qml` have examples).
+
 ## Code style
 
 - C++20, Qt 6 conventions. Match the style of the file you are editing.

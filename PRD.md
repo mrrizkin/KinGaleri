@@ -562,7 +562,7 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 ### M4 — Polish & Packaging (2–3 minggu)
 - [x] Theme light/dark, HiDPI/fractional scaling
 - [x] i18n EN/ID
-- [x] Accessibility pass (kustomisasi shortcut masih terbuka → M5)
+- [x] Accessibility pass + kustomisasi shortcut (halaman Shortcuts + `ShortcutRegistry`; dulu ditandai item M5, sekarang selesai)
 - [x] Performance profiling pass (target semua metrik §4.1 terpenuhi)
 - [x] Docs + user guide (`docs/USER-GUIDE.md`, `docs/M4-REPORT.md`)
 - [~] AppImage + Flatpak + .deb — skrip & manifest siap (`packaging/`), **belum dibangun** di

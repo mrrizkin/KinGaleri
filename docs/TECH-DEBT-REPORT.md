@@ -338,12 +338,23 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
   Lihat `docs/M2-REPORT.md` §9–§10.
 - **Target memory 100k** terukur 330 MB (peak 351 MB), jauh di bawah target PRD < 550 MB. Lihat
   `docs/M2-REPORT.md` §8.
-- **Tidak ada test sama sekali.** Sekarang ada `tests/` (6 target, `-DKG_BUILD_TESTS=ON`) yang mengunci
-  perilaku M2: album CRUD, seleksi, filter tanggal, rename/move termasuk rollback, trash + undo,
-  incremental scan + rekonsiliasi, debounce watcher, parsing CLI, dan jalur pemulihan FTS.
+- **Tidak ada test sama sekali.** Sekarang ada `tests/` (10 target, `-DKG_BUILD_TESTS=ON`) yang mengunci
+  perilaku M2–M4: album CRUD, seleksi, filter tanggal, rename/move termasuk rollback, trash + undo,
+  incremental scan + rekonsiliasi, debounce watcher, parsing CLI, jalur pemulihan FTS, skema shortcut
+  pengguna, pengelompokan tanggal/geo/event, dan deteksi decoder HEIF.
 
 ### Masih terbuka
 
+- **Terjemahan C++ (M4)**: 61 pemanggilan `tr()` di `AppController`/`ShortcutRegistry`/
+  `MediaGridModel` belum punya entri di katalog `.ts`, dan beberapa string masih dibangun dengan
+  `QStringLiteral("…")` (mis. status `"Ready"`, ringkasan grid `"%1 items · %2"`). `.ts` saat ini
+  berisi 258 pesan, semuanya dari konteks QML. Lihat `docs/M4-REPORT.md` §2 dan §10.
+- **Peringatan `UnqualifiedAccess` qmllint (241 buah)**: komponen bersarang membaca id `root` pihak
+  luar, yang dilarang `pragma ComponentBehavior: Bound`. Kategori ini dimatikan di `.qmllint.ini`
+  dengan komentar alasan; kategori lain aktif dan gate `./scripts/qml-lint.sh` sekarang 0 peringatan.
+- **`KinGaleri.Mpv` belum punya qmldir statis**: tipe `MpvItem` didaftarkan runtime lewat
+  `qmlRegisterType()`, sehingga `MpvVideoSurface.qml` tidak bisa di-resolve saat lint/kompilasi.
+  Kandidat perbaikan: `qt_add_qml_module` + `QML_ELEMENT` untuk modul tersebut.
 - **Tampilan trash** (`deleted_at IS NOT NULL`) tidak memakai partial index — dapat diterima karena
   recycle bin secara alami kecil.
 - **`Database` menamai koneksi per-thread, bukan per-file/instance.** Aman untuk aplikasi saat ini,

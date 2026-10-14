@@ -9,7 +9,8 @@
 ## 0. Ringkasan proyek
 
 - **Nama**: Kin Galeri (klon Immich lokal-first untuk Linux).
-- **Path**: `/home/mrrizkin/Projects/work/oss/gallery` — **bukan git repo**.
+- **Path**: `/home/mrrizkin/Projects/work/oss/gallery` — **git repo** (lihat `git log` untuk riwayat;
+  dokumen ini ditulis sebelum repo di-init, keterangan lama "bukan git repo" sudah tidak berlaku).
 - **Stack**: Qt 6.12.0 + QML (Qt Quick Controls) + C++20, video via libmpv (`KinMpvItem`).
   Linux **Artix**, tanpa `sudo`. X11 di `DISPLAY=:0.0`.
 - **Binary**: `build/kin-galeri`.
@@ -88,25 +89,29 @@ sekali lagi sebelum `xdotool type`. `xdotool type` lebih andal daripada clipboar
 
 ## 4. Lead / dugaan bug (mulai dari sini)
 
-1. **Tema dari config kadang tidak diterapkan pada cold start.** Teramati: config
-   `theme=light` tetapi UI render **dark**, sementara menu ⚙ mencentang "Theme: Light";
-   setelah relaunch, UI jadi light. Kandidat: `Binding { target: Theme; property: "dark";
-   value: window.app.settings.dark }` di `src/ui/qml/Main.qml` (sekitar baris 35) di-evaluasi
-   sebelum `AppSettings` siap. Coba reproduksi dengan me-restart beberapa kali
-   (`XDG_CONFIG_HOME=/tmp/kgm4cfg`, tema light dan dark). Kalau perlu ganti ke
-   `Component.onCompleted` + `Connections { target: app.settings; function onDarkChanged() {...} }`
-   atau `Q_PROPERTY` yang push nilai ke singleton.
-2. **Teks menu terpotong**: item terakhir menu ⚙ tampil `Language: Bahasa Indo…`.
-   Menu terlalu sempit. Perbaiki di `settingsMenu` pada `src/ui/qml/Main.qml`.
-3. **Menu ⚙ nyaris keluar tepi kanan jendela** (dibuka dari tombol paling kanan).
-   Cek apakah ada beberapa piksel overflow / terpotong oleh tepi window.
+> **Status ringkas (disunting setelah verifikasi):** lead 1–3 di bawah **sudah tidak berlaku**.
+> Menu ⚙ yang mereka rujuk tidak ada lagi di header — ikon paling kanan sekarang adalah tombol
+> navigasi ke halaman Settings (terverifikasi lewat tooltip "Settings"), dan pilihan tema/bahasa
+> pindah ke **Settings → Interface**. Sisa lead (4–8) tetap relevan.
+
+1. ~~**Tema dari config kadang tidak diterapkan pada cold start.**~~ **Tidak tereproduksi.** Cold
+   start dengan `theme=light` di config langsung merender UI terang (screenshot
+   `/tmp/kgv/shot-light-en.png`), begitu pula `theme=dark` (`/tmp/kgv/shot-dark-id.png`). `Binding`
+   di `Main.qml` aman. Kalau regresi muncul lagi, langkah reproduksi lama tetap berguna: restart
+   beberapa kali dengan `XDG_CONFIG_HOME=/tmp/kgm4cfg`.
+2. ~~**Teks menu terpotong**: `Language: Bahasa Indo…`.~~ **Tidak berlaku.** Pilihan bahasa kini ada
+   di halaman Interface, bukan di menu dropdown; label penuh ("Bahasa Indonesia") tidak terpotong.
+3. ~~**Menu ⚙ nyaris keluar tepi kanan jendela.**~~ **Tidak berlaku.** Tidak ada lagi dropdown di
+   header; yang ada hanya tombol ikon Settings dengan tooltip di sebelah kiri tepi kanan.
 4. **Konsistensi tema terang**: pastikan semua elemen ikut palet terang — menu, semua Dialog
    (rename/move/album picker/error), selection bar, scrollbar, `ViewerOverlay`, `PerfOverlay`,
    `MpvVideoSurface`, `Sidebar`.
 5. **i18n belum menyeluruh**: string yang dibangun di **C++** masih Inggris, mis. ringkasan
    `5 items · 508 B`, footer `watching N folders`, `Ready`, pesan error/undo. Alihkan ke
-   `tr()` + tambahkan ke `resources/i18n/kin-galeri_id.ts` (124 pesan saat ini; konteks =
-   basename file QML + C++). Verifikasi `:/i18n/kin-galeri_id.qm` ikut ter-embed.
+   `tr()` + tambahkan ke `resources/i18n/kin-galeri_id.ts` (258 pesan saat ini, semuanya konteks
+   QML; konteks C++ `AppController`/`ShortcutRegistry`/`MediaGridModel` belum ada). **Jangan**
+   jalankan target `update_translations` di mesin ini — `lupdate` dari `qt6-tools` 6.12.0 tidak
+   punya dukungan QML dan akan menghapus ke-258 pesan QML. Sunting `.ts` dengan tangan.
 6. **HiDPI/fractional scaling** belum diverifikasi visual. Uji:
    ```bash
    QT_SCALE_FACTOR=1.25 DISPLAY=:0.0 ./build/kin-galeri ...   # lalu 1.5, 2.0
@@ -120,8 +125,8 @@ sekali lagi sebelum `xdotool type`. `xdotool type` lebih andal daripada clipboar
 
 ```
 src/ui/qml/
-  Main.qml            # window, header, settingsMenu, dialog rename/move/error, selectionBar, shortcut
-  Theme.qml           # SINGLETON (QT_QML_SINGLETON_TYPE) — seluruh palet dari `property bool dark`
+  Main.qml            # window, header (menu Date, Select, Undo, tombol Settings), dialog rename/move/error, selectionBar, shortcut
+  Theme.qml           # SINGLETON (QT_QML_SINGLETON_TYPE) — seluruh palet dari `dark` + `accent` + `systemIcons`
   Sidebar.qml         # LIBRARY / ALBUMS / COLLECTIONS, dialog album, tombol bawah
   MediaGrid.qml       # grid, scroll, context menu, selection handling, album picker
   MediaRow.qml        # satu baris grid
@@ -145,20 +150,28 @@ QT_QPA_PLATFORM=offscreen timeout 6 ./build/kin-galeri --no-ui --db /tmp/kgidx.d
 QT_QPA_PLATFORM=offscreen timeout 6 ./build/kin-galeri --db /tmp/kgidx.db --cache /tmp/kgidxc 2>&1 \
   | grep -iE "error|undefined|TypeError|binding loop" | grep -iv "Gtk\|murrine\|canberra"
 
-# Unit test (7 target, harus 7/7 pass)
+# Unit test (10 target, harus 10/10 pass)
 cmake -S . -B build-tests -G Ninja -DKG_BUILD_TESTS=ON
 cmake --build build-tests
 ctest --test-dir build-tests --output-on-failure
 
-# Lint QML
-/usr/lib/qt6/bin/qmllint src/ui/qml/*.qml
+# Lint QML — pakai gate-nya, JANGAN `qmllint` dari PATH:
+# qt5-declarative memasang /usr/bin/qmllint (Qt 5) yang membayangi Qt 6 milik
+# /usr/lib/qt6/bin. Target `all_qmllint` juga tidak gagal saat ada warning dan
+# dilewati bila stamp-nya masih segar; gate menambahkan `-W 0`.
+./scripts/qml-lint.sh                       # harus 0 Warning, exit 0
 ```
 
 ## 7. Batasan / jangan disentuh
 
 - **Jangan** mengubah handling video-EOF di `src/ui/quick/KinMpvItem.{h,cpp}` +
-  `MpvVideoSurface.qml` — sudah selesai & terverifikasi (lihat `docs/M2-REPORT.md` §6).
-- Jangan regresi 7 unit test (`build-tests`).
+  `MpvVideoSurface.qml` — sudah selesai & terverifikasi (lihat `docs/M2-REPORT.md` §6). Diperiksa
+  ulang di sesi ini: di akhir klip muncul tombol replay ↻ dengan frame terakhir tetap tampil dan
+  tanpa spinner.
+- Jangan regresi 10 unit test (`build-tests`).
+- Jangan naikkan jumlah warning qmllint: `./scripts/qml-lint.sh` sekarang keluar dengan 0
+  peringatan. Kalau muncul peringatan baru, perbaiki atau matikan secara sempit dengan komentar
+  alasan di tempat (lihat `MpvVideoSurface.qml` dan `.qmllint.ini` sebagai contoh).
 - Jangan hapus fitur tema/i18n yang sudah ada; perbaiki, bukan matikan.
 - Tool yang **tidak** tersedia: `linuxdeploy`, `flatpak-builder`, `dpkg-deb`, `sudo`.
 - `qt_generate_deploy_qml_app_script` **sengaja** tidak dipakai (gagal di Qt 6.12 + CMake 4.4).
@@ -167,8 +180,8 @@ ctest --test-dir build-tests --output-on-failure
 ## 8. Definition of done
 
 - Bug UI diperbaiki; light & dark konsisten; menu tidak terpotong.
-- `cmake --build build` bersih; smoke offscreen tanpa error QML.
-- `ctest` 7/7 lulus.
+- `cmake --build build` bersih; smoke offscreen tanpa error QML; `./scripts/qml-lint.sh` exit 0.
+- `ctest` 10/10 lulus.
 - Ringkas temuan + langkah reproduksi + bukti (screenshot /tmp) di laporan.
 - Update `docs/M4-REPORT.md` §10 (open items) bila ada item yang tertutup.
 

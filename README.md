@@ -1,5 +1,8 @@
 # Kin Galeri
 
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Linux-informational.svg)](#build)
+
 Galeri foto & video **lokal-first** untuk Linux desktop — dibangun dengan **Qt 6 / Qt Quick (QML) + C++20**.
 
 Tanpa server, tanpa akun, tanpa network call wajib. Library Anda tetap di disk Anda.
@@ -397,12 +400,32 @@ src/
     benchmark/        BenchmarkSeeder
   models/             MediaGridModel (model dua tingkat baris → item)
   ui/
-    quick/            ThumbnailProvider (image://thumbs/<id>), FullImageProvider (image://full/…)
-    qml/              Main, Theme, Sidebar, MediaGrid, MediaRow, MediaCell,
+    quick/            ThumbnailProvider (image://thumbs/<id>), FullImageProvider (image://full/…),
+                      ThemeIconProvider (image://themeicon/<name>)
+    qml/              Main, Theme, AppIcon, Sidebar, MediaGrid, MediaRow, MediaCell,
                       TimelineHeader, PerfOverlay, ViewerOverlay, AlbumsView,
                       AlbumCard, SettingsView
 ```
 
 ## Lisensi
 
-Belum ditentukan.
+Kin Galeri adalah **perangkat lunak bebas** dan dirilis di bawah
+**[GNU General Public License v3.0 atau lebih baru (GPL-3.0-or-later)](LICENSE)**.
+
+```
+Copyright (C) 2026 Kin Galeri contributors (mrrizkin)
+
+This program is free software: you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation, either version 3 of the License, or (at your option) any later
+ version.
+```
+
+Ini adalah program bebas: Anda boleh memakai, mempelajari, mengubah, dan
+mendistribusikannya. Konsekuensinya, **turunan/redistribusi juga harus tetap
+open source di bawah GPL** — kamu tidak boleh mengambil kode ini lalu menutup
+sumbernya.
+
+Lisensi ini dipilih karena aplikasi ini menautkan **Qt 6**, **libmpv/mpv**, dan
+**FFmpeg**, yang kompatibel penuh dengan GPL-3.0-or-later. Teks lisensi lengkap
+ada di file [`LICENSE`](LICENSE).

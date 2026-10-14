@@ -295,6 +295,8 @@ install(TARGETS kin-galeri RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/io.github.mrrizkin.KinGaleri.desktop
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/io.github.mrrizkin.KinGaleri.metainfo.xml
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/io.github.mrrizkin.KinGaleri.svg
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps)
 
@@ -311,6 +313,7 @@ set(CPACK_PACKAGE_VENDOR "Kin Galeri")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Fast local photo & video library for Linux")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CONTACT "io.github.mrrizkin")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)

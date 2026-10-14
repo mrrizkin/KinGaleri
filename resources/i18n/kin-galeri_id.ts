@@ -492,6 +492,18 @@
         <translation>Gunakan ikon sistem</translation>
     </message>
     <message>
+        <source>License</source>
+        <translation>Lisensi</translation>
+    </message>
+    <message>
+        <source>GPL-3.0-or-later — free software</source>
+        <translation>GPL-3.0-or-later — perangkat lunak bebas</translation>
+    </message>
+    <message>
+        <source>Source</source>
+        <translation>Sumber</translation>
+    </message>
+    <message>
         <source>Use the desktop's icon theme for the sidebar, settings and toolbar. Turn this off to use the built-in text glyphs instead.</source>
         <translation>Gunakan tema ikon desktop untuk sidebar, pengaturan, dan bilah alat. Matikan untuk memakai glif teks bawaan.</translation>
     </message>

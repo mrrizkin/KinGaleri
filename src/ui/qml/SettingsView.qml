@@ -991,6 +991,14 @@ Item {
                     label: qsTr("Video backend")
                     value: root.app.videoBackend
                 }
+                InfoRow {
+                    label: qsTr("License")
+                    value: qsTr("GPL-3.0-or-later — free software")
+                }
+                InfoRow {
+                    label: qsTr("Source")
+                    value: "github.com/mrrizkin/KinGaleri"
+                }
 
                 Label {
                     Layout.fillWidth: true

@@ -149,7 +149,7 @@ tersimpan, tidak ada tombol Apply.
 - **Thumbnails** — anggaran cache memori (adaptif, atau 32–2048 MB) dan info/aksi cache disk.
 - **Playback** — putar video otomatis, ulang, mulai tanpa suara, volume default, dan backend.
 - **Storage** — info cache/database, tombol **Bersihkan cache thumbnail** dan **Tambah folder…**.
-- **Tentang** — versi aplikasi dan backend video.
+- **Tentang** — versi aplikasi, backend video, lisensi (GPL-3.0-or-later) dan tautan sumber.
 
 **Developer mode** (default nonaktif) menyembunyikan permukaan khusus pengembang dari UI normal:
 Tombol **Perf** di toolbar dan pintasan `F12`, tombol **Generate 50,000 rows** di layar kosong,

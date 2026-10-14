@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata for Kin Galeri.
+
+  This is what desktop software centers and Flathub read: the project license,
+  homepage/bugtracker links and the release notes. Keep the <id> equal to the
+  application id and to the .desktop file name so the launchable lookup works.
+-->
+<component type="desktop-application">
+  <id>io.github.mrrizkin.KinGaleri</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Kin Galeri</name>
+  <summary>Fast local photo &amp; video library for Linux</summary>
+
+  <description>
+    <p>
+      Kin Galeri is a local-first photo and video library for the Linux desktop,
+      built with Qt 6, Qt Quick and C++20.
+    </p>
+    <p>
+      It indexes folders on disk into a searchable catalog with EXIF metadata and
+      a thumbnail cache, so browsing a large collection stays fast. Photos and
+      videos are never modified unless you explicitly ask; removing something
+      sends it to a recycle bin inside the library.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Recursive folder indexing with selectable ignore rules</li>
+      <li>Timeline grid, full-screen viewer and playback via libmpv</li>
+      <li>Full-text search over file names, albums and camera metadata</li>
+      <li>Manual and source-based albums, favourites and soft-delete recycle bin</li>
+      <li>Light/dark themes, six accent colours and English/Indonesian UI</li>
+      <li>No account, no server and no mandatory network access</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.mrrizkin.KinGaleri.desktop</launchable>
+
+  <categories>
+    <category>Graphics</category>
+    <category>Photography</category>
+    <category>Viewer</category>
+  </categories>
+
+  <keywords>
+    <keyword>photo</keyword>
+    <keyword>image</keyword>
+    <keyword>video</keyword>
+    <keyword>gallery</keyword>
+    <keyword>library</keyword>
+    <keyword>album</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/mrrizkin/KinGaleri</url>
+  <url type="bugtracker">https://github.com/mrrizkin/KinGaleri/issues</url>
+  <url type="vcs-browser">https://github.com/mrrizkin/KinGaleri</url>
+
+  <developer id="io.github.mrrizkin">
+    <name>mrrizkin</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-14">
+      <description>
+        <p>First public release: indexing, thumbnails, timeline grid, viewer,
+        video playback, albums, recycle bin, search and settings.</p>
+      </description>
+    </release>
+  </releases>
+</component>

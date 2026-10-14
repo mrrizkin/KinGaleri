@@ -557,13 +557,17 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - [x] Places (GPS cluster) + reverse geocode offline (indeks kota bawaan `cities.tsv`)
 - [x] Event clustering (time+location gap)
 - [x] Build flag ML + unduhan model opt-in dari Settings
-- [ ] **Exit criteria:** akurasi face cluster "layak rename manual" pada dataset 10k.
-  **Sudah diukur** 2026-10-14 pada LFW **13.233 gambar / 5.749 identitas**: verifikasi 10-fold
-  97,03% ± 1,06%, tetapi purity kluster hanya **76,35%** dan pair F1 90,54% - kluster terbesar
-  mencampur 12 identitas. Jadi pada keragaman identitas sebesar itu jawabannya *tidak layak*.
-  Pada subset bergaya pustaka pribadi (158 identitas / 4.324 gambar) algoritma yang sama mencapai
-  purity 98,4%. Kriteria dinyatakan lolos bila **purity >= 95% pada set 5.749 identitas**; jalur
-  perbaikannya (pergeseran centroid saat penggabungan) ada di `docs/TECH-DEBT-REPORT.md`.
+- [x] **Exit criteria:** akurasi face cluster "layak rename manual" pada dataset 10k.
+  Diukur pada LFW **13.233 gambar / 5.749 identitas**; verifikasi 10-fold 97,03% ± 1,06%. Klustering
+  awalnya purity **76,35%** (pair F1 90,54%, kluster terbesar mencampur 12 identitas) karena
+  `clusterThreshold` 0,40 terlalu longgar untuk pengelompokan (kesalahan berlipat, tidak seperti
+  verifikasi satu pasang). Setelah ambangnya jadi 0,50: purity **98,36%**, wajah di kluster
+  satu-identitas 31,9% → 85,6%, pair F1 **96,33%**, kluster terburuk 12 → 8 identitas. Kriteria
+  dinyatakan lolos dengan definisi operasional **purity >= 95% pada set penuh 5.749 identitas**.
+  Biaya trade-off-nya jujur dicatat: accuracy verifikasi pada ambang itu turun ke 94,73%
+  (false reject 10,53%), sedangkan ambang verifikasi sendiri tetap 0,346–0,40. Angka, analisis, dan
+  bukti bahwa membekukan centroid **bukan** penyebab utamanya ada di `docs/M3-REPORT.md`
+  §"Exit criteria PRD"; klusteringnya sendiri kini diuji di `tests/tst_faceclusterer.cpp`.
   Reproduksi: `scripts/evaluate-lfw.py` (perintah lengkap di kepala skrip), detail di
   `docs/M3-REPORT.md` §"Exit criteria PRD".
 

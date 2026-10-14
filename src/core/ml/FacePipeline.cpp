@@ -1,3 +1,4 @@
+#include "core/ml/FaceClusterer.h"
 #include "core/ml/FacePipeline.h"
 
 #include "core/db/Database.h"
@@ -32,40 +33,6 @@ QVector<float> fromBlob(const QByteArray &blob)
     if (count > 0)
         memcpy(values.data(), blob.constData(), static_cast<size_t>(count) * sizeof(float));
     return values;
-}
-
-struct StoredFace
-{
-    qint64 id = 0;
-    qint64 mediaId = 0;
-    QVector<float> embedding;
-};
-
-struct Cluster
-{
-    QVector<float> centroid;
-    QVector<qint64> faceIds;
-    QVector<qint64> mediaIds; ///< first entry is the highest-confidence cover
-    QString name;
-};
-
-/// Adds a member to a cluster and folds it into the running mean. The centroid is
-/// re-normalised so it can still be compared by cosine.
-void addToCluster(Cluster &cluster, const StoredFace &face)
-{
-    const int count = cluster.faceIds.size();
-    if (count == 0) {
-        cluster.centroid = face.embedding;
-    } else {
-        for (int i = 0; i < cluster.centroid.size(); ++i) {
-            cluster.centroid[i] =
-                (cluster.centroid.at(i) * count + face.embedding.at(i)) / (count + 1);
-        }
-        normalise(cluster.centroid);
-    }
-    cluster.faceIds.append(face.id);
-    if (!cluster.mediaIds.contains(face.mediaId))
-        cluster.mediaIds.append(face.mediaId);
 }
 
 } // namespace
@@ -196,7 +163,7 @@ FacePipelineResult FacePipeline::run(const FacePipelineOptions &options,
     }
 
     // ---- 3. load every face (old and new) and cluster ----------------------
-    QVector<StoredFace> all;
+    QVector<FaceSample> all;
     {
         QSqlQuery query(m_database.connection());
         query.prepare(QStringLiteral(
@@ -215,25 +182,7 @@ FacePipelineResult FacePipeline::run(const FacePipelineOptions &options,
         }
     }
 
-    QVector<Cluster> clusters;
-    for (const StoredFace &face : all) {
-        int best = -1;
-        double bestScore = options.clusterThreshold;
-        for (int i = 0; i < clusters.size(); ++i) {
-            const float score = cosineSimilarity(face.embedding, clusters.at(i).centroid);
-            if (score > bestScore) {
-                bestScore = score;
-                best = i;
-            }
-        }
-        if (best < 0) {
-            Cluster cluster;
-            addToCluster(cluster, face);
-            clusters.append(cluster);
-        } else {
-            addToCluster(clusters[best], face);
-        }
-    }
+    QVector<FaceCluster> clusters = clusterFaces(all, options.clusterThreshold);
 
     // ---- 4. carry user-assigned names across the re-cluster ----------------
     {
@@ -282,7 +231,7 @@ FacePipelineResult FacePipeline::run(const FacePipelineOptions &options,
     assign.prepare(QStringLiteral("UPDATE faces SET person_id = ? WHERE id = ?"));
 
     int peopleCount = 0;
-    for (const Cluster &cluster : clusters) {
+    for (const FaceCluster &cluster : clusters) {
         if (cluster.faceIds.isEmpty())
             continue;
         const qint64 coverMedia = cluster.mediaIds.isEmpty() ? 0 : cluster.mediaIds.first();

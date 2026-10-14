@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/ml/VectorMath.h"
+
 #include <QImage>
 #include <QPointF>
 #include <QRectF>
@@ -75,11 +77,5 @@ private:
     QString m_error;
 #endif
 };
-
-/// L2-normalises a vector in place (no-op for a zero vector).
-void normalise(QVector<float> &vector);
-
-/// Cosine similarity of two L2-normalised vectors.
-float cosineSimilarity(const QVector<float> &a, const QVector<float> &b);
 
 } // namespace kg::ml

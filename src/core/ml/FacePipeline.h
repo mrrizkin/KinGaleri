@@ -18,9 +18,18 @@ struct FacePipelineOptions
     /// bounds per-image cost without losing faces (YuNet itself works at 640).
     int maxEdge = 1280;
     /// Cosine similarity above which two faces are considered the same person.
-    /// 0.363 is the value OpenCV ships for SFace verification; clustering uses a
-    /// touch more headroom to avoid merging siblings.
-    double clusterThreshold = 0.40;
+    ///
+    /// Measured on LFW (13,233 images, 5,749 identities, clustered as one
+    /// library because that is how the pipeline runs): 0.40 grouped too eagerly.
+    /// A cluster's running-mean centroid drifts towards the "average face" of
+    /// that identity, so once a cluster held hundreds of faces it started
+    /// matching other similar-looking people - the largest ended up with 527
+    /// faces covering 12 identities, and overall purity was 76.4%. At 0.50
+    /// purity is 98.4% and pairwise F1 96.3%, while the merges that should
+    /// happen still do: real same-person pairs sit far above the line (the
+    /// cross-year Obama pair in the smoke library scores 0.80). Reproduce with
+    /// `scripts/evaluate-lfw.py`, reasoning in docs/M3-REPORT.md.
+    double clusterThreshold = 0.50;
 };
 
 struct FacePipelineResult

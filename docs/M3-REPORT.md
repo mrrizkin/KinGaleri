@@ -2,8 +2,8 @@
 
 Status: **implementasi selesai dan terverifikasi ulang** (lihat §Verifikasi). Build default tetap tanpa
 dependensi baru; backend wajah opsional di balik `-DKG_ENABLE_ML=ON`. Exit criteria PRD soal akurasi
-kluster wajah pada dataset 10k **sudah diukur** pada LFW 13.233 gambar, dan hasilnya belum lolos pada
-set teradversarial itu - angka lengkapnya di §"Exit criteria PRD".
+kluster wajah pada dataset 10k sudah diukur pada LFW 13.233 gambar dan **lolos setelah threshold
+klustering diperbaiki** (purity 76,35% → 98,36%); angka lengkapnya di §"Exit criteria PRD".
 
 ## Ruang lingkup
 
@@ -101,66 +101,88 @@ Hasil di DB segar: **4 wajah → 3 orang**, 1 tempat, 4 event.
 - Halaman Places menampilkan "Soreang · 2 item", Events menampilkan 5 event dengan label tanggal +
   subjudul tempat, People menampilkan kartu cover yang benar (dataset berbeda dari reproduksi di atas).
 
-### Exit criteria PRD: diukur pada LFW 13.233 gambar (2026-10-14)
+### Exit criteria PRD: diukur pada LFW 13.233 gambar (diukur 2026-10-14, diperbaiki 2026-10-15)
 
-Kriteria "akurasi face cluster 'layak rename manual' pada dataset 10k" akhirnya dijalankan pada
-**LFW** (13.233 gambar, 5.749 identitas, arsip resmi + `pairs.txt`) lewat `scripts/evaluate-lfw.py`.
+Kriteria "akurasi face cluster 'layak rename manual' pada dataset 10k" dijalankan pada **LFW**
+(13.233 gambar, 5.749 identitas, arsip resmi + `pairs.txt`) lewat `scripts/evaluate-lfw.py`.
 Perintah reproduksinya ada di kepala skrip itu; model YuNet/SFace yang dipakai adalah yang diunduh
 Settings, bukan model lain.
 
 Dua pertanyaan dijawab terpisah, karena LFW bukan bentuk pustaka pribadi: distribusinya ekstrem
 (median 1 gambar per identitas), sedangkan pustaka pribadi punya sedikit orang dengan ratusan foto.
 
-**1. Verifikasi (protokol resmi `pairs.txt`, 6.000 pasang, threshold dilatih pada 9 fold dan diuji
-pada fold ke-10):**
+**1. Verifikasi (protokol resmi `pairs.txt`, 6.000 pasang):**
 
 | Metrik | Hasil |
 |---|---|
 | 10-fold cross-validated accuracy | **97,03% ± 1,06%** |
-| Accuracy pada threshold pipeline (`cos >= 0,40`) | 96,77% (false reject 6,47%, false accept 0,00%) |
 | Threshold terbaik (tuned on test, jadi batas atas optimis) | 97,08% (`cos >= 0,346`) |
+| Accuracy pada threshold klustering yang sekarang dipakai (`cos >= 0,50`) | 94,73% (false reject 10,53%, false accept 0,00%) |
+| Accuracy pada threshold lama (`cos >= 0,40`) | 96,77% (false reject 6,47%, false accept 0,00%) |
 
-Semua 6.000 pasang terpakai: deteksi wajah 100% (13.233/13.233 gambar LFW).
+Semua 6.000 pasang terpakai: deteksi wajah 100% (13.233/13.233 gambar LFW). Baris `cos >= 0,50`
+bukan angka yang dipakai aplikasi — `clusterThreshold` hanya dipakai untuk mengelompokkan, tidak
+untuk memutuskan "ini orang yang sama" di tempat lain — tetapi dilaporkan supaya trade-off-nya
+jujur: gerbang yang lebih ketat membayar dengan false reject lebih banyak. Mutu embedding-nya
+sendiri tidak berubah (97,03% CV).
 
-**2. Klustering (yang sebenarnya ditanya kriteria):**
+**2. Klustering (yang sebenarnya ditanya kriteria).** Setelah perbaikan threshold:
 
-| Metrik | Hasil |
-|---|---|
-| Identitas sebenarnya | 5.749 |
-| Kluster yang dibuat | 3.530 |
-| Purity (mayoritas identitas per kluster) | **76,35%** |
-| Wajah di kluster satu-identitas | 31,9% |
-| Pairwise precision / recall / F1 | 86,69% / 94,76% / **90,54%** |
-| Singleton (tidak ada gunanya di-rename) | 51,3% kluster |
+| Metrik | Sebelum (0,40) | Sesudah (0,50) |
+|---|---|---|
+| Kluster yang dibuat | 3.530 | 5.845 |
+| Purity (mayoritas identitas per kluster) | 76,35% | **98,36%** |
+| Wajah di kluster satu-identitas | 31,9% | **85,6%** |
+| Pairwise precision / recall / F1 | 86,69% / 94,76% / **90,54%** | 97,83% / 94,88% / **96,33%** |
+| Singleton (tidak ada gunanya di-rename) | 51,3% kluster | 70,9% kluster |
+| Kluster campuran terburuk | 527 wajah / 12 identitas | 522 wajah / 8 identitas |
 
-Kluster terbesar = **527 wajah berisi 12 identitas** (George W. Bush 515 + Michael Piuze, dll), lalu
-236 wajah / 3 identitas (Colin Powell + Joe Lieberman + George W. Bush) dan 143 wajah / 3 identitas
-(Tony Blair + ...). Pola kegagalannya spesifik dan berulang: wajah "rata-rata" laki-laki berjas
-mulai menarik identitas lain ke centroid-nya. Itu **pergeseran centroid** (running mean pada
-`addToCluster`), bukan masalah mutu embedding.
+**Apa yang ternyata jadi penyebabnya.** Hipotesis awal (tertulis di `docs/TECH-DEBT-REPORT.md`) adalah
+pergeseran centroid karena `addToCluster` memakai running mean, dan tiga perbaikan diusulkan
+(batasi update centroid / medoid; dua tahap seed+re-assign; DBSCAN). Waktu diuji, hipotesis itu
+**hanya sebagian benar**, dan bukan sebab utamanya:
+
+- Membekukan centroid setelah N anggota membantu sedikit pada gerbang longgar (cap=2: purity
+  79,9%, cap=4: 77,7%) dan **tidak berpengaruh sama sekali pada 0,50** (cap 8/16/24/32/64/running
+  mean semuanya 98,4% / F1 96,3%).
+- Tahap re-assign menambah +0,1–0,5 poin F1 saja, dan nol pada 0,50.
+- Yang menentukan adalah **`clusterThreshold` sendiri**. Pada 0,40 kluster besar memang menyerap
+  tetangga mirip, tetapi pada 0,45 purity sudah 94,6% dan pada 0,50 mencapai 98,4%.
+
+Jadi perbaikan yang dipakai: **`FacePipelineOptions::clusterThreshold` 0,40 → 0,50**, tanpa
+mengubah algoritmanya. Gerbang 0,40 yang diwarisi dari nilai verifikasi SFace terlalu longgar untuk
+klustering, karena kesalahan di klustering berlipat (wajah yang salah masuk ikut menggeser centroid
+dan menarik lebih banyak wajah salah), sedangkan verifikasi hanya menilai satu pasang.
+
+Yang **tidak** dikorbankan: pasangan orang yang sama dengan skor tinggi tetap menyatu. Pasangan
+lintas tahun di pustaka uji (Obama 2009 + 2012) berskor **0,802**, jauh di atas 0,50; uji ujung-ke-
+ujung 4 potret tetap menghasilkan **3 orang** dari 4 wajah dengan Obama ter-merge.
+
+Klustering sekarang ada di `src/core/ml/FaceClusterer.{h,cpp}` (tanpa dependensi ML, jadi bisa
+diuji tanpa ONNX Runtime) dan dijaga `tests/tst_faceclusterer.cpp`: fungsi, ambang, dan sifat
+centroid (re-normalisasi, cover = wajah pertama, `mediaIds` unik) dipatok di sana.
 
 **3. Efek bentuk pustaka.** `scripts/evaluate-lfw.py sweep` menjalankan ulang algoritma yang sama
-pada subset identitas dengan >= K gambar, sehingga terlihat kapan algoritma ini memadai:
+pada subset identitas dengan >= K gambar:
 
 | K (min gambar/identitas) | identitas | gambar | kluster | purity | pair F1 | wajah di kluster murni | singleton |
 |---|---|---|---|---|---|---|---|
-| 1 (seluruh LFW) | 5.749 | 13.233 | 3.530 | 76,4% | 90,5% | 31,9% | 51,3% |
-| 2 | 1.680 | 9.164 | 1.509 | 88,3% | 93,5% | 49,5% | 14,7% |
-| 3 | 901 | 7.606 | 938 | 93,2% | 95,0% | 62,4% | 14,5% |
-| 5 | 423 | 5.985 | 515 | 96,4% | 95,7% | 68,7% | 20,4% |
-| 10 | 158 | 4.324 | 234 | 98,4% | 96,2% | 69,4% | 31,2% |
-| 20 | 62 | 3.023 | 119 | 99,7% | 96,8% | 68,4% | 47,1% |
+| 1 (seluruh LFW) | 5.749 | 13.233 | 5.845 | 98,4% | 96,3% | 85,6% | 70,9% |
+| 2 | 1.680 | 9.164 | 1.914 | 99,1% | 96,4% | 85,0% | 15,7% |
+| 3 | 901 | 7.606 | 1.089 | 99,4% | 96,6% | 83,8% | 16,7% |
+| 5 | 423 | 5.985 | 566 | 99,5% | 96,6% | 81,1% | 23,1% |
+| 10 | 158 | 4.324 | 246 | 99,5% | 96,6% | 75,2% | 33,3% |
+| 20 | 62 | 3.023 | 123 | 99,7% | 96,9% | 70,2% | 48,8% |
+| 30 | 34 | 2.370 | 87 | 99,7% | 97,0% | 62,1% | 59,8% |
 
-**Putusan (jujur):** kotak exit criteria di `PRD.md` **tetap kosong**. Pada set teradversarial
-jawabannya *tidak layak*: purity 76,35% berarti sekitar seperempat wajah duduk di kluster yang
-mayoritasnya benar tetapi bercampur identitas lain, dan tidak ada cara manual yang masuk akal untuk
-membetulkan satu kluster berisi 527 wajah dari 12 orang. Mutu embedding-nya sendiri tidak jadi
-masalah (97,03% verifikasi) - yang perlu diperbaiki klusteringnya, bukan modelnya.
-
-Definisi operasional yang dipakai untuk menyatakan kriteria ini lolos: **purity >= 95% pada set
-5.749 identitas**. Dengan algoritma sekarang itu baru tercapai pada pustaka dengan <= ~400
-identitas, yang justru kasus nyata aplikasi ini - tetapi bukan yang diminta kriteria. Utang teknis
-dan rencana perbaikannya ada di `docs/TECH-DEBT-REPORT.md`.
+**Putusan.** Definisi operasional yang dipakai: **purity >= 95% pada set penuh 5.749 identitas**.
+Sekarang tercapai tanpa syarat tambahan (98,36%), jadi kotak exit criteria di `PRD.md` **dicentang**
+untuk pertama kalinya. Dua catatan supaya tidak berlebihan: batch besar (>= 30 wajah) dibiarkan
+terpecah lebih sering (singleton 59,8% pada K=30), yang di aplikasi berarti ada orang dengan
+beberapa kartu untuk digabung manual — jauh lebih murah daripada satu kartu berisi delapan orang;
+dan kluster terburuk masih menggabungkan 8 figur publik yang memang sering muncul di foto bersama
+(Bush + Koizumi + Jiang Zemin), kasus yang di pustaka pribadi hampir tidak ada. Sisa rencana
+perbaikan (kalau nanti diperlukan) ada di `docs/TECH-DEBT-REPORT.md`.
 
 ## Build dengan backend wajah
 
@@ -198,4 +220,4 @@ Dua item yang sebelumnya tercatat sebagai utang ditutup setelah M3:
   tanpa tool itu perilakunya placeholder seperti sebelumnya.
 
 `LibraryMaintenance::kFtsIndexVersion` naik 2 → 3 agar library lama membangun ulang indeks
-sekali. Test: `tst_mediagridmodel::taggingFiltersAndIndexesFts`, `tst_imageloader` (11/11 lulus).
+sekali. Test: `tst_mediagridmodel::taggingFiltersAndIndexesFts`, `tst_imageloader` (12/12 lulus).

@@ -130,7 +130,7 @@ Reset all).
 
 ## 6. Unit test (item 1)
 
-Direktori `tests/` (sebelumnya tidak ada) berisi 11 target Qt Test + CTest, diaktifkan dengan
+Direktori `tests/` (sebelumnya tidak ada) berisi 12 target Qt Test + CTest, diaktifkan dengan
 `-DKG_BUILD_TESTS=ON`. `kin-galeri-testcore` (static library) mengompilasi subset sumber non-QML
 sehingga target aplikasi tidak terganggu.
 
@@ -147,6 +147,7 @@ sehingga target aplikasi tidak terganggu.
 | `tst_grouping` | jarak haversine, merge/pisah klaster geo, label kota bawaan, pemisahan event per jeda waktu & lompatan tempat, urutan, penulisan tempat+event |
 | `tst_imageloader` | deteksi `heif-convert` per platform, decode berkas hilang, decode round-trip |
 | `tst_i18n` | konteks `tr()` C++ cocok dengan `staticMetaObject().className()` (nama pendek ditolak), terjemahan konteks C++ tidak kosong |
+| `tst_faceclusterer` | `FaceClusterer` tanpa ML: wajah tak berhubungan jadi kluster sendiri, pasangan skor 0,80 menyatu, 0,45 menyatu di 0,40 tapi tidak di 0,50 (ambang yang dipakai), kluster terdekat menang, centroid tetap unit-length, `mediaIds` unik dan cover = wajah pertama |
 
 Semua memakai `QTemporaryDir`; library pengguna tidak tersentuh. Dua bug ditemukan oleh test ini:
 `Database` tidak punya destruktor (koneksi bocor antar-instance), dan ekspektasi `scanned` menghitung

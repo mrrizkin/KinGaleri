@@ -151,7 +151,7 @@ QT_QPA_PLATFORM=offscreen timeout 6 ./build/kin-galeri --no-ui --db /tmp/kgidx.d
 QT_QPA_PLATFORM=offscreen timeout 6 ./build/kin-galeri --db /tmp/kgidx.db --cache /tmp/kgidxc 2>&1 \
   | grep -iE "error|undefined|TypeError|binding loop" | grep -iv "Gtk\|murrine\|canberra"
 
-# Unit test (11 target, harus 11/11 pass)
+# Unit test (12 target, harus 12/12 pass)
 cmake -S . -B build-tests -G Ninja -DKG_BUILD_TESTS=ON
 cmake --build build-tests
 ctest --test-dir build-tests --output-on-failure
@@ -182,7 +182,7 @@ ctest --test-dir build-tests --output-on-failure
 
 - Bug UI diperbaiki; light & dark konsisten; menu tidak terpotong.
 - `cmake --build build` bersih; smoke offscreen tanpa error QML; `./scripts/qml-lint.sh` exit 0.
-- `ctest` 11/11 lulus.
+- `ctest` 12/12 lulus.
 - Ringkas temuan + langkah reproduksi + bukti (screenshot /tmp) di laporan.
 - Update `docs/M4-REPORT.md` §10 (open items) bila ada item yang tertutup.
 

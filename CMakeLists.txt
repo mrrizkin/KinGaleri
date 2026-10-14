@@ -185,10 +185,13 @@ set(KG_SOURCES
     src/core/grouping/GroupingService.cpp
     src/core/grouping/GroupingService.h
 
+    src/core/ml/FaceClusterer.cpp
+    src/core/ml/FaceClusterer.h
     src/core/ml/FaceEngine.cpp
     src/core/ml/FaceEngine.h
     src/core/ml/FacePipeline.cpp
     src/core/ml/FacePipeline.h
+    src/core/ml/VectorMath.h
 
     src/core/metadata/ExifReader.cpp
     src/core/metadata/ExifReader.h

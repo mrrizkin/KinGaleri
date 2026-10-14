@@ -38,6 +38,12 @@ add_library(kin-galeri-testcore STATIC
     ${CMAKE_SOURCE_DIR}/src/core/metadata/ExifReader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/metadata/ExifReader.h
 
+    # Face grouping is ONNX Runtime-gated in the app, but the clusterer itself has
+    # no ML dependency, so it is compiled and tested in every build.
+    ${CMAKE_SOURCE_DIR}/src/core/ml/FaceClusterer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/ml/FaceClusterer.h
+    ${CMAKE_SOURCE_DIR}/src/core/ml/VectorMath.h
+
     ${CMAKE_SOURCE_DIR}/src/core/thumbs/ImageLoader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/thumbs/ImageLoader.h
 
@@ -87,6 +93,7 @@ kg_add_test(tst_librarymaintenance)
 kg_add_test(tst_folderindexer)
 kg_add_test(tst_grouping)
 kg_add_test(tst_imageloader)
+kg_add_test(tst_faceclusterer)
 
 # The i18n guard reads the hand-maintained catalog directly, so it needs the path
 # to the source file. See tst_i18n.cpp for why the C++ contexts are pinned.

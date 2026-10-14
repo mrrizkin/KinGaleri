@@ -338,7 +338,7 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
   Lihat `docs/M2-REPORT.md` §9–§10.
 - **Target memory 100k** terukur 330 MB (peak 351 MB), jauh di bawah target PRD < 550 MB. Lihat
   `docs/M2-REPORT.md` §8.
-- **Tidak ada test sama sekali.** Sekarang ada `tests/` (11 target, `-DKG_BUILD_TESTS=ON`) yang mengunci
+- **Tidak ada test sama sekali.** Sekarang ada `tests/` (12 target, `-DKG_BUILD_TESTS=ON`) yang mengunci
   perilaku M2–M4: album CRUD, seleksi, filter tanggal, rename/move termasuk rollback, trash + undo,
   incremental scan + rekonsiliasi, debounce watcher, parsing CLI, jalur pemulihan FTS, skema shortcut
   pengguna, pengelompokan tanggal/geo/event, dan deteksi decoder HEIF.
@@ -393,22 +393,22 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
   pada ukuran library yang diuji, tetapi kandidat untuk model khusus People bila jumlah cluster besar.
 - **Klaster wajah bersifat greedy by-confidence**: satu wajah yang salah cluster tidak bisa dibatalkan
   per-wajah. Merge/split manual per orang baru menyediakan merge; split belum ada (M5).
-- **Pergeseran centroid membuat kluster menelan identitas lain (utang baru, terukur).** Pengukuran exit
-  criteria M3 pada LFW (`docs/M3-REPORT.md` §"Exit criteria PRD", reproduksi
-  `scripts/evaluate-lfw.py`) menunjukkan verifikasi embed bagus (97,03% ± 1,06%) tetapi purity kluster
-  hanya 76,35% pada 5.749 identitas. Penyebabnya ada di `FacePipeline::run()` langkah 3: centroid
-  adalah **running mean** (`addToCluster`) yang menyerap setiap anggota baru, jadi kluster besar
-  perlahan bergerak ke wajah "rata-rata" dan mulai menarik identitas yang mirip secara kasar - kluster
-  terbesar berisi 527 wajah dari **12 identitas** (George W. Bush + Michael Piuze + ...), lalu
-  236 wajah / 3 identitas (Colin Powell + Joe Lieberman + George W. Bush). Efeknya hilang pada pustaka
-  bergaya pribadi (purity 96,4% pada 423 identitas, 98,4% pada 158 identitas), yaitu kasus nyata
-  aplikasi ini, tetapi ambang lolos kriteria (purity >= 95% pada 5.749 identitas) tetap tidak tercapai.
-  Jalur perbaikan yang kandidat, berurutan dari termurah:
-  1. jangan perbarui centroid setelah kluster melewati batas ukuran (mis. 50 wajah), atau pakai
-     **medoid/anggota terdekat** alih-alih mean;
-  2. dua tahap: klustering greedy sekali untuk mencari seed, lalu **re-assign** semua wajah ke seed
-     terdekat dengan jarak ke contoh terdekat, bukan ke rata-rata;
-  3. kalau masih kurang, ganti dengan **DBSCAN/HDBSCAN** pada cosine (jarak 1 - cos, `eps` ~ 0,6)
-     yang secara alami memisahkan kluster longgar dan menandai noise sebagai singleton.
-  Setiap perubahan harus divalidasi ulang dengan `scripts/evaluate-lfw.py cluster` (purity, pair F1)
-  **dan** `sweep` supaya perbaikan untuk set teradversarial tidak merusak kasus pustaka pribadi.
+- ~~**Pergeseran centroid membuat kluster menelan identitas lain**~~ — **sudah ditutup, dan hipotesisnya
+  ternyata salah.** Pengukuran exit criteria M3 pada LFW (`docs/M3-REPORT.md` §"Exit criteria PRD",
+  reproduksi `scripts/evaluate-lfw.py`) memulai dari verifikasi embed yang bagus (97,03% ± 1,06%)
+  dengan purity kluster hanya 76,35% pada 5.749 identitas. Penyebab yang dituduh saat itu: running-mean
+  centroid di `addToCluster` bergeser ke wajah "rata-rata" lalu menelan identitas mirip.
+  Waktu diuji, membekukan centroid setelah N anggota nyaris tidak berpengaruh: cap=2 → purity 79,9%,
+  cap=4 → 77,7%, dan cap 8/16/24/32/64 vs running mean **identik** pada ambang kerja (98,4% / F1
+  96,3%). Re-assign tambahan hanya +0,1–0,5 poin F1. Sebab sebenarnya jauh lebih sederhana:
+  `clusterThreshold` 0,40 — nilai verifikasi SFace — terlalu longgar untuk *pengelompokan*, di mana
+  satu wajah yang salah masuk ikut menggeser centroid dan menarik wajah salah berikutnya. Pada 0,45
+  purity sudah 94,6%, pada 0,50 mencapai 98,4%.
+  Perbaikan yang dipakai (2026-10-15): ambang 0,40 → **0,50**, algoritma tidak disentuh, dan
+  klusteringnya dipindah ke `src/core/ml/FaceClusterer.{h,cpp}` (tanpa dependensi ML) supaya bisa
+  diuji tanpa ONNX Runtime lewat `tests/tst_faceclusterer.cpp`. Hasil: purity 98,36%, wajah di kluster
+  satu-identitas 31,9% → 85,6%, pair F1 90,54% → 96,33%, kluster terburuk 12 → 8 identitas.
+  Variasi yang tetap **belum** dikerjakan (tidak diperlukan lagi): medoid, dua tahap seed+re-assign,
+  atau DBSCAN/HDBSCAN cosine. Kalau nanti dikerjakan, validasi wajib dengan
+  `scripts/evaluate-lfw.py cluster` **dan** `sweep` supaya perbaikan untuk set teradversarial tidak
+  merusak kasus pustaka pribadi.

@@ -21,8 +21,8 @@ Item {
     // provider caps the size at 512px.
     readonly property int pixelSize: Math.max(16, Math.round(root.iconSize * 2))
     readonly property string iconPath: {
-        var parts = [];
-        for (var i = 0; i < root.iconNames.length; ++i) {
+        const parts = [];
+        for (let i = 0; i < root.iconNames.length; ++i) {
             parts.push(encodeURIComponent(root.iconNames[i]));
         }
         return parts.join(",");

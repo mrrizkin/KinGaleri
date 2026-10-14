@@ -1023,7 +1023,9 @@ ApplicationWindow {
 
             Rectangle {
                 Layout.fillWidth: true
-                height: 1
+                // `height` on a layout-managed item is flagged by qmllint as
+                // undefined behaviour; the layout consumes the preferred size.
+                Layout.preferredHeight: 1
                 color: Theme.border
                 visible: window.app.model.tags.length > 0
             }
@@ -1154,7 +1156,7 @@ ApplicationWindow {
 
             Rectangle {
                 Layout.fillWidth: true
-                height: 1
+                Layout.preferredHeight: 1
                 color: Theme.border
             }
 

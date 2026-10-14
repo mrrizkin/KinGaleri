@@ -109,7 +109,12 @@ Item {
                 id: pane
                 anchors.fill: parent
                 contentWidth: width
+                // `loader.item` is QObject-typed (the loaded component cannot be
+                // referenced by type here), but the ternary already guards the
+                // null case, so the access is safe.
+                // qmllint disable missing-property
                 contentHeight: loader.item ? loader.item.implicitHeight + 64 : 0
+                // qmllint enable missing-property
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
 
@@ -1224,102 +1229,6 @@ Item {
                     Item { Layout.fillWidth: true }
                 }
             }
-
-            Popup {
-                id: capturePopup
-                property string targetId: ""
-                property string candidate: ""
-                property string errorText: ""
-
-                parent: root
-                anchors.centerIn: Overlay.overlay
-                modal: true
-                focus: true
-                width: 360
-                padding: 20
-                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-                onOpened: {
-                    candidate = ""
-                    errorText = ""
-                    keyCatcher.forceActiveFocus()
-                }
-
-                contentItem: ColumnLayout {
-                    spacing: 12
-
-                    Item {
-                        id: keyCatcher
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 1
-                        focus: true
-                        Keys.onPressed: function (event) {
-                            if (event.key === Qt.Key_Escape) {
-                                event.accepted = true
-                                capturePopup.close()
-                                return
-                            }
-                            const seq = root.app.shortcuts.sequenceFromKey(event.key, event.modifiers)
-                            event.accepted = true
-                            if (seq === "")
-                                return // a bare modifier is not a binding
-                            capturePopup.candidate = seq
-                            capturePopup.errorText = root.app.shortcuts.conflictsFor(seq, capturePopup.targetId)
-                        }
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: qsTr("Press a key combination…")
-                        color: Theme.text
-                        font.pixelSize: 14
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: capturePopup.candidate === "" ? qsTr("(waiting)")
-                                                             : capturePopup.candidate
-                        color: Theme.textFaint
-                        font.family: "monospace"
-                        font.pixelSize: 18
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        visible: capturePopup.errorText !== ""
-                        text: capturePopup.errorText
-                        color: Theme.danger
-                        font.pixelSize: 11
-                        wrapMode: Text.WordWrap
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
-                        Item { Layout.fillWidth: true }
-
-                        Button {
-                            text: qsTr("Cancel")
-                            flat: true
-                            onClicked: capturePopup.close()
-                        }
-                        Button {
-                            text: qsTr("Save")
-                            enabled: capturePopup.candidate !== ""
-                                         && capturePopup.errorText === ""
-                            onClicked: {
-                                const err = root.app.shortcuts.setSequence(
-                                                capturePopup.targetId, capturePopup.candidate)
-                                if (err === "")
-                                    capturePopup.close()
-                                else
-                                    capturePopup.errorText = err
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -1488,6 +1397,107 @@ Item {
             property: "checked"
             value: row.checked
             restoreMode: Binding.RestoreBinding
+        }
+    }
+    // ---- Shortcut capture popup ---------------------------------------------
+    // Declared at the page root on purpose: a Popup inside a Layout is
+    // layout-managed, and Qt Quick reports that as undefined behaviour for both
+    // `anchors.centerIn` and `width` (qmllint Quick.layout-positioning). It has no
+    // dependency on the Shortcuts page subtree, so it lives here instead.
+
+    Popup {
+        id: capturePopup
+        property string targetId: ""
+        property string candidate: ""
+        property string errorText: ""
+
+        parent: root
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        focus: true
+        width: 360
+        padding: 20
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        onOpened: {
+            candidate = ""
+            errorText = ""
+            keyCatcher.forceActiveFocus()
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            Item {
+                id: keyCatcher
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                focus: true
+                Keys.onPressed: function (event) {
+                    if (event.key === Qt.Key_Escape) {
+                        event.accepted = true
+                        capturePopup.close()
+                        return
+                    }
+                    const seq = root.app.shortcuts.sequenceFromKey(event.key, event.modifiers)
+                    event.accepted = true
+                    if (seq === "")
+                        return // a bare modifier is not a binding
+                    capturePopup.candidate = seq
+                    capturePopup.errorText = root.app.shortcuts.conflictsFor(seq, capturePopup.targetId)
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Press a key combination…")
+                color: Theme.text
+                font.pixelSize: 14
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: capturePopup.candidate === "" ? qsTr("(waiting)")
+                                                     : capturePopup.candidate
+                color: Theme.textFaint
+                font.family: "monospace"
+                font.pixelSize: 18
+            }
+
+            Label {
+                Layout.fillWidth: true
+                visible: capturePopup.errorText !== ""
+                text: capturePopup.errorText
+                color: Theme.danger
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Item { Layout.fillWidth: true }
+
+                Button {
+                    text: qsTr("Cancel")
+                    flat: true
+                    onClicked: capturePopup.close()
+                }
+                Button {
+                    text: qsTr("Save")
+                    enabled: capturePopup.candidate !== ""
+                                 && capturePopup.errorText === ""
+                    onClicked: {
+                        const err = root.app.shortcuts.setSequence(
+                                        capturePopup.targetId, capturePopup.candidate)
+                        if (err === "")
+                            capturePopup.close()
+                        else
+                            capturePopup.errorText = err
+                    }
+                }
+            }
         }
     }
 }

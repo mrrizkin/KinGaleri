@@ -207,11 +207,35 @@ Popup {
         }
 
         PinchHandler {
+            id: pinch
+
+            // target left null deliberately: with the default target (the
+            // Flickable), Qt auto-applies the gesture scale to flick.scale as a
+            // visual transform on top of the explicit zoom math below, and that
+            // transform is never reset between gestures - it compounds forever
+            // and bypasses minZoom/maxZoom entirely.
+            target: null
+
+            // zoom captured once per gesture so activeScale (cumulative *since
+            // this gesture began*, not a per-tick delta) multiplies against a
+            // fixed baseline instead of compounding on every signal emission.
+            property real zoomAtGestureStart: 1
+
             onActiveChanged: {
+                if (active)
+                    zoomAtGestureStart = viewer.zoom
+            }
+            onActiveScaleChanged: {
+                // `scale` is useless here: on Qt >= 6.5 it is a read-only
+                // qreal (checked against qquickpinchhandler_p.h, which also
+                // shows scale() is just an alias for persistentScale() - so the
+                // old `zoom *= scale; scale = 1` never reset anything and the
+                // multiplier stayed cumulative across gestures). `activeScale`
+                // is the per-gesture value that does reset itself.
                 if (!active)
                     return
-                viewer.zoom = Math.max(viewer.minZoom, Math.min(viewer.maxZoom, viewer.zoom * scale))
-                scale = 1
+                viewer.zoom = Math.max(viewer.minZoom,
+                                        Math.min(viewer.maxZoom, pinch.zoomAtGestureStart * activeScale))
             }
         }
     }
@@ -230,6 +254,12 @@ Popup {
         source: "MpvVideoSurface.qml"
         // Bound rather than assigned once, so navigating to the next item with
         // the arrow keys swaps the playing file.
+        //
+        // `item` is only typed as QObject because `source` is a URL string: the
+        // mpv component cannot be referenced by type here without breaking
+        // builds that have no mpvqt. onLoaded only runs once the loader is
+        // Ready, so these members do exist at runtime.
+        // qmllint disable missing-property
         onLoaded: {
             item.filePath = Qt.binding(() => viewer.payload ? viewer.payload.path : "")
             item.posterUrl = Qt.binding(() => viewer.payload ? viewer.payload.thumbUrl : "")
@@ -238,6 +268,7 @@ Popup {
             item.muted = Qt.binding(() => viewer.app.settings.videoMute)
             item.volume = Qt.binding(() => viewer.app.settings.videoVolume)
         }
+        // qmllint enable missing-property
     }
 
     Rectangle {
@@ -306,6 +337,10 @@ Popup {
     }
 
     // ---- keyboard -----------------------------------------------------------
+    // Same Loader typing limit as above: every branch below is guarded by
+    // `videoLoader.item`, so the call is safe even though qmllint cannot see the
+    // methods on a QObject-typed `item`.
+    // qmllint disable missing-property
     Shortcut {
         sequence: viewer.app.shortcuts.sequences["viewer_previous"]
         enabled: viewer.opened
@@ -350,6 +385,7 @@ Popup {
         onActivated: if (videoLoader.item)
             videoLoader.item.toggleMute()
     }
+    // qmllint enable missing-property
     Shortcut {
         sequence: viewer.app.shortcuts.sequences["viewer_favorite"]
         enabled: viewer.opened

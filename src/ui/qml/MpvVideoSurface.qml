@@ -1,3 +1,12 @@
+// qmllint disable import unresolved-alias unresolved-type missing-property
+//
+// The directive above is scoped to this file and is not cosmetic. KinGaleri.Mpv
+// is registered at runtime by qmlRegisterType() in main.cpp - mpvqt ships no
+// qmldir of its own - so at lint time `MpvItem` cannot be resolved and every
+// member access below degrades into a weak "missing-property". Suppressing the
+// four affected categories keeps the rest of the tree lint-clean. The proper fix
+// is a static qmldir/qmltypes for KinGaleri.Mpv; recorded as debt in
+// docs/TECH-DEBT-REPORT.md.
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts

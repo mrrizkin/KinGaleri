@@ -273,6 +273,15 @@ if(KG_ENABLE_MPV)
     list(APPEND KG_QML_FILES src/ui/qml/MpvVideoSurface.qml)
 endif()
 
+# All QML_FILES above live directly in src/ui/qml/ (no subdirectories), so the
+# QTP0004 NEW/OLD split makes no functional difference here - it only matters
+# for cross-subdirectory implicit imports. Set it explicitly anyway to silence
+# the Qt 6.8+ "policy not set" author warning. The command itself needs Qt 6.8;
+# the project's minimum is 6.5, so this is guarded.
+if(Qt6_VERSION VERSION_GREATER_EQUAL "6.8" AND COMMAND qt_policy)
+    qt_policy(SET QTP0004 NEW)
+endif()
+
 qt_add_qml_module(kin-galeri
     URI KinGaleri
     VERSION 1.0

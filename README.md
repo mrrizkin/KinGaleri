@@ -407,6 +407,15 @@ src/
                       AlbumCard, SettingsView
 ```
 
+## Berkontribusi
+
+Kontribusi terbuka untuk siapa saja — laporan bug, terjemahan, dokumentasi,
+maupun kode. Panduan lengkap ada di [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+- Laporkan bug lewat [GitHub Issues](https://github.com/mrrizkin/KinGaleri/issues).
+- Jalankan test sebelum membuka PR:
+  `cmake -S . -B build-tests -DKG_BUILD_TESTS=ON && cmake --build build-tests && (cd build-tests && QT_QPA_PLATFORM=offscreen ctest)`.
+
 ## Lisensi
 
 Kin Galeri adalah **perangkat lunak bebas** dan dirilis di bawah

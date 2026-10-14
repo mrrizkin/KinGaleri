@@ -342,13 +342,26 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
   perilaku M2–M4: album CRUD, seleksi, filter tanggal, rename/move termasuk rollback, trash + undo,
   incremental scan + rekonsiliasi, debounce watcher, parsing CLI, jalur pemulihan FTS, skema shortcut
   pengguna, pengelompokan tanggal/geo/event, dan deteksi decoder HEIF.
+- **Verifikasi aksesibilitas.** Duduk sebagai utang karena tidak ada `accerciser`/`pyatspi`; ternyata
+  bus AT-SPI bisa dibaca langsung lewat D-Bus, jadi `scripts/a11y-walk.py` ditambahkan dan tree yang
+  benar-benar diekspos aplikasi bisa diperiksa. Pembacaan pertama menemukan dua cacat nyata: sidebar
+  ter-expose sebagai `role=label` (tidak bisa dicapai Tab, diumumkan sebagai teks statis) dan toggle
+  Settings sebagai `check box` tanpa nama. Keduanya diperbaiki dan diverifikasi ulang di tree. Lihat
+  `docs/M4-REPORT.md` §5.
 
 ### Masih terbuka
 
 - ~~**Terjemahan C++ (M4)**~~ — **sudah ditutup.** 43 string dibungkus `tr()`, ketiga konteks C++
-  ada di `.ts` (349 pesan: 258 QML + 92 C++). Konteksnya adalah nama metaobject (`kg::AppController`),
-  bukan nama kelas — kesalahan itu sempat mematikan seluruh terjemahan C++ tanpa terlihat, dan
-  sekarang dijaga `tests/tst_i18n.cpp`. Lihat `docs/M4-REPORT.md` §2.
+  ada di `.ts`. Konteksnya adalah nama metaobject (`kg::AppController`), bukan nama kelas —
+  kesalahan itu sempat mematikan seluruh terjemahan C++ tanpa terlihat, dan sekarang dijaga
+  `tests/tst_i18n.cpp`. Lihat `docs/M4-REPORT.md` §2.
+- ~~**Cakupan terjemahan QML (M4)**~~ — **sudah ditutup.** Audit 2026-10-14 menemukan konteks
+  `CollectionsView` (16 pesan) dan `MediaCell` (2) hilang sama sekali dari `.ts`, plus 88 string di
+  konteks yang sudah ada (`Main` 40, `SettingsView` 43, `Sidebar` 4, `MediaGrid` 1) — 106 pesan,
+  sekitar seperempat dari seluruh pemanggilan `qsTr()`. Semuanya diterjemahkan; katalog 349 → **455
+  pesan**. Penyebabnya struktural — `lupdate` di mesin ini tidak bisa membaca QML, dan Qt diam-diam
+  jatuh ke teks sumber saat entri hilang sehingga tidak ada test yang gagal — jadi sekarang dijaga
+  `scripts/i18n-audit.py` yang menolak `qsTr()` tanpa entri.
 - **Peringatan `UnqualifiedAccess` qmllint (241 buah)**: komponen bersarang membaca id `root` pihak
   luar, yang dilarang `pragma ComponentBehavior: Bound`. Kategori ini dimatikan di `.qmllint.ini`
   dengan komentar alasan; kategori lain aktif dan gate `./scripts/qml-lint.sh` sekarang 0 peringatan.

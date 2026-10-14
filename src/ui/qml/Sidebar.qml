@@ -281,6 +281,25 @@ Rectangle {
                               : (entryMouse.containsMouse ? Theme.surfaceAlt : "transparent")
         opacity: entry.enabled ? 1.0 : 0.4
 
+        // The sidebar used to be a stack of plain labels as far as the
+        // accessibility tree was concerned: every destination was announced as
+        // static text and Tab could never reach it. Declaring one Button role
+        // here covers all ten entries at once.
+        activeFocusOnTab: true
+        Accessible.role: Accessible.Button
+        Accessible.name: entry.text
+        Accessible.description: entry.selected ? qsTr("Current page") : ""
+        Accessible.selected: entry.selected
+        Accessible.focusable: true
+        Accessible.onPressAction: entry.tapped()
+
+        border.width: entry.activeFocus ? 1 : 0
+        border.color: Theme.accent
+
+        Keys.onReturnPressed: entry.tapped()
+        Keys.onEnterPressed: entry.tapped()
+        Keys.onSpacePressed: entry.tapped()
+
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 8

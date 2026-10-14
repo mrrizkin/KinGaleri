@@ -32,11 +32,21 @@ Kontras kedua palet: latar `#14161a`↔`#f6f7f9`, teks `#eef1f6`↔`#1b1f27`, ak
 
 ## 2. i18n EN / ID
 
-- Seluruh string QML sudah dibungkus `qsTr()`, dan sejak sesi ini string C++ juga `tr()`.
-  Katalog Indonesia: `resources/i18n/kin-galeri_id.ts` — **349 pesan, semuanya diterjemahkan**
-  (0 `unfinished`). 258 pesan dari 10 konteks QML (`Main`, `Sidebar`, `MediaGrid`, `AlbumsView`,
-  `AlbumCard`, `SettingsView`, `ViewerOverlay`, `MpvVideoSurface`, `PerfOverlay`, `KinMpvItem`)
-  dan 92 dari 3 konteks C++ (`kg::AppController`, `kg::MediaGridModel`, `kg::ShortcutRegistry`).
+- Semua string QML dibungkus `qsTr()` dan string C++ `tr()`. Katalog Indonesia:
+  `resources/i18n/kin-galeri_id.ts` — **455 pesan, semuanya diterjemahkan** (0 `unfinished`):
+  362 pesan dari **11 konteks QML** (tiap berkas `src/ui/qml/*.qml`), 1 dari `KinMpvItem` (kelas C++
+  tanpa namespace, jadi konteksnya memang nama pendek), dan 92 dari 3 konteks C++ (`kg::AppController`,
+  `kg::MediaGridModel`, `kg::ShortcutRegistry`).
+- **Cakupan QML dijaga skrip, bukan diasumsikan.** Karena `lupdate` di mesin ini tidak bisa membaca QML
+  dan Qt jatuh ke teks sumber saat entri katalog hilang, mudah menambah `qsTr()` tanpa menambah entri —
+  dan satu layar tetap Inggris sementara sisanya Indonesia, tanpa ada test yang menangkapnya. Itu
+  memang terjadi: audit 2026-10-14 menemukan konteks **`CollectionsView` (16 pesan) dan `MediaCell`
+  (2) sama sekali tidak ada** di `.ts`, plus **88 string** di konteks yang sudah ada (`Main` 40,
+  `SettingsView` 43, `Sidebar` 4, `MediaGrid` 1) — total **106 pesan, sekitar seperempat dari seluruh
+  pemanggilan `qsTr()`**. Semuanya sudah diterjemahkan, dan `scripts/i18n-audit.py` sekarang menolak
+  `qsTr()` tanpa entri (konteks = nama berkas QML, sesuai konvensi Qt). Terverifikasi visual: kartu
+  koleksi kini **"Tangkapan layar / File besar / Baru diambil"**, deskripsi sel di tree AT-SPI
+  **`Gambar`** (dulu `Image`), dan nama toggle Settings berbahasa Indonesia.
 - **Konteks `tr()` harus memakai nama metaobject, bukan nama kelas telanjang.** Kelas C++ proyek ini
   hidup di `namespace kg`, jadi `metaObject()->className()` — yang dipakai Qt sebagai konteks —
   bernilai `kg::AppController`, bukan `AppController`. Selama `.ts` memakai nama pendek, konteksnya
@@ -87,10 +97,26 @@ lengkap tanpa artefak.
 
 ## 5. Aksesibilitas
 
+**Cara memverifikasi (bukan asumsi).** Tidak ada `accerciser`/`pyatspi` di mesin dev, tetapi bus AT-SPI
+hidup dan bisa dibaca lewat D-Bus, jadi tree yang benar-benar diekspos aplikasi dibaca langsung:
+jalankan dengan `QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1` lalu `python3 scripts/a11y-walk.py Kin`. Ini
+bukan pembacaan kode sumber, melainkan apa yang dilihat pembaca layar.
+
 - `MediaCell` mendapat `Accessible.role: Button`, `Accessible.name` = nama file,
   `Accessible.description` (Gambar/Video), dan `Accessible.selected`.
 - `Accessible.name` ditambahkan ke kontrol berikon di header (zoom −/+, bersihkan tanggal, ⚙) dan ke
   kolom pencarian. Kontrol berteks sudah otomatis punya nama dari `text`.
+- **Dua cacat nyata ditemukan lewat tree dan sudah diperbaiki.** (1) Navigasi sidebar tadinya hanya
+  sekumpulan `role=label`: tiap tujuan diumumkan sebagai teks statis dan tak bisa dicapai Tab.
+  `NavEntry` sekarang `Accessible.role: Button` + `name`/`description`/`selected`, `activeFocusOnTab`,
+  indikator fokus, Enter/Space untuk mengaktifkan, plus `Accessible.onPressAction` agar pembaca layar
+  bisa menekannya. Satu perubahan menutup 12 entri; tree kini menampilkan `role=push button
+  name='Semua foto'` dst (yang terpilih berdeskripsi "Halaman saat ini"). (2) Toggle di Settings
+  ter-expose sebagai `check box` **tanpa nama** karena labelnya `Label` bersaudara; `ToggleRow`
+  sekarang memasang `Accessible.role: CheckBox`, `name` dari label, dan `description` dari teks
+  penjelas, dan tree menampilkan ketiganya lengkap.
+- Sisa satu elemen tanpa nama di tree adalah `role=text` di dalam `ComboBox` internal Qt ("Semua
+  foto"); ComboBox-nya sendiri sudah bernama.
 - Seluruh aksi penting tetap punya jalan pintas papan tombol (lihat user guide).
 
 **Kustomisasi shortcut — sudah ditutup (sebelumnya ditandai item M5).**

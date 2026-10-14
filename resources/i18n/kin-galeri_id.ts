@@ -503,6 +503,178 @@
         <source>Use the desktop's icon theme for the sidebar, settings and toolbar. Turn this off to use the built-in text glyphs instead.</source>
         <translation>Gunakan tema ikon desktop untuk sidebar, pengaturan, dan bilah alat. Matikan untuk memakai glif teks bawaan.</translation>
     </message>
+    <message>
+        <source>Smart</source>
+        <translation>Pintar</translation>
+    </message>
+    <message>
+        <source>Shortcuts</source>
+        <translation>Pintasan</translation>
+    </message>
+    <message>
+        <source>All photos</source>
+        <translation>Semua foto</translation>
+    </message>
+    <message>
+        <source>Albums</source>
+        <translation>Album</translation>
+    </message>
+    <message>
+        <source>%1 item(s)</source>
+        <translation>%1 item</translation>
+    </message>
+    <message>
+        <source>Smart grouping</source>
+        <translation>Pengelompokan pintar</translation>
+    </message>
+    <message>
+        <source>Group photos automatically</source>
+        <translation>Kelompokkan foto secara otomatis</translation>
+    </message>
+    <message>
+        <source>Build People, Places, Events and Smart collections. Everything is computed on this device and stored in your library database.</source>
+        <translation>Bangun koleksi Orang, Tempat, Events, dan Pintar. Semuanya dihitung di perangkat ini dan disimpan di basis data pustaka Anda.</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>Status</translation>
+    </message>
+    <message>
+        <source>Rebuild now</source>
+        <translation>Bangun ulang sekarang</translation>
+    </message>
+    <message>
+        <source>What to group</source>
+        <translation>Apa yang dikelompokkan</translation>
+    </message>
+    <message>
+        <source>Places</source>
+        <translation>Tempat</translation>
+    </message>
+    <message>
+        <source>Cluster photos by GPS coordinates and name them from an offline city index. No model needed.</source>
+        <translation>Kelompokkan foto berdasarkan koordinat GPS dan beri nama dari indeks kota offline. Tidak butuh model.</translation>
+    </message>
+    <message>
+        <source>Events</source>
+        <translation>Events</translation>
+    </message>
+    <message>
+        <source>Group photos that were taken close together in time and place. No model needed.</source>
+        <translation>Kelompokkan foto yang diambil berdekatan dalam waktu dan tempat. Tidak butuh model.</translation>
+    </message>
+    <message>
+        <source>People (faces)</source>
+        <translation>Orang (wajah)</translation>
+    </message>
+    <message>
+        <source>Detect faces and cluster them into people. Needs the optional face model; runs on the CPU.</source>
+        <translation>Deteksi wajah dan kelompokkan menjadi orang. Butuh model wajah opsional; berjalan di CPU.</translation>
+    </message>
+    <message>
+        <source>This build has no face backend. Rebuild with -DENABLE_ML=ON and the ONNX Runtime to enable it.</source>
+        <translation>Build ini tidak punya backend wajah. Bangun ulang dengan -DENABLE_ML=ON dan ONNX Runtime untuk mengaktifkannya.</translation>
+    </message>
+    <message>
+        <source>Face model: ready</source>
+        <translation>Model wajah: siap</translation>
+    </message>
+    <message>
+        <source>Face model: not downloaded (about 40 MB)</source>
+        <translation>Model wajah: belum diunduh (sekitar 40 MB)</translation>
+    </message>
+    <message>
+        <source>Downloading…</source>
+        <translation>Mengunduh…</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>Unduh model</translation>
+    </message>
+    <message>
+        <source>When to run</source>
+        <translation>Kapan dijalankan</translation>
+    </message>
+    <message>
+        <source>Analyze new photos automatically</source>
+        <translation>Analisis foto baru secara otomatis</translation>
+    </message>
+    <message>
+        <source>Rebuild the collections after each indexing pass. Rebuilding is cheap; face analysis is the slow part.</source>
+        <translation>Bangun ulang koleksi setelah setiap proses indeks. Membangun ulang itu murah; analisis wajah yang lambat.</translation>
+    </message>
+    <message>
+        <source>Only while idle</source>
+        <translation>Hanya saat menganggur</translation>
+    </message>
+    <message>
+        <source>Hold face analysis back while indexing or thumbnail work is queued, so the interface stays responsive.</source>
+        <translation>Tahan analisis wajah saat pengindeksan atau pembuatan thumbnail masih mengantre, agar antarmuka tetap responsif.</translation>
+    </message>
+    <message>
+        <source>Pause on battery</source>
+        <translation>Jeda saat pakai baterai</translation>
+    </message>
+    <message>
+        <source>Stop analysis when the laptop is running on battery power.</source>
+        <translation>Hentikan analisis bila laptop berjalan dengan daya baterai.</translation>
+    </message>
+    <message>
+        <source>Analysis threads</source>
+        <translation>Thread analisis</translation>
+    </message>
+    <message>
+        <source>%1 thread(s)</source>
+        <translation>%1 thread</translation>
+    </message>
+    <message>
+        <source>Kept low on purpose: inference shares the machine with thumbnailing and the interface.</source>
+        <translation>Sengaja dibuat rendah: inferensi berbagi mesin dengan pembuatan thumbnail dan antarmuka.</translation>
+    </message>
+    <message>
+        <source>Privacy</source>
+        <translation>Privasi</translation>
+    </message>
+    <message>
+        <source>Face embeddings and place clusters stay in your library database. No image, embedding or coordinate is ever sent anywhere.</source>
+        <translation>Embedding wajah dan kluster tempat tetap di basis data pustaka Anda. Tidak ada gambar, embedding, atau koordinat yang dikirim ke mana pun.</translation>
+    </message>
+    <message>
+        <source>Keyboard shortcuts</source>
+        <translation>Pintasan papan tombol</translation>
+    </message>
+    <message>
+        <source>Click a shortcut and press the key combination you want. Press Escape to cancel.</source>
+        <translation>Klik sebuah pintasan lalu tekan kombinasi tombol yang Anda inginkan. Tekan Escape untuk membatalkan.</translation>
+    </message>
+    <message>
+        <source>Reset all</source>
+        <translation>Reset semua</translation>
+    </message>
+    <message>
+        <source>Kin Galeri</source>
+        <translation>Kin Galeri</translation>
+    </message>
+    <message>
+        <source>Place data</source>
+        <translation>Data tempat</translation>
+    </message>
+    <message>
+        <source>Press a key combination…</source>
+        <translation>Tekan kombinasi tombol…</translation>
+    </message>
+    <message>
+        <source>(waiting)</source>
+        <translation>(menunggu)</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Simpan</translation>
+    </message>
 </context>
 <context>
     <name>Main</name>
@@ -827,6 +999,166 @@
         <source>Search file name</source>
         <translation>Cari nama file</translation>
     </message>
+    <message>
+        <source>Kin Galeri</source>
+        <translation>Kin Galeri</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>Tag</translation>
+    </message>
+    <message>
+        <source>ISO</source>
+        <translation>ISO</translation>
+    </message>
+    <message>
+        <source>Albums</source>
+        <translation>Album</translation>
+    </message>
+    <message>
+        <source>%1 tag(s)</source>
+        <translation>%1 tag</translation>
+    </message>
+    <message>
+        <source>Perf ●</source>
+        <translation>Perf ●</translation>
+    </message>
+    <message>
+        <source>Perf ○</source>
+        <translation>Perf ○</translation>
+    </message>
+    <message>
+        <source>People</source>
+        <translation>Orang</translation>
+    </message>
+    <message>
+        <source>This build has no face backend. Rebuild with -DENABLE_ML=ON and the ONNX Runtime to group faces.</source>
+        <translation>Build ini tidak punya backend wajah. Bangun ulang dengan -DENABLE_ML=ON dan ONNX Runtime untuk mengelompokkan wajah.</translation>
+    </message>
+    <message>
+        <source>Turn on Smart grouping and Faces in Settings, then load the face model. Nothing leaves this device.</source>
+        <translation>Aktifkan Pengelompokan pintar dan Wajah di Pengaturan, lalu muat model wajah. Tidak ada data yang keluar dari perangkat ini.</translation>
+    </message>
+    <message>
+        <source>No people yet</source>
+        <translation>Belum ada orang</translation>
+    </message>
+    <message>
+        <source>Faces appear here after the grouping pass finishes. Use Rebuild in Settings if your library was indexed before smart grouping was enabled.</source>
+        <translation>Wajah muncul di sini setelah proses pengelompokan selesai. Pakai Bangun ulang di Pengaturan bila pustaka Anda sudah diindeks sebelum pengelompokan pintar diaktifkan.</translation>
+    </message>
+    <message>
+        <source>Places</source>
+        <translation>Tempat</translation>
+    </message>
+    <message>
+        <source>Turn on Smart grouping and Places in Settings to cluster photos by GPS location.</source>
+        <translation>Aktifkan Pengelompokan pintar dan Tempat di Pengaturan untuk mengelompokkan foto berdasarkan lokasi GPS.</translation>
+    </message>
+    <message>
+        <source>No places yet</source>
+        <translation>Belum ada tempat</translation>
+    </message>
+    <message>
+        <source>Places are built from photo GPS coordinates. Photos without location data cannot appear here.</source>
+        <translation>Tempat dibentuk dari koordinat GPS foto. Foto tanpa data lokasi tidak bisa muncul di sini.</translation>
+    </message>
+    <message>
+        <source>Events</source>
+        <translation>Events</translation>
+    </message>
+    <message>
+        <source>Turn on Smart grouping and Events in Settings to group photos by time and place.</source>
+        <translation>Aktifkan Pengelompokan pintar dan Events di Pengaturan untuk mengelompokkan foto berdasarkan waktu dan tempat.</translation>
+    </message>
+    <message>
+        <source>No events yet</source>
+        <translation>Belum ada event</translation>
+    </message>
+    <message>
+        <source>An event groups a run of photos with no long gap between them. Index some photos with dates first.</source>
+        <translation>Event mengelompokkan rentetan foto tanpa jeda panjang di antaranya. Indeks dulu beberapa foto yang punya tanggal.</translation>
+    </message>
+    <message>
+        <source>Smart</source>
+        <translation>Pintar</translation>
+    </message>
+    <message>
+        <source>Turn on Smart grouping in Settings to build these automatic collections.</source>
+        <translation>Aktifkan Pengelompokan pintar di Pengaturan untuk membangun koleksi otomatis ini.</translation>
+    </message>
+    <message>
+        <source>Nothing to show</source>
+        <translation>Tidak ada yang ditampilkan</translation>
+    </message>
+    <message>
+        <source>These heuristic collections fill up as your library grows.</source>
+        <translation>Koleksi heuristik ini terisi seiring pustaka Anda bertambah.</translation>
+    </message>
+    <message>
+        <source>No tags yet</source>
+        <translation>Belum ada tag</translation>
+    </message>
+    <message>
+        <source>Tag photos from the grid: right-click one, or select several and use Tag… in the toolbar.</source>
+        <translation>Beri tag pada foto dari grid: klik kanan satu foto, atau pilih beberapa lalu pakai Tag… di bilah alat.</translation>
+    </message>
+    <message>
+        <source>Delete this tag from every photo? The photos themselves are not touched.</source>
+        <translation>Hapus tag ini dari semua foto? Fotonya sendiri tidak diubah.</translation>
+    </message>
+    <message>
+        <source>Tag…</source>
+        <translation>Tag…</translation>
+    </message>
+    <message>
+        <source>Name this person</source>
+        <translation>Beri nama orang ini</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Nama</translation>
+    </message>
+    <message>
+        <source>Merge person into…</source>
+        <translation>Gabungkan orang ke…</translation>
+    </message>
+    <message>
+        <source>All photos of this person will move to the one you pick.</source>
+        <translation>Semua foto orang ini akan dipindahkan ke orang yang Anda pilih.</translation>
+    </message>
+    <message>
+        <source>Unnamed person (%1)</source>
+        <translation>Orang tanpa nama (%1)</translation>
+    </message>
+    <message>
+        <source>Add tag</source>
+        <translation>Tambah tag</translation>
+    </message>
+    <message>
+        <source>New tag name…</source>
+        <translation>Nama tag baru…</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Tambah</translation>
+    </message>
+    <message>
+        <source>On this selection</source>
+        <translation>Pada pilihan ini</translation>
+    </message>
+    <message>
+        <source>All tags</source>
+        <translation>Semua tag</translation>
+    </message>
+    <message>
+        <source>Rename tag</source>
+        <translation>Ganti nama tag</translation>
+    </message>
+    <message>
+        <source>Tag name</source>
+        <translation>Nama tag</translation>
+    </message>
 </context>
 <context>
     <name>PerfOverlay</name>
@@ -941,6 +1273,22 @@
         <source>Clear thumbnail cache</source>
         <translation>Bersihkan cache thumbnail</translation>
     </message>
+    <message>
+        <source>Events</source>
+        <translation>Events</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>Tag</translation>
+    </message>
+    <message>
+        <source>DB · </source>
+        <translation>DB · </translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>Halaman saat ini</translation>
+    </message>
 </context>
 <context>
     <name>AlbumCard</name>
@@ -1021,6 +1369,10 @@
     <message>
         <source>Restore to library</source>
         <translation>Pulihkan ke library</translation>
+    </message>
+    <message>
+        <source>Add tag…</source>
+        <translation>Tambah tag…</translation>
     </message>
 </context>
 <context>
@@ -1436,6 +1788,84 @@
     <message>
         <source>Move to recycle bin</source>
         <translation>Pindahkan ke tong sampah</translation>
+    </message>
+</context>
+<context>
+    <name>CollectionsView</name>
+    <message>
+        <source>Screenshots</source>
+        <translation>Tangkapan layar</translation>
+    </message>
+    <message>
+        <source>Videos</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>Panoramas</source>
+        <translation>Panorama</translation>
+    </message>
+    <message>
+        <source>Large files</source>
+        <translation>File besar</translation>
+    </message>
+    <message>
+        <source>Recently taken</source>
+        <translation>Baru diambil</translation>
+    </message>
+    <message>
+        <source>%1 item(s)</source>
+        <translation>%1 item</translation>
+    </message>
+    <message>
+        <source>Grouping…</source>
+        <translation>Mengelompokkan…</translation>
+    </message>
+    <message>
+        <source>Rebuild</source>
+        <translation>Bangun ulang</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Buka Pengaturan</translation>
+    </message>
+    <message>
+        <source>Not set up yet</source>
+        <translation>Belum disiapkan</translation>
+    </message>
+    <message>
+        <source>Unnamed person</source>
+        <translation>Orang tanpa nama</translation>
+    </message>
+    <message>
+        <source>%1 · %2</source>
+        <translation>%1 · %2</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>Ganti nama…</translation>
+    </message>
+    <message>
+        <source>Merge into…</source>
+        <translation>Gabungkan ke…</translation>
+    </message>
+    <message>
+        <source>Rename tag…</source>
+        <translation>Ganti nama tag…</translation>
+    </message>
+    <message>
+        <source>Delete tag</source>
+        <translation>Hapus tag</translation>
+    </message>
+</context>
+<context>
+    <name>MediaCell</name>
+    <message>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>Gambar</translation>
     </message>
 </context>
 </TS>

@@ -74,6 +74,32 @@ stays enabled; if a new warning appears, fix it, or silence it narrowly with a
 `// qmllint disable <category>` comment that states the reason (`MpvVideoSurface.qml`
 and `ViewerOverlay.qml` have examples).
 
+## Translations and accessibility
+
+Two more checks that are not part of `ctest`, because both need a configured
+build and neither is a unit test:
+
+```bash
+python3 scripts/i18n-audit.py       # exit 0 == every qsTr() has a catalog entry
+
+# accessibility: what a screen reader actually sees
+QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1 ./build/kin-galeri --no-home-scan &
+python3 scripts/a11y-walk.py Kin    # walks the live AT-SPI tree over D-Bus
+```
+
+`scripts/i18n-audit.py` exists because the local `lupdate` cannot read QML and
+Qt silently falls back to the source string when a catalog entry is missing, so
+an untranslated screen fails nothing. It compares every `qsTr()` in
+`src/ui/qml/` against `resources/i18n/kin-galeri_id.ts`, using the QML file's
+base name as the context (that is what Qt uses). The C++ half is covered by
+`tests/tst_i18n.cpp`.
+
+`scripts/a11y-walk.py` prints the roles, names and descriptions the app exposes.
+There is no `accerciser` or `pyatspi` on the dev machine, but the AT-SPI bus can
+be read directly, so this is the real tree rather than a guess from the source.
+Run it after touching anything interactive: an unnamed or `role=label` control
+is a bug, not a cosmetic detail.
+
 ## Code style
 
 - C++20, Qt 6 conventions. Match the style of the file you are editing.

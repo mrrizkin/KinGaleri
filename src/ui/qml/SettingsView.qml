@@ -1389,6 +1389,12 @@ Item {
 
         Switch {
             id: control
+            // The visible label is a sibling Label, so without this the control
+            // reaches AT-SPI as an unnamed check box (verified with
+            // scripts/a11y-walk.py before the fix).
+            Accessible.role: Accessible.CheckBox
+            Accessible.name: row.label
+            Accessible.description: row.description
             onToggled: row.toggled(control.checked)
         }
 

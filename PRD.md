@@ -610,12 +610,15 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
   nyata terindeks dalam **8 s** (rc=0). Sesudahnya: `media`=100.000, `media_fts`=100.000,
   `PRAGMA integrity_check`=`ok`, `foreign_key_check` bersih; tiga restart berikutnya rc=0, jumlah
   baris tidak berubah, cache thumbnail konsisten (1.274 berkas / 5 MB).
-- [ ] **Warm start < 1.5 s; scroll 60 fps pada 100k item.** Scroll **lolos** (166–172 fps, frame
-  drop ≤ 0,4%, worst 15,4 ms vs budget 16,67 ms). Start **belum lolos**: process spawn sampai frame
-  pertama **1,82 s** pada library sintetis dan **3,09–3,35 s** pada library 100.000 berkas nyata.
-  Bottleneck sudah dilokalisasi (SQL 20 ms, loop model 780 ms, sisanya frame pertama + thumbnail);
-  dicatat sebagai utang di `docs/TECH-DEBT-REPORT.md`. `--limit 5000` menurunkan start ke 1,14 s,
-  tetapi `--limit` hanya knob CLI untuk benchmark, belum ada di Settings.
+- [x] **Warm start < 1.5 s; scroll 60 fps pada 100k item.** Scroll **lolos** (166–172 fps, frame
+  drop ≤ 0,4%, worst 15,4 ms vs budget 16,67 ms). Start awalnya **gagal** (3,09–3,35 s pada
+  100.000 berkas nyata) lalu diperbaiki: `albumCards()`/`smartCategories()` dihitung tiga kali per
+  reload, dan `GROUP BY source_album` memakai collation yang tidak cocok dengan
+  `idx_media_album_taken` sehingga memindai ulang seluruh library untuk setiap album (468 ms →
+  12 ms); ditambah cache agregat. Sekarang **1,31–1,35 s** (median 1,32 s dari 6 kali, `limit=0` =
+  semua item) dan **≈0,9 s** dengan batas grid. Batas itu kini ada di UI: Settings → Interface →
+  Photo grid → "Items loaded in the grid" (`library/grid_limit`), jadi pengguna dengan 100k item
+  tidak lagi wajib membayar penuh biaya frame pertama. Detail: `docs/M4-REPORT.md` §11.1.
 - [x] **Semua grouping P0 (date, source, favorite, recycle) berfungsi & akurat.**
   `tst_mediagridmodel` (`dateRangeFiltersInclusive`, `dateRangeSwapsReversedBounds`,
   `trashSelectionSoftDeletesAndUndoRestores`, `batchFavoritePersists`,

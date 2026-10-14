@@ -55,6 +55,9 @@ struct CliOptions
 
     /// --limit <n>: only surface the newest n rows in the grid.
     int gridLimit = 0;
+    /// True when --limit was actually passed. Needed because 0 is a meaningful
+    /// value ("no limit"), so it cannot double as "unset; use the setting".
+    bool gridLimitSet = false;
 
     /// Non-fatal parse problems, e.g. unknown flags or bad numbers.
     QStringList warnings;

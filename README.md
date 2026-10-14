@@ -232,6 +232,8 @@ Options:
                                  A value >= 0 pins the budget; adaptive sizes it from the
                                  visible cell count.
       --limit <N>            Surface only the newest N items (0 = all).
+                             Mirrors Settings -> Interface -> "Items loaded in the grid";
+                             the CLI value wins when both are set.
       --perf-overlay         Show the frame-time overlay on start.
       --bench-scroll <s>     Automated scroll benchmark for <s> seconds, then exit.
       --no-ui                Headless mode.
@@ -251,7 +253,10 @@ berlaku langsung tanpa restart:
   alat benchmark, tombol overlay, serta detail penyimpanan di bilah status).
 - **Interface** — tema (System / Light / Dark), warna aksen, bahasa (System / English / Bahasa
   Indonesia), ikon sistem dari tema desktop (dengan fallback glif teks), tampil/sembunyikan sidebar + lebarnya, ukuran thumbnail dan jarak antar tile, header
-  tanggal, animasi transisi, sorotan hover.
+  tanggal, animasi transisi, sorotan hover, serta **Items loaded in the grid** (batas jumlah item
+  yang dimuat ke grid; 0 = semua. Di pustaka ratusan ribu item, batas ini yang menjaga frame pertama
+  tetap di bawah 1,5 s; item di luar batas tetap ada di pustaka dan muncul begitu batasnya
+dinaikkan).
 - **Library** — kelola folder pustaka (tambah / hapus / **Rescan now**), pantau perubahan otomatis,
   pindai ulang saat mulai, ikuti symlink, sertakan folder tersembunyi, lewati folder sampah (daftar
   bawaan `node_modules`/cache/toolchain/`cmake-build-*` dll. bisa dilihat & diedit lewat **Customize…**),

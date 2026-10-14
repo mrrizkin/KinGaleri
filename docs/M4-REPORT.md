@@ -243,14 +243,14 @@ membuktikan "index 100.000 media". Untuk item 1 dan 2 dipakai `/tmp/kg100k`: **1
 | # | Kriteria | Hasil | Bukti |
 |---|---|---|---|
 | 1 | Index 100k tanpa crash; DB & cache konsisten setelah restart | **Lolos** | 100.000 berkas terindeks dalam **8 s**, rc=0; `media`=100.000, `media_fts`=100.000, `PRAGMA integrity_check`=ok, `foreign_key_check` bersih; 3 restart rc=0, jumlah baris tetap, cache thumbnail 1.274 berkas / 5 MB |
-| 2a | Warm start < 1,5 s @ 100k | **Gagal** | process spawn → frame pertama: **1,82 s** (library sintetis) dan **3,09–3,35 s** (100k berkas nyata), konsisten lintas 4 kali jalan |
+| 2a | Warm start < 1,5 s @ 100k | **Lolos** (setelah perbaikan §11.1) | process spawn → frame pertama: **1,31–1,35 s** (median 1,32 s dari 6 kali) pada 100k berkas nyata; awalnya 3,09–3,35 s |
 | 2b | Scroll 60 fps @ 100k | **Lolos** | 166–172 fps, drop ≤ 0,4% (0–3 dari ~520–800 frame), worst 15,4 ms vs budget 16,67 ms; rss 316–339 MB (target < 550 MB) |
 | 3 | Grouping P0 (date/source/favorite/recycle) | **Lolos** | `tst_mediagridmodel` (`dateRangeFiltersInclusive`, `dateRangeSwapsReversedBounds`, `trashSelectionSoftDeletesAndUndoRestores`, `batchFavoritePersists`, `albumCardsMergeManualAndSource`) + GUI M2-REPORT §10 |
 | 4 | Tidak ada network tanpa persetujuan user | **Lolos** | audit `src/`: satu pemakai network (`AppController::downloadFaceModels()`), satu pemanggil (tombol di `SettingsView.qml`) |
 | 5 | AppImage di Ubuntu 24.04 & Fedora 40 | **Belum** | pekerjaan packaging (§7.4), ditunda atas instruksi user |
 | 6 | Dokumentasi build + user guide | **Lolos** | `README.md`, `docs/USER-GUIDE.md`, `CONTRIBUTING.md` |
 
-### 11.1 Analisis kegagalan warm start
+### 11.1 Analisis dan perbaikan warm start
 
 Instrumentasi sementara (`QElapsedTimer`, sudah dilepas dari kode) membagi start 100k seperti ini:
 
@@ -260,19 +260,41 @@ Instrumentasi sementara (`QElapsedTimer`, sudah dilepas dari kode) membagi start
 | `ensureSourceAlbum` + `ensureFtsPopulated` (dijaga nilai di `meta`, jadi no-op) | 0 ms |
 | Query grid (`prepare` + `exec`) | 0 ms — di sqlite3, `SELECT` 100k id terurut hanya **20 ms** |
 | Loop materialisasi 100k baris → `MediaItem`/`Entry` | **776–817 ms** |
-| Sisa sampai frame pertama (Qt Quick, QML, layout, thumbnail sel terlihat) | ≈1,0 s (sintetis), ≈2,3 s (berkas nyata) |
 
-SQL jelas bukan bottleneck. Yang mahal adalah **memuat seluruh library secara eager** (~8 µs/baris:
-18 kolom `query.value()` plus beberapa QString per baris) dan frame pertama yang menunggu thumbnail
-sel yang terlihat. Skalanya linier: 25k → 570 ms, 50k → 950 ms, 100k → 1,82 s. `--limit 5000`
-memotong loop ke 39 ms dan start ke 1,14 s, tetapi `--limit` hanya knob CLI untuk benchmark — belum
-ada di Settings — sehingga pengguna dengan 100k item selalu membayar penuh.
+Klarifikasi penting: klaim sebelumnya di bagian ini — bahwa sisa waktu habis menunggu thumbnail —
+**salah**. Instrumentasi `PerfMonitor::firstFramePresented` menunjukkan frame pertama hanya keluar
+**~20 ms** setelah `startupCompleted`, jadi thumbnail bukan penyebabnya. Penyebab sebenarnya ada dua:
 
-Tiga arah perbaikan (belum dikerjakan; juga tercatat di `docs/TECH-DEBT-REPORT.md`):
+1. **`MediaGridModel::albumCards()` dan `smartCategories()` dihitung tiga kali per reload** —
+   sekali untuk binding QML `albumsChanged`, sekali untuk `collectionsChanged`, sekali lagi saat
+   `registerThumbnailSources()` meminta cover. Pada 100k item itu 405–468 ms + 145 ms, dikali tiga.
+2. **Bugs collation di `albumCards()`.** Query mengelompokkan `source_album` dengan collation BINARY,
+   sedangkan index yang tersedia `idx_media_album_taken(source_album COLLATE NOCASE, taken_at DESC,
+   id DESC) WHERE deleted_at IS NULL`. Akibatnya subquery cover per album tidak bisa memakai index dan
+   **memindai ulang seluruh library untuk setiap album** (100 album × 100k baris = 468 ms). `GROUP BY`
+   dan pembanding subquery sekarang sama-sama `COLLATE NOCASE` → **12 ms**. Itu juga membetulkan bug
+   laten: kartu album tadinya dibedakan huruf besar/kecil sementara filternya tidak.
 
-1. **Progressive population** — materialisasi N pertama (mis. 2.000) agar frame pertama segera
-   keluar, lalu lanjutkan sisanya saat idle. Ini yang paling langsung menyentuh kriteria.
-2. **Hindari `query.value()` 18× per baris** — baca kolom lewat indeks `QSqlRecord` sekali, atau
-   statement sqlite3 langsung tanpa lapisan `QVariant`.
-3. **Tunda thumbnail frame pertama** — render placeholder dulu lalu isi saat siap; mekanisme revisi
-   thumbnail untuk kasus ini sudah ada (`m_thumbnailRevisions`).
+Perbaikannya: konsistensi collation di atas, plus cache agregat
+(`mutable QHash<QString, QVariantList> m_aggregateCache` di `MediaGridModel`, dibersihkan di
+`reload()`) supaya tiga pemanggilan itu hanya menghitung sekali.
+
+**Hasil (library berkas nyata 100k, `QT_QPA_PLATFORM=offscreen`):**
+
+| Kondisi | Sebelum | Sesudah |
+|---|---|---|
+| `grid_limit=0` (semua 100k item) | 3,09–3,35 s | **1,31–1,35 s** (6 kali: 1310, 1319, 1322, 1323, 1339, 1346 ms; median 1322) |
+| `grid_limit=20000` | — | **894–899 ms** |
+
+**Knob-nya sekarang ada di UI.** Sebelumnya `--limit` hanya flag CLI; pengguna dengan 100k item tidak
+punya cara memotong biaya frame pertama. Sekarang ada setting **Settings → Interface → Photo grid →
+"Items loaded in the grid"** (`library/grid_limit`, SpinBox 0–200000; 0 = "All items"), dengan
+normalisasi ke kelipatan 1.000 dalam rentang 1.000–1.000.000. Nilai CLI `--limit` tetap menang bila
+diberikan (dibedakan lewat `CliOptions::gridLimitSet`, karena 0 adalah nilai yang sah).
+
+Sisa optimasi (tercatat di `docs/TECH-DEBT-REPORT.md`, belum dikerjakan karena kriteria sudah lolos):
+
+1. **Progressive population** — materialisasi N pertama, lanjutkan sisanya saat idle. Membuat frame
+   pertama tetap cepat berapa pun besar library.
+2. **Hindari `query.value()` 18× per baris** — (~8 µs/baris) baca kolom lewat `QSqlRecord` sekali atau
+   langsung lewat statement sqlite3 tanpa lapisan `QVariant`.

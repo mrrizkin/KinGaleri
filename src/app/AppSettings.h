@@ -54,6 +54,10 @@ class AppSettings : public QObject
     // --- Library ----------------------------------------------------------
     Q_PROPERTY(bool autoWatch READ autoWatch WRITE setAutoWatch NOTIFY autoWatchChanged)
     Q_PROPERTY(bool rescanOnStartup READ rescanOnStartup WRITE setRescanOnStartup NOTIFY rescanOnStartupChanged)
+    /** Cap on how many items the grid materialises at once (0 = every item).
+     *  The user-facing form of the `--limit` benchmark knob: on a 100k library the
+     *  first frame waits for the whole model, so a cap is what keeps startup fast. */
+    Q_PROPERTY(int gridDisplayLimit READ gridDisplayLimit WRITE setGridDisplayLimit NOTIFY gridDisplayLimitChanged)
     Q_PROPERTY(bool followSymlinks READ followSymlinks WRITE setFollowSymlinks NOTIFY followSymlinksChanged)
     Q_PROPERTY(bool includeHidden READ includeHidden WRITE setIncludeHidden NOTIFY includeHiddenChanged)
     Q_PROPERTY(bool ignoreJunk READ ignoreJunk WRITE setIgnoreJunk NOTIFY ignoreJunkChanged)
@@ -153,6 +157,11 @@ public:
     bool rescanOnStartup() const { return m_rescanOnStartup; }
     void setRescanOnStartup(bool value);
 
+    /// 0 means "all items"; otherwise clamped to [1000, 1000000] and rounded to a
+    /// multiple of 1000 so the config file stays readable.
+    int gridDisplayLimit() const { return m_gridDisplayLimit; }
+    void setGridDisplayLimit(int limit);
+
     bool followSymlinks() const { return m_followSymlinks; }
     void setFollowSymlinks(bool value);
 
@@ -224,6 +233,8 @@ public:
     static int normaliseSidebarWidth(int width);
     static int normaliseThumbnailMemoryMb(int mb);
     static int normaliseVideoVolume(int volume);
+    /// Grid display cap: 0 stays 0 (= all items), otherwise [1000, 1000000] in steps of 1000.
+    static int normaliseGridDisplayLimit(int limit);
     /// Inference thread count, clamped to [1, 8].
     static int normaliseSmartThreads(int threads);
     /// Cleans/dedupes a folder list for the ignore set.
@@ -254,6 +265,7 @@ signals:
     void showPerfOverlayChanged();
     void autoWatchChanged();
     void rescanOnStartupChanged();
+    void gridDisplayLimitChanged();
     void followSymlinksChanged();
     void includeHiddenChanged();
     void ignoreJunkChanged();
@@ -298,6 +310,7 @@ private:
     QStringList m_ignoredFolders;
     QStringList m_ignoredPatterns;
     int m_thumbnailMemoryMb = 0;
+    int m_gridDisplayLimit = 0;
     bool m_videoAutoplay = true;
     bool m_videoLoop = false;
     bool m_videoMute = false;

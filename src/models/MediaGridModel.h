@@ -458,6 +458,13 @@ private:
     /// Cover media ids produced by albumCards(), so onThumbnailReady knows which
     /// album cards to refresh.
     mutable QSet<qint64> m_albumCoverIds;
+    /// Cache for the sidebar/collection aggregates (albumCards(), smartCategories()).
+    /// They are pure functions of the database and QML re-reads them several times
+    /// per reload - the albumsChanged/collectionsChanged bindings plus the thumbnail
+    /// cover pass - which on a 100k library meant the same table scans ran three
+    /// times per start. Cleared in reload(), which every mutation already goes
+    /// through.
+    mutable QHash<QString, QVariantList> m_aggregateCache;
     QVector<UndoAction> m_undoStack;
     qint64 m_dateFrom = 0;
     qint64 m_dateTo = 0;

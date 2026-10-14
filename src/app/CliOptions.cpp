@@ -149,6 +149,7 @@ CliOptions parseCli(const QStringList &args)
         const int n = limitRaw.toInt(&ok);
         if (ok && n >= 0) {
             opts.gridLimit = n;
+            opts.gridLimitSet = true;
         } else {
             opts.warnings.append(QStringLiteral("--limit expects a non-negative integer, got '%1'")
                                      .arg(limitRaw));

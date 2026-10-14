@@ -475,6 +475,45 @@ Item {
                     checked: root.settings.showDateHeaders
                     onToggled: function (value) { root.settings.showDateHeaders = value }
                 }
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 6
+                    text: qsTr("Items loaded in the grid")
+                    color: Theme.textMuted
+                    font.pixelSize: 12
+                }
+                SpinBox {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 200000
+                    stepSize: 5000
+                    editable: true
+                    // No specialValueText on the QML SpinBox: 0 is spelled out by the
+                    // text mapping instead, and typing accepts "5000 items" or "5 000".
+                    textFromValue: function (value) {
+                        return value === 0 ? qsTr("All items") : qsTr("%1 items").arg(value)
+                    }
+                    valueFromText: function (text) {
+                        const digits = text.replace(/[^0-9]/g, "")
+                        return digits.length === 0 ? 0 : Number(digits)
+                    }
+                    validator: IntValidator { bottom: 0; top: 200000 }
+                    value: root.settings.gridDisplayLimit
+                    onValueModified: {
+                        root.settings.gridDisplayLimit = value
+                        // The setter rounds and clamps, so read the stored value back
+                        // instead of leaving a number in the box that was never saved.
+                        value = root.settings.gridDisplayLimit
+                    }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("A cap keeps the first frame fast on very large libraries: only the newest items are loaded. The rest stay in the library and come back when you raise the limit.")
+                    color: Theme.textFaint
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
             }
 
             SettingCard {

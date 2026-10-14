@@ -38,6 +38,7 @@ constexpr auto kHoverEffectsKey = "interface/hover_effects";
 constexpr auto kShowPerfOverlayKey = "interface/show_perf_overlay";
 constexpr auto kAutoWatchKey = "library/auto_watch";
 constexpr auto kRescanOnStartupKey = "library/rescan_on_startup";
+constexpr auto kGridDisplayLimitKey = "library/grid_limit";
 constexpr auto kFollowSymlinksKey = "library/follow_symlinks";
 constexpr auto kIncludeHiddenKey = "library/include_hidden";
 constexpr auto kIgnoreJunkKey = "library/ignore_junk";
@@ -67,6 +68,11 @@ constexpr int kDefaultThumbnailSize = 168;
 
 constexpr int kMinThumbnailMemoryMb = 32;
 constexpr int kMaxThumbnailMemoryMb = 2048;
+
+// Grid display cap. The floor is deliberately well above a single screen so the
+// spinner cannot be used to hide the library one row at a time.
+constexpr int kMinGridDisplayLimit = 1000;
+constexpr int kMaxGridDisplayLimit = 1000000;
 
 constexpr int kMinSidebarWidth = 160;
 constexpr int kMaxSidebarWidth = 360;
@@ -149,6 +155,7 @@ void AppSettings::load()
         value(kIgnoredPatternsKey, QStringList()).toStringList());
 
     m_thumbnailMemoryMb = normaliseThumbnailMemoryMb(value(kThumbnailMemoryKey, 0).toInt());
+    m_gridDisplayLimit = normaliseGridDisplayLimit(value(kGridDisplayLimitKey, 0).toInt());
 
     m_videoAutoplay = value(kVideoAutoplayKey, true).toBool();
     m_videoLoop = value(kVideoLoopKey, false).toBool();
@@ -245,6 +252,16 @@ int AppSettings::normaliseThumbnailMemoryMb(int mb)
 int AppSettings::normaliseVideoVolume(int volume)
 {
     return qBound(0, volume, 100);
+}
+
+int AppSettings::normaliseGridDisplayLimit(int limit)
+{
+    if (limit <= 0) {
+        return 0; // every item
+    }
+    // Round to 1000 so a hand-edited INI does not end up with a value the grid
+    // spinner cannot represent.
+    return qBound(kMinGridDisplayLimit, (limit + 500) / 1000 * 1000, kMaxGridDisplayLimit);
 }
 
 QStringList AppSettings::normaliseIgnoredFolders(const QStringList &folders)
@@ -463,6 +480,17 @@ void AppSettings::setRescanOnStartup(bool value)
     m_rescanOnStartup = value;
     writeSetting(kRescanOnStartupKey, m_rescanOnStartup);
     Q_EMIT rescanOnStartupChanged();
+}
+
+void AppSettings::setGridDisplayLimit(int limit)
+{
+    const int normalised = normaliseGridDisplayLimit(limit);
+    if (normalised == m_gridDisplayLimit) {
+        return;
+    }
+    m_gridDisplayLimit = normalised;
+    writeSetting(kGridDisplayLimitKey, m_gridDisplayLimit);
+    Q_EMIT gridDisplayLimitChanged();
 }
 
 void AppSettings::setFollowSymlinks(bool value)

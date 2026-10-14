@@ -158,8 +158,11 @@ int main(int argc, char *argv[])
 
     AppController controller;
     controller.setInitialPerfOverlay(options.showPerfOverlay);
-    // Must be set before initialise() so the model's first load honours it.
-    controller.setGridLimit(options.gridLimit);
+    // Must be set before initialise() so the model's first load honours it. An
+    // explicit --limit always wins; otherwise the persisted setting decides, which
+    // is how a 100k library keeps a fast first frame without a command line.
+    controller.setGridLimit(options.gridLimitSet ? options.gridLimit
+                                                 : controller.settings()->gridDisplayLimit());
 
     // A fresh library defaults to the home folder, but only for an interactive
     // launch: benchmarks, explicit --index runs and KG_NO_HOME_SCAN keep it off

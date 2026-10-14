@@ -565,6 +565,7 @@ void MediaGridModel::reload()
     m_entries.clear();
     m_indexById.clear();
     m_totalBytes = 0;
+    m_aggregateCache.clear();
 
     if (!m_database) {
         m_error = tr("No database attached");
@@ -1255,6 +1256,13 @@ QVariantList MediaGridModel::albums() const
 
 QVariantList MediaGridModel::albumCards() const
 {
+    const auto cachedCards = m_aggregateCache.constFind(QStringLiteral("albumCards"));
+    if (cachedCards != m_aggregateCache.constEnd()) {
+        // Deliberately before m_albumCoverIds.clear(): the cover set from the first
+        // computation is still valid and onThumbnailReady() depends on it.
+        return *cachedCards;
+    }
+
     QVariantList cards;
     if (!m_database) {
         return cards;
@@ -1301,13 +1309,24 @@ QVariantList MediaGridModel::albumCards() const
     }
 
     // Folder/camera albums derived from the indexed rows.
+    //
+    // COLLATE NOCASE on both the GROUP BY and the cover lookup is not cosmetic: it
+    // is what lets SQLite use idx_media_album_taken(source_album COLLATE NOCASE,
+    // taken_at DESC, id DESC) both for the grouping and for the per-album cover
+    // search. Grouping on the bare BINARY column made every one of the per-album
+    // subqueries re-scan the library: 468 ms for 100 source albums on a 100k
+    // library, which was most of the cold start. It also matches the filter path,
+    // which has always compared album names case-insensitively - so a library with
+    // both "Trip" and "trip" no longer shows two cards that select each other.
     QSqlQuery source(m_database->connection());
     source.prepare(QStringLiteral(
-        "SELECT source_album, COUNT(*), "
-        "  (SELECT m2.id FROM media m2 WHERE m2.source_album = media.source_album "
+        "SELECT source_album COLLATE NOCASE, COUNT(*), "
+        "  (SELECT m2.id FROM media m2 "
+        "     WHERE m2.source_album = media.source_album COLLATE NOCASE "
         "     AND m2.deleted_at IS NULL ORDER BY m2.taken_at DESC, m2.id DESC LIMIT 1) "
         "FROM media WHERE deleted_at IS NULL AND source_album IS NOT NULL "
-        "AND source_album <> '' GROUP BY source_album ORDER BY source_album COLLATE NOCASE"));
+        "AND source_album <> '' GROUP BY source_album COLLATE NOCASE "
+        "ORDER BY source_album COLLATE NOCASE"));
     if (!source.exec()) {
         qWarning("kin-galeri: could not list source albums: %s",
                  qUtf8Printable(source.lastError().text()));
@@ -1318,6 +1337,7 @@ QVariantList MediaGridModel::albumCards() const
         }
     }
 
+    m_aggregateCache.insert(QStringLiteral("albumCards"), cards);
     return cards;
 }
 
@@ -1436,6 +1456,11 @@ QVariantList MediaGridModel::people() const
 
 QVariantList MediaGridModel::smartCategories() const
 {
+    const auto cachedCategories = m_aggregateCache.constFind(QStringLiteral("smartCategories"));
+    if (cachedCategories != m_aggregateCache.constEnd()) {
+        return *cachedCategories;
+    }
+
     QVariantList list;
     if (!m_database) {
         return list;
@@ -1484,6 +1509,7 @@ QVariantList MediaGridModel::smartCategories() const
         map.insert(QStringLiteral("coverUrl"), coverUrl(coverId));
         list.append(map);
     }
+    m_aggregateCache.insert(QStringLiteral("smartCategories"), list);
     return list;
 }
 

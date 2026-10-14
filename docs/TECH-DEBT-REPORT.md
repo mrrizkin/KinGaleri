@@ -351,15 +351,18 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
 
 ### Masih terbuka
 
-- **Warm start 100k melebihi budget (PRD §9).** Diukur 2026-10-15 pada Ryzen 7 PRO 5850U:
-  process spawn → frame pertama **1,82 s** (library sintetis) dan **3,09–3,35 s** (100.000 berkas
-  PNG nyata), sedangkan targetnya **< 1,5 s**. Scroll-nya sendiri lolos (166–172 fps, drop ≤ 0,4%).
-  Instrumentasi sementara melokalisasi biayanya: migrasi & query SQL ≈ 0 ms (SQL 20 ms di sqlite3),
-  loop materialisasi 100k baris **776–817 ms**, sisanya Qt Quick + frame pertama yang menunggu
-  thumbnail. Sifatnya linier (~8 µs/baris). `--limit 5000` menurunkannya ke 1,14 s, tetapi `--limit`
-  hanya knob CLI benchmark dan belum ada di Settings. Tiga arah perbaikan (progressive population;
-  hindari `query.value()` 18× per baris; tunda thumbnail frame pertama) ditulis di
-  `docs/M4-REPORT.md` §11.1.
+- ~~**Warm start 100k melebihi budget (PRD §9)**~~ — **sudah ditutup.** Diukur 2026-10-15 pada
+  Ryzen 7 PRO 5850U: process spawn → frame pertama awalnya **3,09–3,35 s** pada 100.000 berkas PNG
+  nyata (target < 1,5 s); scroll sendiri selalu lolos (166–172 fps, drop ≤ 0,4%). Instrumentasi
+  sementara menemukan biaya sebenarnya bukan SQL (20 ms) dan bukan thumbnail (frame pertama cuma
+  ~20 ms setelah `startupCompleted`, klaim lama di M4-REPORT §11.1 salah), melainkan
+  `albumCards()`/`smartCategories()` yang dihitung **tiga kali per reload** plus `GROUP BY
+  source_album` yang collation-nya tidak cocok dengan `idx_media_album_taken` sehingga memindai
+  ulang seluruh library per album (**468 ms → 12 ms** setelah `COLLATE NOCASE` konsisten). Ditambah
+  cache agregat di `MediaGridModel`. Hasil: **1,31–1,35 s** (median 1,32 s dari 6 kali) dengan semua
+  100k item, **≈0,9 s** dengan batas grid. Knob `--limit` kini juga ekspos di UI sebagai
+  `library/grid_limit` (Settings → Interface → Photo grid). Sisa optimasi opsional (progressive
+  population; hindari `query.value()` 18× per baris) tetap tercatat di `docs/M4-REPORT.md` §11.1.
 - ~~**Terjemahan C++ (M4)**~~ — **sudah ditutup.** 43 string dibungkus `tr()`, ketiga konteks C++
   ada di `.ts`. Konteksnya adalah nama metaobject (`kg::AppController`), bukan nama kelas —
   kesalahan itu sempat mematikan seluruh terjemahan C++ tanpa terlihat, dan sekarang dijaga

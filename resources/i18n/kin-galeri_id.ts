@@ -675,6 +675,22 @@
         <source>Save</source>
         <translation>Simpan</translation>
     </message>
+    <message>
+        <source>Items loaded in the grid</source>
+        <translation>Item yang dimuat di grid</translation>
+    </message>
+    <message>
+        <source>All items</source>
+        <translation>Semua item</translation>
+    </message>
+    <message>
+        <source>A cap keeps the first frame fast on very large libraries: only the newest items are loaded. The rest stay in the library and come back when you raise the limit.</source>
+        <translation>Batas ini menjaga frame pertama tetap cepat di pustaka yang sangat besar: hanya item terbaru yang dimuat. Sisanya tetap ada di pustaka dan muncul kembali saat batasnya dinaikkan.</translation>
+    </message>
+    <message>
+        <source>%1 items</source>
+        <translation>%1 item</translation>
+    </message>
 </context>
 <context>
     <name>Main</name>

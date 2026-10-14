@@ -149,7 +149,10 @@ tersimpan, tidak ada tombol Apply.
 - **Interface** — tema (System / Light / Dark), warna aksen (6 pilihan), bahasa (System / English /
   Bahasa Indonesia, berlaku langsung), ikon sistem dari tema ikon desktop (bisa dimatikan untuk
   memakai glif teks bawaan), tampil/sembunyikan dan lebar sidebar, ukuran thumbnail, jarak
-  antar tile, header tanggal, animasi transisi, serta sorotan hover pada tile.
+  antar tile, header tanggal, animasi transisi, serta sorotan hover pada tile. Ada juga **Items
+  loaded in the grid**: batas jumlah item yang dimuat (0 = semua; di pustaka yang sangat besar
+  batas ini yang menjaga frame pertama tetap cepat, dan sisa item muncul begitu batasnya
+  dinaikkan).
 - **Library** — daftar folder pustaka dengan jumlah item dan tombol **Remove**, **Add folder…**,
   **Rescan now**; pantau perubahan berkas otomatis; pindai ulang saat mulai; opsi pemindaian:
   ikuti symlink, sertakan folder tersembunyi, lewati folder sampah (daftar polanya terlihat & bisa
@@ -199,7 +202,8 @@ kin-galeri [opsi]
       --reset-db              Hapus database sebelum mulai
       --thumbnail-size <px>   Panjang sisi thumbnail (default 256)
       --thumb-memory-cache <MB>  Budget thumbnail di memori (default: adaptif)
-      --limit <N>             Hanya tampilkan N item terbaru
+      --limit <N>             Hanya tampilkan N item terbaru (0 = semua; menimpa setelan
+                              Settings → Interface → "Items loaded in the grid")
       --no-ui                 Mode headless (indexing saja)
       --software-render       Paksa renderer software (driver GPU bermasalah)
       --rebuild-search-index  Bangun ulang index pencarian lalu keluar

@@ -124,6 +124,13 @@ bool AppController::initialise(const QString &databasePath, int thumbnailEdge, Q
         // more rows than the caller asked for.
         m_model->setLimit(m_pendingGridLimit);
     }
+    // Changing the cap in Settings re-runs the load immediately; setLimit() emits
+    // filterChanged() and reloads, so there is nothing else to do here.
+    connect(m_settings, &AppSettings::gridDisplayLimitChanged, this, [this]() {
+        if (m_model) {
+            m_model->setLimit(m_settings->gridDisplayLimit());
+        }
+    });
     connect(m_model, &MediaGridModel::reloadFinished, this, &AppController::registerThumbnailSources);
     connect(m_model, &MediaGridModel::countChanged, this, &AppController::summaryChanged);
     connect(m_model, &MediaGridModel::summaryChanged, this, &AppController::summaryChanged);

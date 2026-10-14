@@ -552,14 +552,20 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - Catatan: detail & bukti verifikasi di [`docs/M2-REPORT.md`](docs/M2-REPORT.md) §9–§10. Sisa yang belum:
   target memori 100k (§4.1.1) dan `tests/`.
 
-### M3 — AI Grouping (4–6 minggu) — **implementasi selesai & terverifikasi; exit criteria belum dibuktikan**
+### M3 — AI Grouping (4–6 minggu) — **implementasi selesai; exit criteria diukur, belum lolos pada set teradversarial**
 - [x] Face detect + embed + cluster → People UI (opt-in `-DKG_ENABLE_ML=ON`, ONNX Runtime + YuNet/SFace)
 - [x] Places (GPS cluster) + reverse geocode offline (indeks kota bawaan `cities.tsv`)
 - [x] Event clustering (time+location gap)
 - [x] Build flag ML + unduhan model opt-in dari Settings
-- [ ] **Exit criteria:** akurasi face cluster "layak rename manual" pada dataset 10k — **belum dijalankan.**
-  Bukti terkuat saat ini 4 potret → 4 wajah / 3 orang (dua foto Obama dari 2009 dan 2012 ter-cluster
-  jadi satu). Belum ada pengukuran pada dataset 10k, jadi angka akurasinya belum bisa diklaim.
+- [ ] **Exit criteria:** akurasi face cluster "layak rename manual" pada dataset 10k.
+  **Sudah diukur** 2026-10-14 pada LFW **13.233 gambar / 5.749 identitas**: verifikasi 10-fold
+  97,03% ± 1,06%, tetapi purity kluster hanya **76,35%** dan pair F1 90,54% - kluster terbesar
+  mencampur 12 identitas. Jadi pada keragaman identitas sebesar itu jawabannya *tidak layak*.
+  Pada subset bergaya pustaka pribadi (158 identitas / 4.324 gambar) algoritma yang sama mencapai
+  purity 98,4%. Kriteria dinyatakan lolos bila **purity >= 95% pada set 5.749 identitas**; jalur
+  perbaikannya (pergeseran centroid saat penggabungan) ada di `docs/TECH-DEBT-REPORT.md`.
+  Reproduksi: `scripts/evaluate-lfw.py` (perintah lengkap di kepala skrip), detail di
+  `docs/M3-REPORT.md` §"Exit criteria PRD".
 
 > Catatan: nama flag di draf awal PRD (`ENABLE_ML`) adalah `KG_ENABLE_ML` di implementasi.
 

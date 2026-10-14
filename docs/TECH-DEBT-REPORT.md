@@ -368,3 +368,22 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
   pada ukuran library yang diuji, tetapi kandidat untuk model khusus People bila jumlah cluster besar.
 - **Klaster wajah bersifat greedy by-confidence**: satu wajah yang salah cluster tidak bisa dibatalkan
   per-wajah. Merge/split manual per orang baru menyediakan merge; split belum ada (M5).
+- **Pergeseran centroid membuat kluster menelan identitas lain (utang baru, terukur).** Pengukuran exit
+  criteria M3 pada LFW (`docs/M3-REPORT.md` §"Exit criteria PRD", reproduksi
+  `scripts/evaluate-lfw.py`) menunjukkan verifikasi embed bagus (97,03% ± 1,06%) tetapi purity kluster
+  hanya 76,35% pada 5.749 identitas. Penyebabnya ada di `FacePipeline::run()` langkah 3: centroid
+  adalah **running mean** (`addToCluster`) yang menyerap setiap anggota baru, jadi kluster besar
+  perlahan bergerak ke wajah "rata-rata" dan mulai menarik identitas yang mirip secara kasar - kluster
+  terbesar berisi 527 wajah dari **12 identitas** (George W. Bush + Michael Piuze + ...), lalu
+  236 wajah / 3 identitas (Colin Powell + Joe Lieberman + George W. Bush). Efeknya hilang pada pustaka
+  bergaya pribadi (purity 96,4% pada 423 identitas, 98,4% pada 158 identitas), yaitu kasus nyata
+  aplikasi ini, tetapi ambang lolos kriteria (purity >= 95% pada 5.749 identitas) tetap tidak tercapai.
+  Jalur perbaikan yang kandidat, berurutan dari termurah:
+  1. jangan perbarui centroid setelah kluster melewati batas ukuran (mis. 50 wajah), atau pakai
+     **medoid/anggota terdekat** alih-alih mean;
+  2. dua tahap: klustering greedy sekali untuk mencari seed, lalu **re-assign** semua wajah ke seed
+     terdekat dengan jarak ke contoh terdekat, bukan ke rata-rata;
+  3. kalau masih kurang, ganti dengan **DBSCAN/HDBSCAN** pada cosine (jarak 1 - cos, `eps` ~ 0,6)
+     yang secara alami memisahkan kluster longgar dan menandai noise sebagai singleton.
+  Setiap perubahan harus divalidasi ulang dengan `scripts/evaluate-lfw.py cluster` (purity, pair F1)
+  **dan** `sweep` supaya perbaikan untuk set teradversarial tidak merusak kasus pustaka pribadi.

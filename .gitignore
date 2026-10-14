@@ -11,3 +11,7 @@ session.jsonl
 
 # kin-galeri runtime artifacts (dev convenience)
 /bench-cache/
+
+# python helper scripts (scripts/*.py)
+__pycache__/
+*.pyc

@@ -142,4 +142,4 @@ Dua item yang sebelumnya tercatat sebagai utang ditutup setelah M3:
   tanpa tool itu perilakunya placeholder seperti sebelumnya.
 
 `LibraryMaintenance::kFtsIndexVersion` naik 2 → 3 agar library lama membangun ulang indeks
-sekali. Test: `tst_mediagridmodel::taggingFiltersAndIndexesFts`, `tst_imageloader` (10/10 lulus).
+sekali. Test: `tst_mediagridmodel::taggingFiltersAndIndexesFts`, `tst_imageloader` (11/11 lulus).

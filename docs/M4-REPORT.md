@@ -32,10 +32,19 @@ Kontras kedua palet: latar `#14161a`↔`#f6f7f9`, teks `#eef1f6`↔`#1b1f27`, ak
 
 ## 2. i18n EN / ID
 
-- Seluruh string QML sudah dibungkus `qsTr()`. Katalog Indonesia:
-  `resources/i18n/kin-galeri_id.ts` — **258 pesan, semuanya diterjemahkan** (0 `unfinished`),
-  tersebar di 10 konteks: `Main`, `Sidebar`, `MediaGrid`, `AlbumsView`, `AlbumCard`,
-  `SettingsView`, `ViewerOverlay`, `MpvVideoSurface`, `PerfOverlay`, `KinMpvItem`.
+- Seluruh string QML sudah dibungkus `qsTr()`, dan sejak sesi ini string C++ juga `tr()`.
+  Katalog Indonesia: `resources/i18n/kin-galeri_id.ts` — **349 pesan, semuanya diterjemahkan**
+  (0 `unfinished`). 258 pesan dari 10 konteks QML (`Main`, `Sidebar`, `MediaGrid`, `AlbumsView`,
+  `AlbumCard`, `SettingsView`, `ViewerOverlay`, `MpvVideoSurface`, `PerfOverlay`, `KinMpvItem`)
+  dan 92 dari 3 konteks C++ (`kg::AppController`, `kg::MediaGridModel`, `kg::ShortcutRegistry`).
+- **Konteks `tr()` harus memakai nama metaobject, bukan nama kelas telanjang.** Kelas C++ proyek ini
+  hidup di `namespace kg`, jadi `metaObject()->className()` — yang dipakai Qt sebagai konteks —
+  bernilai `kg::AppController`, bukan `AppController`. Selama `.ts` memakai nama pendek, konteksnya
+  tidak pernah cocok dan **semua** terjemahan C++ jatuh ke bahasa Inggris; string QML tetap bekerja
+  karena `qsTr()` memakai nama komponen QML, sehingga bug ini tidak terlihat dari UI. Linter tidak
+  bisa menemukannya (`tr()` dan `QStringLiteral` sama-sama valid), jadi dijaga oleh
+  `tests/tst_i18n.cpp`, yang mengaitkan nama konteks di `.ts` dengan
+  `T::staticMetaObject.className()` dan menolak nama pendek.
 - Digabungkan saat build oleh `qt_add_translations()` (lihat `CMakeLists.txt`) ke resource
   `:/i18n/kin-galeri_id.qm`. `AppSettings::applyLanguage()` memuatnya saat preferensi berubah;
   mengganti bahasa memicu `LanguageChange` sehingga binding `qsTr()` di QML dievaluasi ulang **tanpa
@@ -45,11 +54,11 @@ Kontras kedua palet: latar `#14161a`↔`#f6f7f9`, teks `#eef1f6`↔`#1b1f27`, ak
 
 Penerjemahan sebagian tidak apa-apa: entri yang belum diterjemahkan jatuh ke teks sumber (Inggris).
 
-**Belum (lihat §10):** tiga konteks C++ — `AppController`, `ShortcutRegistry`, `MediaGridModel` —
-belum ada di katalog, dan beberapa string dibangun dengan `QStringLiteral` sehingga tidak bisa
-diterjemahkan sama sekali (mis. status `"Ready"` dan ringkasan grid `"%1 items · %2"`). Terlihat di
-UI Indonesia: sidebar dan halaman Pengaturan sudah Indonesia, sementara isi status bar tetap
-Inggris.
+**Sudah ditutup.** 43 string C++ yang sebelumnya `QStringLiteral(...)` sudah dibungkus `tr()`
+(`AppController` 17, `MediaGridModel` 26 termasuk `Undid %1`, ditambah pemetaan filter
+`videos`/`images`), ketiga konteks C++ ditambahkan ke `.ts`, dan konteksnya diperbaiki menjadi
+`kg::…`. Terverifikasi visual: UI Indonesia menampilkan status bar **"Siap"** dan header
+**"4 item · 5.7 MB"** (`/tmp/kgv/i18n-id3.png`), bukan lagi Inggris.
 
 > **Peringatan tool.** `lupdate` dari `qt6-tools` 6.12.0 di mesin dev **tidak** dibangun dengan
 dukungan QML/JavaScript ("missing qml/javascript support"). Menjalankan target `update_translations`
@@ -95,7 +104,7 @@ Reset all).
 
 ## 6. Unit test (item 1)
 
-Direktori `tests/` (sebelumnya tidak ada) berisi 10 target Qt Test + CTest, diaktifkan dengan
+Direktori `tests/` (sebelumnya tidak ada) berisi 11 target Qt Test + CTest, diaktifkan dengan
 `-DKG_BUILD_TESTS=ON`. `kin-galeri-testcore` (static library) mengompilasi subset sumber non-QML
 sehingga target aplikasi tidak terganggu.
 
@@ -111,6 +120,7 @@ sehingga target aplikasi tidak terganggu.
 | `tst_shortcuts` | skema default, rebind persisten, konflik ditolak, reset satu aksi vs `resetAll`, tangkapan key event, sampah tersimpan diabaikan |
 | `tst_grouping` | jarak haversine, merge/pisah klaster geo, label kota bawaan, pemisahan event per jeda waktu & lompatan tempat, urutan, penulisan tempat+event |
 | `tst_imageloader` | deteksi `heif-convert` per platform, decode berkas hilang, decode round-trip |
+| `tst_i18n` | konteks `tr()` C++ cocok dengan `staticMetaObject().className()` (nama pendek ditolak), terjemahan konteks C++ tidak kosong |
 
 Semua memakai `QTemporaryDir`; library pengguna tidak tersentuh. Dua bug ditemukan oleh test ini:
 `Database` tidak punya destruktor (koneksi bocor antar-instance), dan ekspektasi `scanned` menghitung
@@ -175,11 +185,8 @@ dari perubahan M4.
 
 - **Kustomisasi shortcut** (PRD M4) — **sudah ditutup**; lihat §5.
 - **AppImage/Flatpak/.deb belum dibangun** di lingkungan ini (§7.4). Skrip/manifest siap.
-- **Terjemahan C++**: `AppController`, `ShortcutRegistry`, dan `MediaGridModel` belum ada di katalog
-  `.ts`, dan sebagian string dibangun dengan `QStringLiteral("…")` sehingga mustahil diterjemahkan
-  (mis. `"Ready"`, `"%1 items · %2"`). Ada 61 pemanggilan `tr()` di C++, nol yang punya terjemahan.
-  Jalur perbaikannya: bungkus string yang masih `QStringLiteral` dengan `tr()`, lalu tambahkan
-  konteksnya ke `.ts`.
+- ~~**Terjemahan C++**~~ — **sudah ditutup**; lihat §2 (43 string dibungkus `tr()`, konteks
+  `kg::…` diperbaiki, dijaga `tests/tst_i18n.cpp`).
 - **`UnqualifiedAccess` QML**: 241 peringatan qmllint berasal dari komponen bersarang yang membaca id
   `root` milik komponen luarnya. Persis itu yang dilarang `pragma ComponentBehavior: Bound`.
   Perbaikannya bukan satu-baris: delegate inline tidak bisa menerima `required` property dari view,

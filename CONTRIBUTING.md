@@ -79,10 +79,13 @@ and `ViewerOverlay.qml` have examples).
 - C++20, Qt 6 conventions. Match the style of the file you are editing.
 - 4-space indentation, braces on their own line for functions/classes.
 - Prefer `QStringLiteral`/`QLatin1String` and keep hot loops allocation-light.
-- User-visible strings must be wrapped in `qsTr()` and added to
+- User-visible strings must be wrapped in `qsTr()`/`tr()` and added to
   `resources/i18n/kin-galeri_id.ts` (edit the `.ts` **by hand** or with
   `lconvert`; do not run the `update_translations` target, the local `lupdate`
-  lacks QML support).
+  lacks QML support). For a C++ class inside `namespace kg` the translation
+  context is the metaobject name (`kg::MyClass`), never the bare class name - a
+  mismatch silently drops every string back to English, so `tests/tst_i18n.cpp`
+  pins the two together.
 - Keep commits focused and explain the *why* in the message.
 
 ## Pull requests

@@ -106,10 +106,11 @@ sekali lagi sebelum `xdotool type`. `xdotool type` lebih andal daripada clipboar
 4. **Konsistensi tema terang**: pastikan semua elemen ikut palet terang — menu, semua Dialog
    (rename/move/album picker/error), selection bar, scrollbar, `ViewerOverlay`, `PerfOverlay`,
    `MpvVideoSurface`, `Sidebar`.
-5. **i18n belum menyeluruh**: string yang dibangun di **C++** masih Inggris, mis. ringkasan
-   `5 items · 508 B`, footer `watching N folders`, `Ready`, pesan error/undo. Alihkan ke
-   `tr()` + tambahkan ke `resources/i18n/kin-galeri_id.ts` (258 pesan saat ini, semuanya konteks
-   QML; konteks C++ `AppController`/`ShortcutRegistry`/`MediaGridModel` belum ada). **Jangan**
+5. ~~**i18n belum menyeluruh**~~ **Sudah ditutup.** 43 string C++ dibungkus `tr()`
+   (`AppController` 17, `MediaGridModel` 26), konteks C++ ditambahkan ke `.ts` (349 pesan total).
+   Temuan penting: konteks `tr()` untuk kelas di `namespace kg` adalah nama metaobject
+   (`kg::AppController`), **bukan** nama kelas telanjang — `.ts` sempat memakai nama pendek sehingga
+   seluruh terjemahan C++ diam-diam jatuh ke Inggris. Dijaga `tests/tst_i18n.cpp`. **Jangan**
    jalankan target `update_translations` di mesin ini — `lupdate` dari `qt6-tools` 6.12.0 tidak
    punya dukungan QML dan akan menghapus ke-258 pesan QML. Sunting `.ts` dengan tangan.
 6. ~~**HiDPI/fractional scaling** belum diverifikasi visual.~~ **Sudah diverifikasi.**
@@ -150,7 +151,7 @@ QT_QPA_PLATFORM=offscreen timeout 6 ./build/kin-galeri --no-ui --db /tmp/kgidx.d
 QT_QPA_PLATFORM=offscreen timeout 6 ./build/kin-galeri --db /tmp/kgidx.db --cache /tmp/kgidxc 2>&1 \
   | grep -iE "error|undefined|TypeError|binding loop" | grep -iv "Gtk\|murrine\|canberra"
 
-# Unit test (10 target, harus 10/10 pass)
+# Unit test (11 target, harus 11/11 pass)
 cmake -S . -B build-tests -G Ninja -DKG_BUILD_TESTS=ON
 cmake --build build-tests
 ctest --test-dir build-tests --output-on-failure
@@ -168,7 +169,7 @@ ctest --test-dir build-tests --output-on-failure
   `MpvVideoSurface.qml` — sudah selesai & terverifikasi (lihat `docs/M2-REPORT.md` §6). Diperiksa
   ulang di sesi ini: di akhir klip muncul tombol replay ↻ dengan frame terakhir tetap tampil dan
   tanpa spinner.
-- Jangan regresi 10 unit test (`build-tests`).
+- Jangan regresi 11 unit test (`build-tests`).
 - Jangan naikkan jumlah warning qmllint: `./scripts/qml-lint.sh` sekarang keluar dengan 0
   peringatan. Kalau muncul peringatan baru, perbaiki atau matikan secara sempit dengan komentar
   alasan di tempat (lihat `MpvVideoSurface.qml` dan `.qmllint.ini` sebagai contoh).
@@ -181,7 +182,7 @@ ctest --test-dir build-tests --output-on-failure
 
 - Bug UI diperbaiki; light & dark konsisten; menu tidak terpotong.
 - `cmake --build build` bersih; smoke offscreen tanpa error QML; `./scripts/qml-lint.sh` exit 0.
-- `ctest` 10/10 lulus.
+- `ctest` 11/11 lulus.
 - Ringkas temuan + langkah reproduksi + bukti (screenshot /tmp) di laporan.
 - Update `docs/M4-REPORT.md` §10 (open items) bila ada item yang tertutup.
 

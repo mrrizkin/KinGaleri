@@ -552,12 +552,16 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - Catatan: detail & bukti verifikasi di [`docs/M2-REPORT.md`](docs/M2-REPORT.md) §9–§10. Sisa yang belum:
   target memori 100k (§4.1.1) dan `tests/`.
 
-### M3 — AI Grouping (4–6 minggu)
-- [ ] Face detect + embed + cluster → People UI
-- [ ] Places (GPS cluster) + reverse geocode offline
-- [ ] Event clustering (time+location gap)
-- [ ] Build flag `ENABLE_ML`, model download opt-in
-- **Exit criteria:** akurasi face cluster "layak rename manual" pada dataset 10k.
+### M3 — AI Grouping (4–6 minggu) — **implementasi selesai & terverifikasi; exit criteria belum dibuktikan**
+- [x] Face detect + embed + cluster → People UI (opt-in `-DKG_ENABLE_ML=ON`, ONNX Runtime + YuNet/SFace)
+- [x] Places (GPS cluster) + reverse geocode offline (indeks kota bawaan `cities.tsv`)
+- [x] Event clustering (time+location gap)
+- [x] Build flag ML + unduhan model opt-in dari Settings
+- [ ] **Exit criteria:** akurasi face cluster "layak rename manual" pada dataset 10k — **belum dijalankan.**
+  Bukti terkuat saat ini 4 potret → 4 wajah / 3 orang (dua foto Obama dari 2009 dan 2012 ter-cluster
+  jadi satu). Belum ada pengukuran pada dataset 10k, jadi angka akurasinya belum bisa diklaim.
+
+> Catatan: nama flag di draf awal PRD (`ENABLE_ML`) adalah `KG_ENABLE_ML` di implementasi.
 
 ### M4 — Polish & Packaging (2–3 minggu)
 - [x] Theme light/dark, HiDPI/fractional scaling

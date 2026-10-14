@@ -1,7 +1,8 @@
 # M3 — Smart grouping (Places, Events, Smart, People)
 
-Status: **selesai.** Build default tetap tanpa dependensi baru; backend wajah
-opsional di balik `-DKG_ENABLE_ML=ON`.
+Status: **implementasi selesai dan terverifikasi ulang** (lihat §Verifikasi). Build default tetap tanpa
+dependensi baru; backend wajah opsional di balik `-DKG_ENABLE_ML=ON`. Satu hal yang **belum**
+dibuktikan: exit criteria PRD soal akurasi kluster wajah pada dataset 10k.
 
 ## Ruang lingkup
 
@@ -69,15 +70,41 @@ dipicu pengguna.
 
 ## Verifikasi
 
-- `tests/tst_grouping.cpp` (8 test total lulus): merge/pisah cluster, haversine, lookup
-  kota Jakarta, pemisahan event karena waktu dan lokasi, urutan event, dan penulisan
-  Places/Events ke DB termasuk idempotensi rebuild.
-- Uji wajah nyata (di luar suite, karena butuh model): 4 potret Wikimedia (2 Obama,
-  Michelle Obama, Angela Merkel) → **4 wajah, 3 orang**; dua foto Obama ter-cluster
-  menjadi satu. Dijalankan headless (`--no-ui --index`) maupun dari UI.
-- Halaman Places menampilkan "Soreang · 2 item", Events menampilkan 5 event dengan label
-  tanggal + subjudul tempat, People menampilkan kartu cover yang benar. Semua di-screenshot
-  lewat X11.
+### Verifikasi ulang (mandiri, reproduksi penuh)
+
+Klaim di bawah dijalankan ulang dari nol lewat build ML, bukan sekadar membaca artefak lama:
+
+```bash
+# 4 potret di /tmp/faces/{merkel,michelle,obama1,obama2}.jpg + model di /tmp/kgmldata/kin-galeri/models
+XDG_DATA_HOME=/tmp/kgmldata ./build-ml/kin-galeri --no-ui --no-home-scan \
+    --db /tmp/kgv/verify.db --cache /tmp/kgv/verifycache --index /tmp/faces
+```
+
+Hasil di DB segar: **4 wajah → 3 orang**, 1 tempat, 4 event.
+
+| Pemeriksaan | Hasil |
+|---|---|
+| `people` | #1 `media_count=2` (obama1 2009 + obama2 2012 — kluster lintas tanggal), #2 michelle, #3 merkel |
+| `places` | `Köln, DE` (`country=DE`) — GPS EXIF di-resolve indeks kota offline, bukan dari tag teks |
+| `events` | 4 event, `start_at`/`end_at` milidetik dari EXIF, satu media per event pada set ini |
+| UI People | 3 kartu cover; kartu Obama berlabel **2 item(s)** |
+| UI Places | 1 kartu "Köln, DE" |
+| UI Events | 4 kartu berlabel tanggal (`4 Jun 2019`, `12 Feb 2018`, `6 Dec 2012`, `13 Jan 2009`) |
+| UI Smart | 5 koleksi heuristik tampil (Screenshots/Videos/Panoramas/Large files/Recently taken) |
+
+### Catatan sebelumnya (tetap berlaku)
+
+- `tests/tst_grouping.cpp` (8 test): merge/pisah cluster, haversine, lookup kota Jakarta, pemisahan
+  event karena waktu dan lokasi, urutan event, dan penulisan Places/Events ke DB termasuk idempotensi
+  rebuild.
+- Halaman Places menampilkan "Soreang · 2 item", Events menampilkan 5 event dengan label tanggal +
+  subjudul tempat, People menampilkan kartu cover yang benar (dataset berbeda dari reproduksi di atas).
+
+### Yang belum dibuktikan
+
+- **Exit criteria PRD**: "akurasi face cluster layak rename manual pada dataset 10k". Semua pengujian
+  wajah di atas memakai 4 potret. Belum ada run pada dataset 10k, jadi akurasi pada skala itu belum
+  bisa diklaim. Ini tercatat sebagai kotak yang sengaja tetap kosong di `PRD.md` bagian M3.
 
 ## Build dengan backend wajah
 

@@ -128,6 +128,17 @@ class MediaGridModel : public QAbstractListModel
     Q_PROPERTY(QVariantList albumCards READ albumCards NOTIFY albumsChanged)
     /** Active manual-album filter id, or 0 when none. */
     Q_PROPERTY(qint64 albumId READ albumId WRITE setAlbumId NOTIFY filterChanged)
+    /** Smart-grouping filters (M3). id 0 = inactive. */
+    Q_PROPERTY(qint64 placeId READ placeId WRITE setPlaceId NOTIFY filterChanged)
+    Q_PROPERTY(qint64 personId READ personId WRITE setPersonId NOTIFY filterChanged)
+    Q_PROPERTY(qint64 eventId READ eventId WRITE setEventId NOTIFY filterChanged)
+    Q_PROPERTY(QString smartCategory READ smartCategory WRITE setSmartCategory NOTIFY filterChanged)
+    /** Occurrence lists for the People / Places / Events / Smart pages. Each entry
+     *  is {kind, id, name, subtitle, count, coverId, coverUrl}. */
+    Q_PROPERTY(QVariantList places READ places NOTIFY collectionsChanged)
+    Q_PROPERTY(QVariantList events READ events NOTIFY collectionsChanged)
+    Q_PROPERTY(QVariantList people READ people NOTIFY collectionsChanged)
+    Q_PROPERTY(QVariantList smartCategories READ smartCategories NOTIFY collectionsChanged)
     /** Multi-selection state (PRD F-3.7 / F-5.7). */
     Q_PROPERTY(int selectionCount READ selectionCount NOTIFY selectionChanged)
     Q_PROPERTY(bool selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
@@ -275,6 +286,34 @@ public:
     qint64 albumId() const { return m_albumId; }
     void setAlbumId(qint64 albumId);
 
+    // ---- smart grouping (M3) ----------------------------------------------
+    qint64 placeId() const { return m_placeId; }
+    void setPlaceId(qint64 placeId);
+    qint64 personId() const { return m_personId; }
+    void setPersonId(qint64 personId);
+    qint64 eventId() const { return m_eventId; }
+    void setEventId(qint64 eventId);
+    QString smartCategory() const { return m_smartCategory; }
+    void setSmartCategory(const QString &category);
+
+    /// Cached-busting cover URL for a smart-grouping cover id, reusing the
+    /// thumbnail revision map so a regenerated thumbnail refreshes the card.
+    Q_INVOKABLE QString coverUrl(qint64 mediaId) const;
+
+    QVariantList places() const;
+    QVariantList events() const;
+    QVariantList people() const;
+    /// The fixed heuristic smart albums, with live counts.
+    QVariantList smartCategories() const;
+    /// Renames a person (PRD F-2.4 manual tidy-up). Empty names are ignored.
+    Q_INVOKABLE void renamePerson(qint64 personId, const QString &name);
+    /// Merges `sourceId` into `targetId`, moving faces and removing the source.
+    Q_INVOKABLE void mergePeople(qint64 targetId, qint64 sourceId);
+    /// Rebuilds places + events from the current library. Runs synchronously on
+    /// the GUI thread; callers should only do this for small libraries or after
+    /// an explicit user action.
+    Q_INVOKABLE bool rebuildSmartGrouping();
+
     /// Creates (or returns the id of an existing) manual album with `name`.
     Q_INVOKABLE qint64 createAlbum(const QString &name);
     Q_INVOKABLE void renameAlbum(qint64 albumId, const QString &name);
@@ -342,12 +381,16 @@ signals:
     void trashChanged();
     /// Emitted after reload(), so the sidebar picks up newly seen albums.
     void albumsChanged();
+    /// Emitted when the People / Places / Events / Smart lists may have changed.
+    void collectionsChanged();
     /// A cover thumbnail finished generating, so the album card can refresh.
     void albumCoverReady(qint64 mediaId);
     void selectionChanged();
     void selectionModeChanged();
     void undoChanged();
     void actionPerformed(const QString &description);
+    /// User-facing feedback for actions the model performs itself.
+    void infoMessage(const QString &message);
 
 private:
     /// One reversible file/recycle operation. Paths are absolute and stored for
@@ -388,6 +431,10 @@ private:
     QString m_searchQuery;
     bool m_trashOnly = false;
     qint64 m_albumId = 0;
+    qint64 m_placeId = 0;
+    qint64 m_personId = 0;
+    qint64 m_eventId = 0;
+    QString m_smartCategory;
     bool m_selectionMode = false;
     QSet<qint64> m_selected;
     /// Cover media ids produced by albumCards(), so onThumbnailReady knows which

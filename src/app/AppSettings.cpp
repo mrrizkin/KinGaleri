@@ -49,6 +49,16 @@ constexpr auto kVideoAutoplayKey = "playback/autoplay";
 constexpr auto kVideoLoopKey = "playback/loop";
 constexpr auto kVideoMuteKey = "playback/mute";
 constexpr auto kVideoVolumeKey = "playback/volume";
+// Smart grouping (M3). Kept under "smart" so the settings page grouping and the
+// config file agree.
+constexpr auto kSmartEnabledKey = "smart/enabled";
+constexpr auto kSmartPlacesKey = "smart/places";
+constexpr auto kSmartEventsKey = "smart/events";
+constexpr auto kSmartFacesKey = "smart/faces";
+constexpr auto kSmartAutoAnalyzeKey = "smart/auto_analyze";
+constexpr auto kSmartThreadsKey = "smart/threads";
+constexpr auto kSmartIdleOnlyKey = "smart/idle_only";
+constexpr auto kSmartPauseOnBatteryKey = "smart/pause_on_battery";
 
 constexpr int kMinThumbnailSize = 80;
 constexpr int kMaxThumbnailSize = 384;
@@ -144,6 +154,15 @@ void AppSettings::load()
     m_videoLoop = value(kVideoLoopKey, false).toBool();
     m_videoMute = value(kVideoMuteKey, false).toBool();
     m_videoVolume = normaliseVideoVolume(value(kVideoVolumeKey, 100).toInt());
+
+    m_smartEnabled = value(kSmartEnabledKey, false).toBool();
+    m_smartPlaces = value(kSmartPlacesKey, true).toBool();
+    m_smartEvents = value(kSmartEventsKey, true).toBool();
+    m_smartFaces = value(kSmartFacesKey, false).toBool();
+    m_smartAutoAnalyze = value(kSmartAutoAnalyzeKey, true).toBool();
+    m_smartThreads = normaliseSmartThreads(value(kSmartThreadsKey, 2).toInt());
+    m_smartIdleOnly = value(kSmartIdleOnlyKey, true).toBool();
+    m_smartPauseOnBattery = value(kSmartPauseOnBatteryKey, true).toBool();
 }
 
 QStringList AppSettings::accentNames()
@@ -601,6 +620,92 @@ void AppSettings::setVideoVolume(int volume)
     m_videoVolume = normalised;
     writeSetting(kVideoVolumeKey, m_videoVolume);
     Q_EMIT videoVolumeChanged();
+}
+
+int AppSettings::normaliseSmartThreads(int threads)
+{
+    return qBound(1, threads, 8);
+}
+
+void AppSettings::setSmartEnabled(bool value)
+{
+    if (value == m_smartEnabled) {
+        return;
+    }
+    m_smartEnabled = value;
+    writeSetting(kSmartEnabledKey, m_smartEnabled);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartPlaces(bool value)
+{
+    if (value == m_smartPlaces) {
+        return;
+    }
+    m_smartPlaces = value;
+    writeSetting(kSmartPlacesKey, m_smartPlaces);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartEvents(bool value)
+{
+    if (value == m_smartEvents) {
+        return;
+    }
+    m_smartEvents = value;
+    writeSetting(kSmartEventsKey, m_smartEvents);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartFaces(bool value)
+{
+    if (value == m_smartFaces) {
+        return;
+    }
+    m_smartFaces = value;
+    writeSetting(kSmartFacesKey, m_smartFaces);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartAutoAnalyze(bool value)
+{
+    if (value == m_smartAutoAnalyze) {
+        return;
+    }
+    m_smartAutoAnalyze = value;
+    writeSetting(kSmartAutoAnalyzeKey, m_smartAutoAnalyze);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartThreads(int threads)
+{
+    const int normalised = normaliseSmartThreads(threads);
+    if (normalised == m_smartThreads) {
+        return;
+    }
+    m_smartThreads = normalised;
+    writeSetting(kSmartThreadsKey, m_smartThreads);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartIdleOnly(bool value)
+{
+    if (value == m_smartIdleOnly) {
+        return;
+    }
+    m_smartIdleOnly = value;
+    writeSetting(kSmartIdleOnlyKey, m_smartIdleOnly);
+    Q_EMIT smartChanged();
+}
+
+void AppSettings::setSmartPauseOnBattery(bool value)
+{
+    if (value == m_smartPauseOnBattery) {
+        return;
+    }
+    m_smartPauseOnBattery = value;
+    writeSetting(kSmartPauseOnBatteryKey, m_smartPauseOnBattery);
+    Q_EMIT smartChanged();
 }
 
 bool AppSettings::dark() const

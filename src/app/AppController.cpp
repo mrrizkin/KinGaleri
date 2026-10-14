@@ -2,9 +2,13 @@
 
 #include "app/PathUtils.h"
 #include "app/Paths.h"
+#include "app/ShortcutRegistry.h"
 #include "core/benchmark/BenchmarkSeeder.h"
 #include "core/db/Database.h"
 #include "core/db/LibraryMaintenance.h"
+#include "core/grouping/GroupingService.h"
+#include "core/ml/FaceEngine.h"
+#include "core/ml/FacePipeline.h"
 #include "core/thumbs/ThumbnailService.h"
 #include "models/MediaGridModel.h"
 #include "ui/quick/ThumbnailProvider.h"
@@ -17,7 +21,11 @@
 #include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QLocale>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QProcess>
+#include <QSaveFile>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QUrl>
@@ -39,6 +47,18 @@ namespace {
 constexpr int kAdaptiveThumbFloorMb = 32;
 constexpr int kAdaptiveThumbCeilingMb = 256;
 
+/// What one smart-grouping job produced: the cheap Places/Events rebuild plus,
+/// when faces are enabled, the face pass.
+struct SmartRunOutcome
+{
+    GroupingService::Result grouping;
+    bool facesRan = false;
+    int facesAnalyzed = 0;
+    int facesDetected = 0;
+    int people = 0;
+    QString faceError;
+};
+
 } // namespace
 
 AppController::AppController(QObject *parent)
@@ -46,6 +66,7 @@ AppController::AppController(QObject *parent)
     , m_model(new MediaGridModel(this))
     , m_perf(new PerfMonitor(this))
     , m_settings(new AppSettings(this))
+    , m_shortcuts(new ShortcutRegistry(this))
 {
 }
 
@@ -125,6 +146,12 @@ bool AppController::initialise(const QString &databasePath, int thumbnailEdge, Q
     connect(m_settings, &AppSettings::followSymlinksChanged, this, &AppController::applyWatcherSettings);
     connect(m_settings, &AppSettings::ignoredFoldersChanged, this, &AppController::applyWatcherSettings);
     connect(m_settings, &AppSettings::ignoredPatternsChanged, this, &AppController::applyWatcherSettings);
+    // Turning smart grouping on (or asking for auto analysis) should produce a
+    // result without the user having to press the rebuild button as well.
+    connect(m_settings, &AppSettings::smartChanged, this, &AppController::maybeRunSmartGrouping);
+    // Downloading the face model can unlock the People pass, so re-evaluate once
+    // the files land (and when a download starts, harmlessly, since it is skipped).
+    connect(this, &AppController::faceModelsChanged, this, &AppController::maybeRunSmartGrouping);
 
     m_database->setMetaValue(QStringLiteral("last_opened"),
                              QString::number(QDateTime::currentMSecsSinceEpoch()));
@@ -132,6 +159,11 @@ bool AppController::initialise(const QString &databasePath, int thumbnailEdge, Q
     if (m_autoHomeScanEnabled) {
         m_autoHomePending = shouldSeedDefaultHomeRoot();
     }
+
+    // A library that was already indexed before smart grouping was enabled gets
+    // its Places/Events without another scan.
+    setSmartStatus(m_settings->smartEnabled() ? QStringLiteral("Not grouped yet")
+                                              : QStringLiteral("Off"));
 
     return true;
 }
@@ -225,6 +257,236 @@ void AppController::setProgress(int current, int total)
     m_progressCurrent = current;
     m_progressTotal = total;
     Q_EMIT progressChanged();
+}
+
+void AppController::setSmartStatus(const QString &status)
+{
+    if (status == m_smartStatus) {
+        return;
+    }
+    m_smartStatus = status;
+    Q_EMIT smartStatusChanged();
+}
+
+bool AppController::smartFacesAvailable() const
+{
+#ifdef KG_ENABLE_ML
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool AppController::maybeRunSmartGrouping()
+{
+    if (!m_settings || !m_settings->smartEnabled() || !m_settings->smartAutoAnalyze()) {
+        return false;
+    }
+    // Grouping is a full rebuild, so skip it when the library fingerprint is
+    // unchanged since the last pass. A manual "Rebuild" always forces it.
+    const QString signature = smartSourceSignature();
+    if (!signature.isEmpty()
+        && m_database->metaValue(QStringLiteral("smart_source_sig")) == signature) {
+        return false;
+    }
+    if (!m_smartRunning)
+        runSmartGrouping();
+    return m_smartRunning;
+}
+
+QString AppController::smartSourceSignature() const
+{
+    if (!m_database)
+        return {};
+    QSqlQuery query(m_database->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT COUNT(*), COALESCE(MAX(indexed_at), 0) FROM media WHERE deleted_at IS NULL"))
+        || !query.next()) {
+        return {};
+    }
+    QString signature = QStringLiteral("%1:%2").arg(query.value(0).toLongLong()).arg(query.value(1).toLongLong());
+    // Fold the requested feature set in: toggling Places/Events/Faces on must
+    // re-run grouping even when the media itself has not changed.
+    if (m_settings) {
+        signature += QStringLiteral(":%1%2%3")
+                         .arg(m_settings->smartPlaces() ? QLatin1Char('1') : QLatin1Char('0'))
+                         .arg(m_settings->smartEvents() ? QLatin1Char('1') : QLatin1Char('0'))
+                         .arg(m_settings->smartFaces() && faceModelsReady() ? QLatin1Char('1')
+                                                                            : QLatin1Char('0'));
+    }
+    return signature;
+}
+
+void AppController::rebuildSmartGrouping()
+{
+    if (!m_settings || !m_settings->smartEnabled()) {
+        Q_EMIT infoMessage(QStringLiteral("Enable smart grouping in Settings first."));
+        return;
+    }
+    runSmartGrouping();
+}
+
+void AppController::runSmartGrouping()
+{
+    if (m_smartRunning || !m_database || !m_model) {
+        return;
+    }
+    m_smartRunning = true;
+    Q_EMIT smartStatusChanged();
+    setSmartStatus(QStringLiteral("Grouping photos…"));
+
+    const bool wantFaces = m_settings->smartEnabled() && m_settings->smartFaces()
+                           && smartFacesAvailable() && faceModelsReady();
+    const bool wantPlaces = m_settings->smartPlaces();
+    const bool wantEvents = m_settings->smartEvents();
+    ml::FacePipelineOptions faceOptions;
+    faceOptions.detectorPath = faceModelDir() + QLatin1Char('/') + ml::FaceEngine::detectorFileName();
+    faceOptions.embedderPath = faceModelDir() + QLatin1Char('/') + ml::FaceEngine::embedderFileName();
+
+    auto *watch = new QFutureWatcher<SmartRunOutcome>(this);
+    connect(watch, &QFutureWatcher<SmartRunOutcome>::finished, this, [this, watch]() {
+        const SmartRunOutcome outcome = watch->result();
+        watch->deleteLater();
+        m_smartRunning = false;
+
+        if (!outcome.grouping.error.isEmpty()) {
+            setSmartStatus(QStringLiteral("Grouping failed"));
+            Q_EMIT errorOccurred(outcome.grouping.error);
+        } else {
+            QString text = QStringLiteral("%1 place(s) · %2 event(s)")
+                               .arg(outcome.grouping.places)
+                               .arg(outcome.grouping.events);
+            if (outcome.facesRan) {
+                if (!outcome.faceError.isEmpty()) {
+                    text += QStringLiteral(" · faces: %1").arg(outcome.faceError);
+                } else {
+                    text += QStringLiteral(" · %1 face(s), %2 person(s)")
+                                .arg(outcome.facesDetected)
+                                .arg(outcome.people);
+                }
+            }
+            setSmartStatus(text);
+            Q_EMIT infoMessage(QStringLiteral("Smart grouping updated: %1").arg(text));
+        }
+        // Places/events/people membership may have changed under an active filter,
+        // so re-read the grid and let the collection lists refresh.
+        m_model->reload();
+        // Remember what the library looked like so the next startup can skip the
+        // full rebuild when nothing changed.
+        if (outcome.grouping.error.isEmpty())
+            m_database->setMetaValue(QStringLiteral("smart_source_sig"), smartSourceSignature());
+        Q_EMIT smartStatusChanged();
+        // If this pass was the last step of the startup chain, --no-ui can exit now.
+        finishStartupChain();
+    });
+
+    Database *database = m_database.get();
+    std::atomic_bool *cancel = &m_cancel;
+    watch->setFuture(QtConcurrent::run([database, wantFaces, wantPlaces, wantEvents, faceOptions, cancel]() -> SmartRunOutcome {
+        SmartRunOutcome outcome;
+        outcome.grouping = GroupingService::rebuild(*database, wantPlaces, wantEvents);
+#ifdef KG_ENABLE_ML
+        if (wantFaces) {
+            ml::FacePipeline pipeline(*database);
+            const ml::FacePipelineResult faces =
+                pipeline.run(faceOptions, [cancel]() { return cancel->load(); });
+            outcome.facesRan = true;
+            outcome.facesAnalyzed = faces.analyzed;
+            outcome.facesDetected = faces.detected;
+            outcome.people = faces.people;
+            outcome.faceError = faces.ok ? QString() : faces.error;
+        }
+#else
+        Q_UNUSED(faceOptions);
+#endif
+        // QSqlDatabase connections are thread-affine; tear ours down here.
+        database->closeThreadConnection();
+        return outcome;
+    }));
+}
+
+bool AppController::faceModelsReady() const
+{
+    const QString dir = faceModelDir();
+    return QFileInfo::exists(dir + QLatin1Char('/') + ml::FaceEngine::detectorFileName())
+           && QFileInfo::exists(dir + QLatin1Char('/') + ml::FaceEngine::embedderFileName());
+}
+
+QString AppController::faceModelDir() const
+{
+    return Paths::dataDir() + QStringLiteral("/models");
+}
+
+void AppController::downloadFaceModels()
+{
+    if (m_faceModelDownloading)
+        return;
+    if (!smartFacesAvailable()) {
+        Q_EMIT errorOccurred(QStringLiteral("This build has no ML backend."));
+        return;
+    }
+
+    QDir().mkpath(faceModelDir());
+    m_faceModelDownloading = true;
+    Q_EMIT faceModelsChanged();
+    setSmartStatus(QStringLiteral("Downloading face model…"));
+    Q_EMIT infoMessage(QStringLiteral("Downloading face models…"));
+
+    const auto manager = new QNetworkAccessManager(this);
+    // Two small, well-known files straight from the OpenCV Zoo. Sequential: the
+    // network manager queues the second request from the first one's handler.
+    struct Download
+    {
+        QString url;
+        QString file;
+    };
+    const auto downloads = std::make_shared<QList<Download>>(QList<Download>{
+        {QStringLiteral("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/"
+                        "face_detection_yunet_2023mar.onnx"),
+         faceModelDir() + QLatin1Char('/') + ml::FaceEngine::detectorFileName()},
+        {QStringLiteral("https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/"
+                        "face_recognition_sface_2021dec.onnx"),
+         faceModelDir() + QLatin1Char('/') + ml::FaceEngine::embedderFileName()},
+    });
+
+    const auto startNext = std::make_shared<std::function<void(int)>>();
+    *startNext = [this, manager, downloads, startNext](int index) {
+        if (index >= downloads->size()) {
+            m_faceModelDownloading = false;
+            Q_EMIT faceModelsChanged();
+            setSmartStatus(QStringLiteral("Face model ready"));
+            Q_EMIT infoMessage(QStringLiteral("Face model downloaded."));
+            manager->deleteLater();
+            return;
+        }
+        const Download item = downloads->at(index);
+        QNetworkRequest request{QUrl(item.url)};
+        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                             QNetworkRequest::NoLessSafeRedirectPolicy);
+        QNetworkReply *reply = manager->get(request);
+        connect(reply, &QNetworkReply::finished, this, [this, reply, item, index, startNext]() {
+            reply->deleteLater();
+            if (reply->error() != QNetworkReply::NoError) {
+                m_faceModelDownloading = false;
+                Q_EMIT faceModelsChanged();
+                setSmartStatus(QStringLiteral("Download failed"));
+                Q_EMIT errorOccurred(
+                    QStringLiteral("Could not download the face model: %1").arg(reply->errorString()));
+                return;
+            }
+            QSaveFile file(item.file);
+            if (!file.open(QIODevice::WriteOnly) || file.write(reply->readAll()) < 0
+                || !file.commit()) {
+                m_faceModelDownloading = false;
+                Q_EMIT faceModelsChanged();
+                setSmartStatus(QStringLiteral("Download failed"));
+                Q_EMIT errorOccurred(QStringLiteral("Could not save the face model to %1").arg(item.file));
+                return;
+            }
+            (*startNext)(index + 1);
+        });
+    };
+    (*startNext)(0);
 }
 
 void AppController::setStartupRequests(int seedRows, const QStringList &indexFolders)
@@ -369,6 +631,20 @@ void AppController::finishStartupChain()
     if (!m_startupChainActive) {
         return;
     }
+    // The smart-grouping pass is the last step of the startup chain, and
+    // startupCompleted() deliberately waits for it: otherwise --no-ui would exit
+    // while Places/Events/faces were still being written.
+    if (!m_startupSmartStarted && m_settings && m_settings->smartEnabled()
+        && m_settings->smartAutoAnalyze()) {
+        m_startupSmartStarted = true;
+        if (!m_smartRunning) {
+            runSmartGrouping();
+            // If the job could not start (no database/model yet), fall through and
+            // let the chain finish rather than hanging --no-ui.
+            if (m_smartRunning)
+                return;
+        }
+    }
     m_startupChainActive = false;
     Q_EMIT startupCompleted();
 }
@@ -454,21 +730,36 @@ void AppController::registerThumbnailSources()
     // Album covers are not necessarily part of the current grid filter (the album
     // page can be open while the model is filtered to something else), so resolve
     // their source files explicitly or their thumbnails would never generate.
-    const QVariantList cards = m_model->albumCards();
-    for (const QVariant &variant : cards) {
-        const qint64 coverId = variant.toMap().value(QStringLiteral("coverId")).toLongLong();
-        if (coverId <= 0) {
-            continue;
+    // The smart-grouping collections (People/Places/Events/Smart) have the same
+    // problem: their covers are chosen by the grouping pass, not by the grid.
+    QSet<qint64> covers;
+    const auto registerCover = [this, &covers](qint64 coverId) {
+        if (coverId <= 0 || covers.contains(coverId)) {
+            return;
         }
+        covers.insert(coverId);
         const QVariantMap detail = m_model->mediaDetail(coverId);
         const QString path = detail.value(QStringLiteral("path")).toString();
         if (path.isEmpty()) {
-            continue;
+            return;
         }
         m_thumbnails->registerSource(coverId, path,
                                      detail.value(QStringLiteral("isSynthetic")).toBool(),
                                      detail.value(QStringLiteral("kind")).toString()
                                          == QLatin1String("video"));
+    };
+
+    const QVariantList cards = m_model->albumCards();
+    for (const QVariant &variant : cards) {
+        registerCover(variant.toMap().value(QStringLiteral("coverId")).toLongLong());
+    }
+
+    const QList<QVariantList> collections = {m_model->places(), m_model->events(),
+                                             m_model->people(), m_model->smartCategories()};
+    for (const QVariantList &collection : collections) {
+        for (const QVariant &variant : collection) {
+            registerCover(variant.toMap().value(QStringLiteral("coverId")).toLongLong());
+        }
     }
 }
 
@@ -581,6 +872,11 @@ void AppController::indexFolders(const QStringList &folders)
             Q_EMIT infoMessage(m_statusText);
         }
         reload();
+        // On a user-triggered scan the startup chain is already done, so the
+        // grouping pass has to be started here. finishStartupChain() starts it
+        // itself during startup, which keeps --no-ui deterministic.
+        if (!m_startupChainActive)
+            maybeRunSmartGrouping();
         finishStartupChain();
     });
 

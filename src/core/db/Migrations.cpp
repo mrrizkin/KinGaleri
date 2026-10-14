@@ -320,6 +320,74 @@ END)SQL"),
     };
     list.append(v6);
 
+    // ---------------------------------------------------------------------
+    // v7 - smart grouping: places, events, face matching (M3)
+    //
+    // The `places`, `faces`, `people` and `media_places` tables already exist
+    // from v1 but nothing ever wrote to them. This migration only adds what the
+    // grouping pass needs to persist its output and read it back quickly.
+    //
+    // `events` is new. An event is a run of photos with no gap larger than a few
+    // hours (and, when GPS is present, no jump to another place), which is the
+    // clustering the PRD asks for in F-2.10.
+    //
+    // The partial GPS index is what keeps `rebuildPlaces` a scan of the few
+    // percent of rows that actually have coordinates rather than of the whole
+    // library. It is partial on `deleted_at IS NULL` to match the read path.
+    // ---------------------------------------------------------------------
+    Migration v7;
+    v7.version = 7;
+    v7.name = QStringLiteral("smart_grouping");
+    v7.statements = {
+        QStringLiteral("CREATE INDEX idx_media_gps ON media(gps_lat, gps_lon) "
+                       "WHERE deleted_at IS NULL AND gps_lat IS NOT NULL"),
+
+        QStringLiteral("ALTER TABLE places ADD COLUMN country TEXT"),
+        QStringLiteral("ALTER TABLE places ADD COLUMN media_count INTEGER NOT NULL DEFAULT 0"),
+        QStringLiteral("ALTER TABLE places ADD COLUMN cover_media_id INTEGER"),
+
+        QStringLiteral(R"SQL(
+CREATE TABLE events (
+    id           INTEGER PRIMARY KEY,
+    name         TEXT,
+    start_at     INTEGER NOT NULL,
+    end_at       INTEGER NOT NULL,
+    place_id     INTEGER REFERENCES places(id) ON DELETE SET NULL,
+    media_count  INTEGER NOT NULL DEFAULT 0,
+    cover_media_id INTEGER
+))SQL"),
+        QStringLiteral("CREATE INDEX idx_events_start ON events(start_at DESC)"),
+
+        QStringLiteral(R"SQL(
+CREATE TABLE media_events (
+    media_id INTEGER NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    PRIMARY KEY (media_id, event_id)
+))SQL"),
+        QStringLiteral("CREATE INDEX idx_media_events_event ON media_events(event_id)"),
+
+        // Faces gained a stable fingerprint of the model that produced the
+        // embedding. A stored 512-float vector is meaningless if the encoder
+        // changes, so the grouping pass only reuses rows whose marker matches.
+        QStringLiteral("ALTER TABLE faces ADD COLUMN model_marker TEXT"),
+        QStringLiteral("ALTER TABLE people ADD COLUMN media_count INTEGER NOT NULL DEFAULT 0"),
+        QStringLiteral("ALTER TABLE people ADD COLUMN cover_media_id INTEGER"),
+        QStringLiteral("ALTER TABLE people ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0"),
+
+        // `face_scans` records that an image was looked at, even when no face was
+        // found. Without it a photo with zero faces would be re-analysed on every
+        // pass, because there is no `faces` row to indicate otherwise.
+        QStringLiteral(R"SQL(
+CREATE TABLE face_scans (
+    media_id     INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+    model_marker TEXT NOT NULL,
+    face_count   INTEGER NOT NULL DEFAULT 0,
+    analyzed_at  INTEGER NOT NULL DEFAULT 0
+))SQL"),
+        QStringLiteral("CREATE INDEX idx_face_scans_marker ON face_scans(model_marker)"),
+    };
+    list.append(v7);
+
     return list;
 }
 

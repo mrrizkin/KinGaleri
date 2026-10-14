@@ -315,7 +315,7 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
 
 ## 10. Yang masih terbuka
 
-> **Status per akhir M2.** Daftar ini disegarkan setelah M2 selesai; entri lama yang sudah
+> **Status per akhir M3.** Daftar ini disegarkan setelah M3 selesai; entri lama yang sudah
 > beres dicatat sebagai *Selesai* agar sejarahnya tidak hilang.
 
 ### Selesai setelah laporan ini pertama ditulis
@@ -349,5 +349,10 @@ ditambah struktur FTS dan string `sourceAlbum` ekstra per baris.
 - **`Database` menamai koneksi per-thread, bukan per-file/instance.** Aman untuk aplikasi saat ini,
   tetapi kalau suatu saat dua library dibuka bersamaan dalam satu thread, `connection()` akan diam-diam
   mengembalikan koneksi pertama. Destruktor menutup celah untuk pemakaian berurutan.
-- **`--software-render` / fallback Wayland** belum ada (risiko PRD §8).
 - **HEIC/HEIF** belum punya fallback `heif-convert` (risiko PRD §8).
+- **Smart grouping (M3)** selesai, tetapi menyisakan utang kecil: rename/merge orang memakai model
+  `MediaGridModel` yang sama dengan grid, jadi keduanya membaca `people` secara live (properti
+  `people`) yang dapat memicu query ketika halaman People sedang tidak terlihat. Belum menjadi masalah
+  pada ukuran library yang diuji, tetapi kandidat untuk model khusus People bila jumlah cluster besar.
+- **Klaster wajah bersifat greedy by-confidence**: satu wajah yang salah cluster tidak bisa dibatalkan
+  per-wajah. Merge/split manual per orang baru menyediakan merge; split belum ada (M5).

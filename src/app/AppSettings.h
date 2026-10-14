@@ -74,6 +74,23 @@ class AppSettings : public QObject
     Q_PROPERTY(bool videoMute READ videoMute WRITE setVideoMute NOTIFY videoMuteChanged)
     Q_PROPERTY(int videoVolume READ videoVolume WRITE setVideoVolume NOTIFY videoVolumeChanged)
 
+    // --- Smart grouping (M3) ----------------------------------------------
+    /** Master switch for People / Places / Events / Smart collections. */
+    Q_PROPERTY(bool smartEnabled READ smartEnabled WRITE setSmartEnabled NOTIFY smartChanged)
+    /** Places (GPS clustering) and Events need no model - they are cheap. */
+    Q_PROPERTY(bool smartPlaces READ smartPlaces WRITE setSmartPlaces NOTIFY smartChanged)
+    Q_PROPERTY(bool smartEvents READ smartEvents WRITE setSmartEvents NOTIFY smartChanged)
+    /** Faces need the optional ML runtime and a downloaded model. */
+    Q_PROPERTY(bool smartFaces READ smartFaces WRITE setSmartFaces NOTIFY smartChanged)
+    /** Rebuild grouping automatically once an indexing pass completes. */
+    Q_PROPERTY(bool smartAutoAnalyze READ smartAutoAnalyze WRITE setSmartAutoAnalyze NOTIFY smartChanged)
+    /** Worker threads for face inference, clamped to [1, 8]. */
+    Q_PROPERTY(int smartThreads READ smartThreads WRITE setSmartThreads NOTIFY smartChanged)
+    /** Only run inference while no indexing/thumbnail work is queued. */
+    Q_PROPERTY(bool smartIdleOnly READ smartIdleOnly WRITE setSmartIdleOnly NOTIFY smartChanged)
+    /** Pause inference on battery power. */
+    Q_PROPERTY(bool smartPauseOnBattery READ smartPauseOnBattery WRITE setSmartPauseOnBattery NOTIFY smartChanged)
+
 public:
     explicit AppSettings(QObject *parent = nullptr);
 
@@ -179,6 +196,24 @@ public:
     int videoVolume() const { return m_videoVolume; }
     void setVideoVolume(int volume);
 
+    // ---- smart grouping (M3) ----------------------------------------------
+    bool smartEnabled() const { return m_smartEnabled; }
+    void setSmartEnabled(bool value);
+    bool smartPlaces() const { return m_smartPlaces; }
+    void setSmartPlaces(bool value);
+    bool smartEvents() const { return m_smartEvents; }
+    void setSmartEvents(bool value);
+    bool smartFaces() const { return m_smartFaces; }
+    void setSmartFaces(bool value);
+    bool smartAutoAnalyze() const { return m_smartAutoAnalyze; }
+    void setSmartAutoAnalyze(bool value);
+    int smartThreads() const { return m_smartThreads; }
+    void setSmartThreads(int threads);
+    bool smartIdleOnly() const { return m_smartIdleOnly; }
+    void setSmartIdleOnly(bool value);
+    bool smartPauseOnBattery() const { return m_smartPauseOnBattery; }
+    void setSmartPauseOnBattery(bool value);
+
     static QString normaliseTheme(const QString &theme);
     static QString normaliseLanguage(const QString &language);
     static QString normaliseAccent(const QString &accent);
@@ -189,6 +224,8 @@ public:
     static int normaliseSidebarWidth(int width);
     static int normaliseThumbnailMemoryMb(int mb);
     static int normaliseVideoVolume(int volume);
+    /// Inference thread count, clamped to [1, 8].
+    static int normaliseSmartThreads(int threads);
     /// Cleans/dedupes a folder list for the ignore set.
     static QStringList normaliseIgnoredFolders(const QStringList &folders);
     /// Trims/dedupes glob patterns, dropping empties.
@@ -228,6 +265,8 @@ signals:
     void videoLoopChanged();
     void videoMuteChanged();
     void videoVolumeChanged();
+    /// Any of the smart-grouping preferences changed.
+    void smartChanged();
 
 private:
     void load();
@@ -263,6 +302,14 @@ private:
     bool m_videoLoop = false;
     bool m_videoMute = false;
     int m_videoVolume = 100;
+    bool m_smartEnabled = false;
+    bool m_smartPlaces = true;
+    bool m_smartEvents = true;
+    bool m_smartFaces = false;
+    bool m_smartAutoAnalyze = true;
+    int m_smartThreads = 2;
+    bool m_smartIdleOnly = true;
+    bool m_smartPauseOnBattery = true;
     bool m_translatorInstalled = false;
 };
 

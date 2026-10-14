@@ -15,6 +15,8 @@ add_library(kin-galeri-testcore STATIC
     ${CMAKE_SOURCE_DIR}/src/app/CliOptions.h
     ${CMAKE_SOURCE_DIR}/src/app/AppSettings.cpp
     ${CMAKE_SOURCE_DIR}/src/app/AppSettings.h
+    ${CMAKE_SOURCE_DIR}/src/app/ShortcutRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/ShortcutRegistry.h
 
     ${CMAKE_SOURCE_DIR}/src/core/db/Database.cpp
     ${CMAKE_SOURCE_DIR}/src/core/db/Database.h
@@ -27,6 +29,12 @@ add_library(kin-galeri-testcore STATIC
     ${CMAKE_SOURCE_DIR}/src/core/model/SourceAlbum.h
     ${CMAKE_SOURCE_DIR}/src/core/grouping/DateGrouper.cpp
     ${CMAKE_SOURCE_DIR}/src/core/grouping/DateGrouper.h
+    ${CMAKE_SOURCE_DIR}/src/core/grouping/GeoClusterer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/grouping/GeoClusterer.h
+    ${CMAKE_SOURCE_DIR}/src/core/grouping/EventClusterer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/grouping/EventClusterer.h
+    ${CMAKE_SOURCE_DIR}/src/core/grouping/GroupingService.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/grouping/GroupingService.h
     ${CMAKE_SOURCE_DIR}/src/core/metadata/ExifReader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/metadata/ExifReader.h
 
@@ -40,6 +48,13 @@ add_library(kin-galeri-testcore STATIC
 )
 
 target_include_directories(kin-galeri-testcore PUBLIC ${CMAKE_SOURCE_DIR}/src)
+
+# The tests exercise the same embedded city index as the app.
+qt_add_resources(kin-galeri-testcore "kg_data_test"
+    PREFIX "/"
+    BASE ${CMAKE_SOURCE_DIR}/resources
+    FILES ${CMAKE_SOURCE_DIR}/resources/data/cities.tsv
+)
 
 target_link_libraries(kin-galeri-testcore PUBLIC
     Qt6::Core
@@ -61,8 +76,10 @@ endfunction()
 
 kg_add_test(tst_clioptions)
 kg_add_test(tst_appsettings)
+kg_add_test(tst_shortcuts)
 kg_add_test(tst_pathutils)
 kg_add_test(tst_librarywatcher)
 kg_add_test(tst_mediagridmodel)
 kg_add_test(tst_librarymaintenance)
 kg_add_test(tst_folderindexer)
+kg_add_test(tst_grouping)

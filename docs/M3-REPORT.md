@@ -1,0 +1,102 @@
+# M3 — Smart grouping (Places, Events, Smart, People)
+
+Status: **selesai.** Build default tetap tanpa dependensi baru; backend wajah
+opsional di balik `-DKG_ENABLE_ML=ON`.
+
+## Ruang lingkup
+
+| Fitur | Butuh model? | Status |
+|---|---|---|
+| **Places** — cluster GPS + nama kota offline | tidak | selesai |
+| **Events** — celah waktu + lompatan lokasi | tidak | selesai |
+| **Smart** — koleksi heuristik | tidak | selesai |
+| **People** — deteksi + embedding + clustering wajah | ya (YuNet + SFace) | selesai, opt-in |
+
+Semua dihitung di perangkat dan disimpan di `library.db`; tidak ada gambar,
+embedding, atau koordinat yang dikirim keluar kecuali unduhan model yang
+dipicu pengguna.
+
+## Arsitektur
+
+### Skema (migrasi v7 `smart_grouping`)
+
+- `places` (sudah ada sejak v1) ditambah `country`, `media_count`, `cover_media_id`.
+- `events` + `media_events` baru; nama event dibiarkan kosong dan diformat UI dari
+  `start_at`/`end_at`, agar tidak menyimpan teks ber-locale di DB.
+- `faces` ditambah `model_marker`; `people` ditambah `media_count`, `cover_media_id`,
+  `is_hidden`.
+- `face_scans(media_id, model_marker, face_count, analyzed_at)` mencatat bahwa sebuah
+  gambar **sudah diperiksa** walau nol wajah ditemukan, sehingga pass berikutnya tidak
+  mengulang foto yang sama.
+- Index parsial `idx_media_gps` supaya rebuild Places hanya memindai baris ber-GPS.
+
+### Inti (tanpa model)
+
+- `core/grouping/GeoClusterer` — union-find pada grid derajat, keputusan jarak tetap
+  haversine (`mergeMeters` default 500 m), lalu diberi nama dari
+  `resources/data/cities.tsv` (GeoNames `cities15000`, populasi ≥ 100k + kota ID ≥ 40k,
+  6.431 baris, 240 KB, CC BY 4.0). Tanpa kota dalam 50 km → label koordinat.
+- `core/grouping/EventClusterer` — sortir waktu, potong saat celah > 6 jam atau lompatan
+  GPS > 20 km. Titik tanpa GPS tidak menghapus anchor lokasi.
+- `core/grouping/GroupingService` — rebuild penuh `places`+`media_places` lalu
+  `events`+`media_events`, keduanya transaksional dan idempoten.
+
+### Backend wajah (opsional)
+
+- `core/ml/FaceEngine` — ONNX Runtime C++ API, model dimuat malas.
+  - **YuNet** 640×640: letterbox (bukan stretch), input **BGR** [0,255], decode persis
+    seperti `cv::FaceDetectorYN` (cls/obj sudah [0,1] tanpa sigmoid, `score=sqrt(cls*obj)`,
+    `box=(cell+delta)*stride`, `size=exp(delta)*stride`), lalu NMS.
+  - **SFace** 112×112: alignment similarity 5 titik ke referensi ArcFace (bentuk tertutup
+    via bilangan kompleks, tanpa SVD), sampling bilinear manual, input **RGB** [0,255],
+    output 128-d dinormalisasi L2. (Detektor BGR dan embedder RGB memang berbeda; ini
+    mengikuti implementasi referensi OpenCV.)
+- `core/ml/FacePipeline` — inkremental per `media` (gambar, non-sintetis, non-terhapus),
+  deteksi+embed, commit per gambar, lalu clustering global greedy berbasis centroid.
+  Threshold cosine default 0,40. Nama orang yang sudah diubah pengguna dibawa lintas
+  rebuild dengan mencocokkan embedding penutup orang lama ke cluster baru terdekat.
+
+### UI
+
+- Sidebar **COLLECTIONS**: People / Places / Events / Smart (selalu tampil).
+- `CollectionsView.qml` — satu komponen untuk empat halaman: grid kartu cover + jumlah,
+  tombol Rebuild untuk Places/Events, empty state, dan menu klik-kanan (rename/merge)
+  untuk People.
+- `SettingsView` halaman **Smart**: master switch, pilihan Places/Events/Faces, unduh
+  model, auto-analyze, idle-only, pause-on-battery, slider thread (1–8), status, Rebuild.
+- `MediaGridModel` menambah filter `placeId`/`personId`/`eventId`/`smartCategory` dan
+  properti koleksi `places`/`events`/`people`/`smartCategories`.
+
+## Verifikasi
+
+- `tests/tst_grouping.cpp` (8 test total lulus): merge/pisah cluster, haversine, lookup
+  kota Jakarta, pemisahan event karena waktu dan lokasi, urutan event, dan penulisan
+  Places/Events ke DB termasuk idempotensi rebuild.
+- Uji wajah nyata (di luar suite, karena butuh model): 4 potret Wikimedia (2 Obama,
+  Michelle Obama, Angela Merkel) → **4 wajah, 3 orang**; dua foto Obama ter-cluster
+  menjadi satu. Dijalankan headless (`--no-ui --index`) maupun dari UI.
+- Halaman Places menampilkan "Soreang · 2 item", Events menampilkan 5 event dengan label
+  tanggal + subjudul tempat, People menampilkan kartu cover yang benar. Semua di-screenshot
+  lewat X11.
+
+## Build dengan backend wajah
+
+```bash
+curl -L -o ort.tgz \
+  https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.20.1.tgz
+tar xzf ort.tgz
+cmake -S . -B build -G Ninja -DKG_ENABLE_ML=ON \
+  -DKG_ORT_ROOT="$PWD/onnxruntime-linux-x64-1.20.1"
+cmake --build build
+```
+
+Model (~40 MB) diunduh dari **Settings → Smart → Download model** ke
+`<data dir>/models/`.
+
+## Utang / batas
+
+- Clustering greedy; belum ada split per-wajah (merge sudah ada).
+- Rebuild wajah penuh hanya saat model/marker berubah atau dipicu manual; foto baru
+  diproses inkremental.
+- Deteksi hanya pada gambar, bukan frame video.
+- Model int8 belum disediakan; fp32 dipakai karena totalnya sudah kecil (~40 MB).

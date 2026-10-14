@@ -95,23 +95,36 @@ ApplicationWindow {
         onActivated: window.showPerf = !window.showPerf
     }
     Shortcut {
-        sequence: "Ctrl+R"
+        sequence: window.app.shortcuts.sequences["reload"]
         onActivated: window.app.reload()
     }
     Shortcut {
-        sequence: "Ctrl+F"
+        sequence: window.app.shortcuts.sequences["search"]
         onActivated: searchField.forceActiveFocus()
     }
     Shortcut {
-        sequence: "Ctrl+Z"
+        sequence: window.app.shortcuts.sequences["undo"]
         enabled: window.app.model.canUndo && !viewer.opened
         onActivated: window.app.model.undo()
+    }
+    Shortcut {
+        sequence: window.app.shortcuts.sequences["trash"]
+        enabled: !viewer.opened
+                 && (window.app.model.selectionCount > 0
+                     || (window.detailsVisible && window.details
+                         && window.details.id !== undefined))
+        onActivated: {
+            if (window.app.model.selectionCount > 0)
+                window.app.model.trashSelection()
+            else if (window.details && window.details.id !== undefined)
+                window.app.model.moveToTrashById(window.details.id)
+        }
     }
     Shortcut {
         // Left disabled while the viewer is open: the viewer registers its own
         // Escape handling, and two enabled Shortcuts with the same sequence make
         // Qt report an ambiguous activation, which fires neither one.
-        sequence: "Escape"
+        sequence: window.app.shortcuts.sequences["cancel"]
         enabled: !viewer.opened
         onActivated: {
             window.detailsVisible = false
@@ -144,6 +157,27 @@ ApplicationWindow {
             model.albumId = 0
             model.sourceAlbum = name
         }
+        window.libraryPage = "photos"
+    }
+
+    /// Opens one People / Places / Events card as a filtered photo grid. Mirrors
+    /// openAlbum(): every other filter is cleared first so the result is exactly
+    /// the collection's contents.
+    function openCollection(item) {
+        const model = window.app.model
+        model.trashOnly = false
+        model.favoritesOnly = false
+        model.filterKind = ""
+        model.sourceAlbum = ""
+        model.albumId = 0
+        model.searchQuery = ""
+        model.clearDateRange()
+        model.clearSelection()
+        searchField.text = ""
+        model.placeId = item.kind === "place" ? item.id : 0
+        model.personId = item.kind === "person" ? item.id : 0
+        model.eventId = item.kind === "event" ? item.id : 0
+        model.smartCategory = item.kind === "smart" ? item.key : ""
         window.libraryPage = "photos"
     }
 
@@ -237,7 +271,10 @@ ApplicationWindow {
                 text: window.libraryPage === "albums"
                       ? qsTr("%1 album(s)").arg(window.app.model.albumCards.length)
                       : (window.libraryPage === "settings" ? qsTr("Settings")
-                                                            : window.app.summary)
+                        : (window.libraryPage === "people" || window.libraryPage === "places"
+                           || window.libraryPage === "events" || window.libraryPage === "smart"
+                           ? window.app.smartStatus
+                           : window.app.summary))
                 color: Theme.textMuted
                 elide: Text.ElideRight
                 leftPadding: 8
@@ -368,6 +405,7 @@ ApplicationWindow {
             onAlbumsRequested: window.libraryPage = "albums"
             onPhotosRequested: window.libraryPage = "photos"
             onSettingsRequested: window.libraryPage = "settings"
+            onCollectionsRequested: function (kind) { window.libraryPage = kind }
         }
 
         Rectangle {
@@ -425,6 +463,79 @@ ApplicationWindow {
                 onAlbumActivated: function (kind, id, name) {
                     window.openAlbum(kind, id, name)
                 }
+            }
+
+            CollectionsView {
+                anchors.fill: parent
+                visible: window.libraryPage === "people"
+                app: window.app
+                title: qsTr("People")
+                items: window.app.model.people
+                editableTitles: true
+                needsSetup: !window.app.settings.smartEnabled || !window.app.settings.smartFaces
+                           || !window.app.smartFacesAvailable
+                setupHint: !window.app.smartFacesAvailable
+                           ? qsTr("This build has no face backend. Rebuild with -DENABLE_ML=ON and the ONNX Runtime to group faces.")
+                           : qsTr("Turn on Smart grouping and Faces in Settings, then load the face model. Nothing leaves this device.")
+                emptyTitle: qsTr("No people yet")
+                emptyHint: qsTr("Faces appear here after the grouping pass finishes. Use Rebuild in Settings if your library was indexed before smart grouping was enabled.")
+                onActivated: function (item) { window.openCollection(item) }
+                onSetupRequested: window.libraryPage = "settings"
+                onRenameRequested: function (id, currentName) {
+                    personRenameField.text = currentName
+                    personRenameTarget = id
+                    personRenameDialog.open()
+                }
+                onMergeRequested: function (id) {
+                    personMergeSource = id
+                    personMergeDialog.open()
+                }
+            }
+
+            CollectionsView {
+                anchors.fill: parent
+                visible: window.libraryPage === "places"
+                app: window.app
+                title: qsTr("Places")
+                items: window.app.model.places
+                showRebuild: true
+                needsSetup: !window.app.settings.smartEnabled || !window.app.settings.smartPlaces
+                setupHint: qsTr("Turn on Smart grouping and Places in Settings to cluster photos by GPS location.")
+                emptyTitle: qsTr("No places yet")
+                emptyHint: qsTr("Places are built from photo GPS coordinates. Photos without location data cannot appear here.")
+                onActivated: function (item) { window.openCollection(item) }
+                onSetupRequested: window.libraryPage = "settings"
+                onRebuildRequested: window.app.rebuildSmartGrouping()
+            }
+
+            CollectionsView {
+                anchors.fill: parent
+                visible: window.libraryPage === "events"
+                app: window.app
+                title: qsTr("Events")
+                items: window.app.model.events
+                showRebuild: true
+                needsSetup: !window.app.settings.smartEnabled || !window.app.settings.smartEvents
+                setupHint: qsTr("Turn on Smart grouping and Events in Settings to group photos by time and place.")
+                emptyTitle: qsTr("No events yet")
+                emptyHint: qsTr("An event groups a run of photos with no long gap between them. Index some photos with dates first.")
+                onActivated: function (item) { window.openCollection(item) }
+                onSetupRequested: window.libraryPage = "settings"
+                onRebuildRequested: window.app.rebuildSmartGrouping()
+            }
+
+            CollectionsView {
+                anchors.fill: parent
+                visible: window.libraryPage === "smart"
+                app: window.app
+                title: qsTr("Smart")
+                items: window.app.model.smartCategories
+                needsSetup: !window.app.settings.smartEnabled
+                setupHint: qsTr("Turn on Smart grouping in Settings to build these automatic collections.")
+                emptyTitle: qsTr("Nothing to show")
+                emptyHint: qsTr("These heuristic collections fill up as your library grows.")
+                onActivated: function (item) { window.openCollection(item) }
+                onSetupRequested: window.libraryPage = "settings"
             }
 
             SettingsView {
@@ -671,6 +782,8 @@ ApplicationWindow {
     property var albumTargetIds: []
     property var renameTarget: null
     property var moveTargetIds: []
+    property int personRenameTarget: 0
+    property int personMergeSource: 0
     property string lastError: ""
     property var pendingConfirmAction: null
     property string confirmMessage: ""
@@ -722,6 +835,72 @@ ApplicationWindow {
             if (window.renameTarget)
                 window.reportError(window.app.model.renameMedia(window.renameTarget.mediaId,
                                                                 renameField.text))
+        }
+    }
+
+    // ---- People tidy-up (PRD F-2.4) ---------------------------------------
+    Dialog {
+        id: personRenameDialog
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        title: qsTr("Name this person")
+        width: 400
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        TextField {
+            id: personRenameField
+            width: 320
+            selectByMouse: true
+            placeholderText: qsTr("Name")
+        }
+
+        onAccepted: window.app.model.renamePerson(window.personRenameTarget,
+                                                  personRenameField.text)
+    }
+
+    Dialog {
+        id: personMergeDialog
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        title: qsTr("Merge person into…")
+        width: 420
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        ColumnLayout {
+            width: 360
+            spacing: 8
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("All photos of this person will move to the one you pick.")
+                color: Theme.textMuted
+                font.pixelSize: 12
+                wrapMode: Text.WordWrap
+            }
+            ComboBox {
+                id: mergeTargetBox
+                Layout.fillWidth: true
+                textRole: "label"
+                valueRole: "id"
+                model: {
+                    const result = []
+                    const people = window.app.model.people
+                    for (let i = 0; i < people.length; ++i) {
+                        if (people[i].id === window.personMergeSource)
+                            continue
+                        result.push({ id: people[i].id,
+                                      label: people[i].name !== ""
+                                             ? people[i].name
+                                             : qsTr("Unnamed person (%1)").arg(people[i].count) })
+                    }
+                    return result
+                }
+            }
+        }
+
+        onAccepted: {
+            if (mergeTargetBox.currentValue)
+                window.app.model.mergePeople(mergeTargetBox.currentValue, window.personMergeSource)
         }
     }
 

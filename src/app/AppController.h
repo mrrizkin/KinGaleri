@@ -12,12 +12,14 @@
 #include "core/indexer/LibraryWatcher.h"
 #include "app/AppSettings.h"
 #include "app/PerfMonitor.h"
+#include "app/ShortcutRegistry.h"
 #include "models/MediaGridModel.h"
 
 namespace kg {
 
 class Database;
 class MediaGridModel;
+class ShortcutRegistry;
 class ThumbnailService;
 class ThumbnailProvider;
 
@@ -57,6 +59,20 @@ class AppController : public QObject
     Q_PROPERTY(PerfMonitor *perf READ perf CONSTANT)
     /** Theme + language preferences (M4). Persisted with QSettings. */
     Q_PROPERTY(AppSettings *settings READ settings CONSTANT)
+    /** Rebindable keyboard shortcuts (M5). Persisted with QSettings. */
+    Q_PROPERTY(ShortcutRegistry *shortcuts READ shortcuts CONSTANT)
+    /** Human-readable summary of the last smart-grouping pass. */
+    Q_PROPERTY(QString smartStatus READ smartStatus NOTIFY smartStatusChanged)
+    /** True when this build includes the optional face/ML backend. */
+    Q_PROPERTY(bool smartFacesAvailable READ smartFacesAvailable CONSTANT)
+    /** True while a grouping (or face) pass is running. */
+    Q_PROPERTY(bool smartRunning READ smartRunning NOTIFY smartStatusChanged)
+    /** True when the face model files are present on disk. */
+    Q_PROPERTY(bool faceModelsReady READ faceModelsReady NOTIFY faceModelsChanged)
+    /** True while the face models are being downloaded. */
+    Q_PROPERTY(bool faceModelDownloading READ faceModelDownloading NOTIFY faceModelsChanged)
+    /** Where the face models are expected to live. */
+    Q_PROPERTY(QString faceModelDir READ faceModelDir CONSTANT)
     Q_PROPERTY(bool scrollBenchmarkEnabled READ scrollBenchmarkEnabled CONSTANT)
     Q_PROPERTY(double scrollBenchmarkSeconds READ scrollBenchmarkSeconds CONSTANT)
 
@@ -74,6 +90,7 @@ public:
 
     MediaGridModel *model() const { return m_model; }
     AppSettings *settings() const { return m_settings; }
+    ShortcutRegistry *shortcuts() const { return m_shortcuts; }
 
     bool busy() const { return m_busy; }
     QString statusText() const { return m_statusText; }
@@ -96,6 +113,20 @@ public:
     Q_INVOKABLE bool removeRoot(const QString &path);
     /// Re-indexes every enabled root (the Settings page "Rescan now" button).
     Q_INVOKABLE void rescanLibrary();
+
+    /// Rebuilds Places + Events (and faces when ML is enabled) from the current
+    /// library. Safe to call from QML; runs on a worker thread.
+    Q_INVOKABLE void rebuildSmartGrouping();
+
+    QString smartStatus() const { return m_smartStatus; }
+    bool smartFacesAvailable() const;
+    bool smartRunning() const { return m_smartRunning; }
+
+    bool faceModelsReady() const;
+    bool faceModelDownloading() const { return m_faceModelDownloading; }
+    QString faceModelDir() const;
+    /// Downloads yunet.onnx + sface.onnx into faceModelDir() (opt-in, PRD F-2.4).
+    Q_INVOKABLE void downloadFaceModels();
 
     /// Registers the QML image provider and the model on the given engine.
     ThumbnailProvider *thumbnailProvider() const { return m_provider; }
@@ -180,6 +211,8 @@ signals:
     void indexingChanged();
     void watchingChanged();
     void rootsChanged();
+    void smartStatusChanged();
+    void faceModelsChanged();
     void thumbnailBudgetChanged();
     void errorOccurred(const QString &message);
     void infoMessage(const QString &message);
@@ -202,6 +235,15 @@ private:
     FolderIndexer::ScanOptions currentScanOptions() const;
     /// Starts or stops the watcher according to settings.autoWatch().
     void applyWatcherSettings();
+    /// Runs the smart-grouping pass when the preferences ask for it and one is
+    /// not already in flight. Returns true when a pass is running (or was just
+    /// started), so the startup chain knows to wait for it.
+    bool maybeRunSmartGrouping();
+    /// Cheap fingerprint (row count + newest indexed_at) of the live library. Used
+    /// to skip a full Places/Events rebuild when nothing has changed.
+    QString smartSourceSignature() const;
+    void runSmartGrouping();
+    void setSmartStatus(const QString &status);
 
     std::unique_ptr<Database> m_database;
     std::unique_ptr<ThumbnailService> m_thumbnails;
@@ -210,11 +252,15 @@ private:
     MediaGridModel *m_model = nullptr;
     PerfMonitor *m_perf = nullptr;
     AppSettings *m_settings = nullptr;
+    ShortcutRegistry *m_shortcuts = nullptr;
 
     std::atomic_bool m_cancel{false};
 
     bool m_busy = false;
     bool m_indexing = false;
+    bool m_smartRunning = false;
+    bool m_faceModelDownloading = false;
+    QString m_smartStatus;
     bool m_initialPerfOverlay = false;
     QString m_statusText;
     int m_progressCurrent = 0;
@@ -224,6 +270,9 @@ private:
     QStringList m_startupIndexFolders;
     /// True while the initial CLI-requested job chain is still running.
     bool m_startupChainActive = false;
+    /// True once the startup chain has handed off to a smart-grouping pass, so
+    /// finishStartupChain() does not start a second one when that pass ends.
+    bool m_startupSmartStarted = false;
     /// True when this library should have the home folder added as first root.
     bool m_autoHomePending = false;
     /// Whether the home-root default is allowed at all (false for benchmarks).

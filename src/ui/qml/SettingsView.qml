@@ -31,6 +31,8 @@ Item {
         ListElement { name: qsTr("Thumbnails"); glyph: "\u25A3"; icons: "view-preview,image-x-generic-symbolic,image-x-generic" }
         ListElement { name: qsTr("Playback"); glyph: "\u25B6"; icons: "media-playback-start-symbolic,media-playback-start" }
         ListElement { name: qsTr("Storage"); glyph: "\u2263"; icons: "drive-harddisk-symbolic,drive-harddisk" }
+        ListElement { name: qsTr("Smart"); glyph: "\u2726"; icons: "system-run-symbolic,system-run,tools-wizard" }
+        ListElement { name: qsTr("Shortcuts"); glyph: "\u2328"; icons: "preferences-desktop-keyboard-shortcuts-symbolic,preferences-desktop-keyboard-shortcuts,input-keyboard-symbolic" }
         ListElement { name: qsTr("About"); glyph: "\u2139"; icons: "help-about-symbolic,help-about,dialog-information-symbolic" }
     }
 
@@ -132,6 +134,8 @@ Item {
         case 3: return thumbnailsPage
         case 4: return playbackPage
         case 5: return storagePage
+        case 6: return smartPage
+        case 7: return shortcutsPage
         default: return aboutPage
         }
     }
@@ -965,6 +969,360 @@ Item {
         }
     }
 
+    // ---- Smart grouping (M3) ------------------------------------------------
+    Component {
+        id: smartPage
+
+        ColumnLayout {
+            spacing: 16
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Smart")
+                font.pixelSize: 24
+                font.bold: true
+                color: Theme.text
+            }
+
+            SettingCard {
+                title: qsTr("Smart grouping")
+
+                ToggleRow {
+                    label: qsTr("Group photos automatically")
+                    description: qsTr("Build People, Places, Events and Smart collections. Everything is computed on this device and stored in your library database.")
+                    checked: root.settings.smartEnabled
+                    onToggled: function (value) { root.settings.smartEnabled = value }
+                }
+
+                InfoRow {
+                    label: qsTr("Status")
+                    value: root.app.smartStatus
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    spacing: 10
+
+                    Button {
+                        text: qsTr("Rebuild now")
+                        enabled: root.settings.smartEnabled && !root.app.smartRunning
+                        onClicked: root.app.rebuildSmartGrouping()
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+            }
+
+            SettingCard {
+                title: qsTr("What to group")
+
+                ToggleRow {
+                    label: qsTr("Places")
+                    description: qsTr("Cluster photos by GPS coordinates and name them from an offline city index. No model needed.")
+                    enabled: root.settings.smartEnabled
+                    checked: root.settings.smartPlaces
+                    onToggled: function (value) { root.settings.smartPlaces = value }
+                }
+                ToggleRow {
+                    label: qsTr("Events")
+                    description: qsTr("Group photos that were taken close together in time and place. No model needed.")
+                    enabled: root.settings.smartEnabled
+                    checked: root.settings.smartEvents
+                    onToggled: function (value) { root.settings.smartEvents = value }
+                }
+                ToggleRow {
+                    label: qsTr("People (faces)")
+                    description: root.app.smartFacesAvailable
+                                 ? qsTr("Detect faces and cluster them into people. Needs the optional face model; runs on the CPU.")
+                                 : qsTr("This build has no face backend. Rebuild with -DENABLE_ML=ON and the ONNX Runtime to enable it.")
+                    enabled: root.settings.smartEnabled && root.app.smartFacesAvailable
+                    checked: root.settings.smartFaces && root.app.smartFacesAvailable
+                    onToggled: function (value) { root.settings.smartFaces = value }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    visible: root.app.smartFacesAvailable && root.settings.smartEnabled
+                    spacing: 10
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: root.app.faceModelsReady
+                              ? qsTr("Face model: ready")
+                              : qsTr("Face model: not downloaded (about 40 MB)")
+                        color: Theme.textFaint
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
+                    Button {
+                        text: root.app.faceModelDownloading ? qsTr("Downloading…")
+                                                            : qsTr("Download model")
+                        enabled: !root.app.faceModelDownloading && !root.app.faceModelsReady
+                        onClicked: root.app.downloadFaceModels()
+                    }
+                }
+            }
+
+            SettingCard {
+                title: qsTr("When to run")
+
+                ToggleRow {
+                    label: qsTr("Analyze new photos automatically")
+                    description: qsTr("Rebuild the collections after each indexing pass. Rebuilding is cheap; face analysis is the slow part.")
+                    enabled: root.settings.smartEnabled
+                    checked: root.settings.smartAutoAnalyze
+                    onToggled: function (value) { root.settings.smartAutoAnalyze = value }
+                }
+                ToggleRow {
+                    label: qsTr("Only while idle")
+                    description: qsTr("Hold face analysis back while indexing or thumbnail work is queued, so the interface stays responsive.")
+                    enabled: root.settings.smartEnabled
+                    checked: root.settings.smartIdleOnly
+                    onToggled: function (value) { root.settings.smartIdleOnly = value }
+                }
+                ToggleRow {
+                    label: qsTr("Pause on battery")
+                    description: qsTr("Stop analysis when the laptop is running on battery power.")
+                    enabled: root.settings.smartEnabled
+                    checked: root.settings.smartPauseOnBattery
+                    onToggled: function (value) { root.settings.smartPauseOnBattery = value }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 6
+                    text: qsTr("Analysis threads")
+                    color: Theme.textMuted
+                    font.pixelSize: 12
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Slider {
+                        Layout.fillWidth: true
+                        enabled: root.settings.smartEnabled
+                        from: 1
+                        to: 8
+                        stepSize: 1
+                        snapMode: Slider.SnapAlways
+                        value: root.settings.smartThreads
+                        onMoved: root.settings.smartThreads = value
+                    }
+                    Label {
+                        Layout.preferredWidth: 54
+                        text: qsTr("%1 thread(s)").arg(root.settings.smartThreads)
+                        color: Theme.textMuted
+                        horizontalAlignment: Text.AlignRight
+                    }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Kept low on purpose: inference shares the machine with thumbnailing and the interface.")
+                    color: Theme.textFaint
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            SettingCard {
+                title: qsTr("Privacy")
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Face embeddings and place clusters stay in your library database. No image, embedding or coordinate is ever sent anywhere.")
+                    color: Theme.textFaint
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+    }
+
+    // ---- Shortcuts ----------------------------------------------------------
+    Component {
+        id: shortcutsPage
+
+        ColumnLayout {
+            spacing: 16
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Shortcuts")
+                font.pixelSize: 24
+                font.bold: true
+                color: Theme.text
+            }
+
+            SettingCard {
+                title: qsTr("Keyboard shortcuts")
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Click a shortcut and press the key combination you want. Press Escape to cancel.")
+                    color: Theme.textFaint
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+
+                Repeater {
+                    model: root.app.shortcuts.actions
+
+                    delegate: ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Label {
+                            Layout.topMargin: index === 0 ? 0 : 10
+                            visible: index === 0
+                                     || root.app.shortcuts.actions[index - 1].group !== modelData.group
+                            text: modelData.group
+                            color: Theme.textFaint
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: modelData.label
+                                color: Theme.text
+                                font.pixelSize: 13
+                            }
+
+                            Button {
+                                text: modelData.sequence
+                                font.family: "monospace"
+                                onClicked: {
+                                    capturePopup.targetId = modelData.id
+                                    capturePopup.open()
+                                }
+                            }
+
+                            Button {
+                                visible: !modelData.isDefault
+                                text: qsTr("Reset")
+                                flat: true
+                                onClicked: root.app.shortcuts.reset(modelData.id)
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 8
+                    spacing: 10
+
+                    Button {
+                        text: qsTr("Reset all")
+                        onClicked: root.app.shortcuts.resetAll()
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+            }
+
+            Popup {
+                id: capturePopup
+                property string targetId: ""
+                property string candidate: ""
+                property string errorText: ""
+
+                parent: root
+                anchors.centerIn: Overlay.overlay
+                modal: true
+                focus: true
+                width: 360
+                padding: 20
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                onOpened: {
+                    candidate = ""
+                    errorText = ""
+                    keyCatcher.forceActiveFocus()
+                }
+
+                contentItem: ColumnLayout {
+                    spacing: 12
+
+                    Item {
+                        id: keyCatcher
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 1
+                        focus: true
+                        Keys.onPressed: function (event) {
+                            if (event.key === Qt.Key_Escape) {
+                                event.accepted = true
+                                capturePopup.close()
+                                return
+                            }
+                            const seq = root.app.shortcuts.sequenceFromKey(event.key, event.modifiers)
+                            event.accepted = true
+                            if (seq === "")
+                                return // a bare modifier is not a binding
+                            capturePopup.candidate = seq
+                            capturePopup.errorText = root.app.shortcuts.conflictsFor(seq, capturePopup.targetId)
+                        }
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: qsTr("Press a key combination…")
+                        color: Theme.text
+                        font.pixelSize: 14
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: capturePopup.candidate === "" ? qsTr("(waiting)")
+                                                             : capturePopup.candidate
+                        color: Theme.textFaint
+                        font.family: "monospace"
+                        font.pixelSize: 18
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        visible: capturePopup.errorText !== ""
+                        text: capturePopup.errorText
+                        color: Theme.danger
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Item { Layout.fillWidth: true }
+
+                        Button {
+                            text: qsTr("Cancel")
+                            flat: true
+                            onClicked: capturePopup.close()
+                        }
+                        Button {
+                            text: qsTr("Save")
+                            enabled: capturePopup.candidate !== ""
+                                         && capturePopup.errorText === ""
+                            onClicked: {
+                                const err = root.app.shortcuts.setSequence(
+                                                capturePopup.targetId, capturePopup.candidate)
+                                if (err === "")
+                                    capturePopup.close()
+                                else
+                                    capturePopup.errorText = err
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ---- About --------------------------------------------------------------
     Component {
         id: aboutPage
@@ -998,6 +1356,10 @@ Item {
                 InfoRow {
                     label: qsTr("Source")
                     value: "github.com/mrrizkin/KinGaleri"
+                }
+                InfoRow {
+                    label: qsTr("Place data")
+                    value: "GeoNames (CC BY 4.0)"
                 }
 
                 Label {

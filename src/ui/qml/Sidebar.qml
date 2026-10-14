@@ -12,6 +12,7 @@ Rectangle {
     signal albumsRequested()
     signal photosRequested()
     signal settingsRequested()
+    signal collectionsRequested(string kind)
 
     /// "photos", "albums" or "settings"; drives the selected state of the entries.
     property string currentPage: "photos"
@@ -25,6 +26,10 @@ Rectangle {
         root.photosRequested()
         root.app.model.trashOnly = false
         root.app.model.albumId = 0
+        root.app.model.placeId = 0
+        root.app.model.personId = 0
+        root.app.model.eventId = 0
+        root.app.model.smartCategory = ""
         root.app.model.favoritesOnly = favoritesOnly
         root.app.model.filterKind = kind
         root.app.model.sourceAlbum = album
@@ -38,6 +43,10 @@ Rectangle {
         root.app.model.filterKind = ""
         root.app.model.sourceAlbum = ""
         root.app.model.albumId = 0
+        root.app.model.placeId = 0
+        root.app.model.personId = 0
+        root.app.model.eventId = 0
+        root.app.model.smartCategory = ""
         root.app.model.trashOnly = true
     }
 
@@ -85,6 +94,10 @@ Rectangle {
                         && !root.app.model.trashOnly
                         && root.app.model.sourceAlbum === ""
                         && root.app.model.albumId === 0
+                        && root.app.model.placeId === 0
+                        && root.app.model.personId === 0
+                        && root.app.model.eventId === 0
+                        && root.app.model.smartCategory === ""
             onTapped: root.applyFilter("", false, "")
         }
         NavEntry {
@@ -118,7 +131,6 @@ Rectangle {
 
         Label {
             Layout.fillWidth: true
-            visible: root.developerMode
             text: qsTr("COLLECTIONS")
             font.pixelSize: 10
             font.bold: true
@@ -128,32 +140,37 @@ Rectangle {
             bottomPadding: 4
         }
 
-        Label {
+        NavEntry {
             Layout.fillWidth: true
-            visible: root.developerMode
-            text: qsTr("Not yet implemented — planned for M2/M3")
-            font.pixelSize: 10
-            color: Theme.textFaint
-            wrapMode: Text.WordWrap
-            topPadding: 6
+            text: qsTr("People")
+            glyph: "☺"
+            iconNames: ["system-users-symbolic", "system-users", "avatar-default-symbolic", "avatar-default"]
+            selected: root.currentPage === "people"
+            onTapped: root.collectionsRequested("people")
         }
-
-        Repeater {
-            model: [
-                { label: qsTr("People"), icons: ["system-users-symbolic", "system-users", "avatar-default-symbolic", "avatar-default"] },
-                { label: qsTr("Places"), icons: ["mark-location-symbolic", "mark-location", "globe"] },
-                { label: qsTr("Smart"), icons: ["system-run-symbolic", "system-run", "tools-wizard"] }
-            ]
-
-            NavEntry {
-                required property var modelData
-                Layout.fillWidth: true
-                visible: root.developerMode
-                text: modelData.label
-                glyph: "○"
-                iconNames: modelData.icons
-                enabled: false
-            }
+        NavEntry {
+            Layout.fillWidth: true
+            text: qsTr("Places")
+            glyph: "◉"
+            iconNames: ["mark-location-symbolic", "mark-location", "globe"]
+            selected: root.currentPage === "places"
+            onTapped: root.collectionsRequested("places")
+        }
+        NavEntry {
+            Layout.fillWidth: true
+            text: qsTr("Events")
+            glyph: "▤"
+            iconNames: ["view-calendar-symbolic", "view-calendar", "x-office-calendar-symbolic"]
+            selected: root.currentPage === "events"
+            onTapped: root.collectionsRequested("events")
+        }
+        NavEntry {
+            Layout.fillWidth: true
+            text: qsTr("Smart")
+            glyph: "✦"
+            iconNames: ["system-run-symbolic", "system-run", "tools-wizard"]
+            selected: root.currentPage === "smart"
+            onTapped: root.collectionsRequested("smart")
         }
 
         NavEntry {

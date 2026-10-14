@@ -307,7 +307,7 @@ Popup {
 
     // ---- keyboard -----------------------------------------------------------
     Shortcut {
-        sequence: "Left"
+        sequence: viewer.app.shortcuts.sequences["viewer_previous"]
         enabled: viewer.opened
         onActivated: {
             // For a video, Left seeks; for an image it steps to the previous item.
@@ -321,7 +321,7 @@ Popup {
         }
     }
     Shortcut {
-        sequence: "Right"
+        sequence: viewer.app.shortcuts.sequences["viewer_next"]
         enabled: viewer.opened
         onActivated: {
             if (videoLoader.active && videoLoader.item)
@@ -335,7 +335,7 @@ Popup {
     // Shortcuts sharing one sequence are treated as an *ambiguous* activation by
     // Qt and neither fires. Escape also still works via closePolicy below.
     Shortcut {
-        sequence: "Space"
+        sequence: viewer.app.shortcuts.sequences["viewer_play_pause"]
         enabled: viewer.opened
         onActivated: {
             if (videoLoader.active && videoLoader.item)
@@ -345,17 +345,27 @@ Popup {
         }
     }
     Shortcut {
-        sequence: "M"
+        sequence: viewer.app.shortcuts.sequences["viewer_mute"]
         enabled: viewer.opened && videoLoader.active
         onActivated: if (videoLoader.item)
             videoLoader.item.toggleMute()
     }
     Shortcut {
-        sequence: "F"
+        sequence: viewer.app.shortcuts.sequences["viewer_favorite"]
         enabled: viewer.opened
         onActivated: {
             if (viewer.payload)
                 viewer.model.toggleFavoriteById(viewer.payload.mediaId)
         }
+    }
+    Shortcut {
+        sequence: viewer.app.shortcuts.sequences["viewer_zoom_in"]
+        enabled: viewer.opened
+        onActivated: viewer.zoom = Math.min(viewer.maxZoom, viewer.zoom * 1.25)
+    }
+    Shortcut {
+        sequence: viewer.app.shortcuts.sequences["viewer_zoom_out"]
+        enabled: viewer.opened
+        onActivated: viewer.zoom = Math.max(viewer.minZoom, viewer.zoom / 1.25)
     }
 }

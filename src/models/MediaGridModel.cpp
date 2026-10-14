@@ -4,6 +4,8 @@
 #include "app/Paths.h"
 #include "core/db/Database.h"
 #include "core/grouping/DateGrouper.h"
+#include "core/grouping/EventClusterer.h"
+#include "core/grouping/GroupingService.h"
 #include "core/model/SourceAlbum.h"
 
 #include <QDateTime>
@@ -370,6 +372,49 @@ void MediaGridModel::setAlbumId(qint64 albumId)
     reload();
 }
 
+void MediaGridModel::setPlaceId(qint64 placeId)
+{
+    const qint64 clamped = std::max<qint64>(0, placeId);
+    if (clamped == m_placeId) {
+        return;
+    }
+    m_placeId = clamped;
+    Q_EMIT filterChanged();
+    reload();
+}
+
+void MediaGridModel::setPersonId(qint64 personId)
+{
+    const qint64 clamped = std::max<qint64>(0, personId);
+    if (clamped == m_personId) {
+        return;
+    }
+    m_personId = clamped;
+    Q_EMIT filterChanged();
+    reload();
+}
+
+void MediaGridModel::setEventId(qint64 eventId)
+{
+    const qint64 clamped = std::max<qint64>(0, eventId);
+    if (clamped == m_eventId) {
+        return;
+    }
+    m_eventId = clamped;
+    Q_EMIT filterChanged();
+    reload();
+}
+
+void MediaGridModel::setSmartCategory(const QString &category)
+{
+    if (category == m_smartCategory) {
+        return;
+    }
+    m_smartCategory = category;
+    Q_EMIT filterChanged();
+    reload();
+}
+
 void MediaGridModel::setLimit(int limit)
 {
     const int clamped = std::max(0, limit);
@@ -457,6 +502,10 @@ void MediaGridModel::clearFilters()
     m_dateFrom = 0;
     m_dateTo = 0;
     m_albumId = 0;
+    m_placeId = 0;
+    m_personId = 0;
+    m_eventId = 0;
+    m_smartCategory.clear();
     Q_EMIT filterChanged();
     reload();
 }
@@ -555,6 +604,34 @@ void MediaGridModel::reload()
     if (m_albumId > 0) {
         sql += QStringLiteral("AND id IN (SELECT media_id FROM album_items WHERE album_id = :albumId) ");
     }
+    // Smart-grouping membership (M3). Each is a primary-key-prefixed subquery on
+    // a join table, so SQLite resolves it with an index scan.
+    if (m_placeId > 0) {
+        sql += QStringLiteral("AND id IN (SELECT media_id FROM media_places WHERE place_id = :placeId) ");
+    }
+    if (m_personId > 0) {
+        sql += QStringLiteral("AND id IN (SELECT media_id FROM faces WHERE person_id = :personId) ");
+    }
+    if (m_eventId > 0) {
+        sql += QStringLiteral("AND id IN (SELECT media_id FROM media_events WHERE event_id = :eventId) ");
+    }
+    // Smart albums are heuristic predicates over columns already on `media`.
+    // They are hardcoded here rather than stored, so there is no user input in
+    // the fragment and nothing to quote.
+    if (!m_smartCategory.isEmpty()) {
+        if (m_smartCategory == QLatin1String("screenshots")) {
+            sql += QStringLiteral("AND (source_album = 'Screenshots' COLLATE NOCASE "
+                                  "OR filename LIKE 'Screenshot%' OR filename LIKE 'Screen Shot%') ");
+        } else if (m_smartCategory == QLatin1String("videos")) {
+            sql += QStringLiteral("AND kind = 'video' ");
+        } else if (m_smartCategory == QLatin1String("panoramas")) {
+            sql += QStringLiteral("AND width > 0 AND height > 0 AND (CAST(width AS REAL) / height) >= 2.0 ");
+        } else if (m_smartCategory == QLatin1String("large")) {
+            sql += QStringLiteral("AND size_bytes >= 20971520 ");
+        } else if (m_smartCategory == QLatin1String("recent")) {
+            sql += QStringLiteral("AND taken_at >= :recentCutoff ");
+        }
+    }
 
     // Search is a full-text query against the FTS5 index when SQLite has one, and
     // falls back to a LIKE scan when it does not. LIKE '%x%' can never use an
@@ -601,6 +678,19 @@ void MediaGridModel::reload()
     }
     if (m_albumId > 0) {
         query.bindValue(QStringLiteral(":albumId"), m_albumId);
+    }
+    if (m_placeId > 0) {
+        query.bindValue(QStringLiteral(":placeId"), m_placeId);
+    }
+    if (m_personId > 0) {
+        query.bindValue(QStringLiteral(":personId"), m_personId);
+    }
+    if (m_eventId > 0) {
+        query.bindValue(QStringLiteral(":eventId"), m_eventId);
+    }
+    if (m_smartCategory == QLatin1String("recent")) {
+        query.bindValue(QStringLiteral(":recentCutoff"),
+                        QDateTime::currentMSecsSinceEpoch() - 30LL * 24 * 60 * 60 * 1000);
     }
     if (useFts && !ftsExpression.isEmpty()) {
         query.bindValue(QStringLiteral(":fts"), ftsExpression);
@@ -678,6 +768,7 @@ void MediaGridModel::reload()
     rebuildSummary();
     Q_EMIT countChanged();
     Q_EMIT albumsChanged();
+    Q_EMIT collectionsChanged();
     Q_EMIT reloadFinished();
 }
 
@@ -1213,6 +1304,243 @@ QString MediaGridModel::albumCoverUrl(qint64 mediaId) const
         return {};
     }
     return buildThumbUrl(mediaId, m_thumbnailRevisions.value(mediaId, 0));
+}
+
+QString MediaGridModel::coverUrl(qint64 mediaId) const
+{
+    return albumCoverUrl(mediaId);
+}
+
+QVariantList MediaGridModel::places() const
+{
+    QVariantList list;
+    if (!m_database) {
+        return list;
+    }
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, name, COALESCE(country, ''), media_count, COALESCE(cover_media_id, 0), "
+        "  ROUND(radius_m) "
+        "FROM places WHERE media_count > 0 "
+        "ORDER BY media_count DESC, name COLLATE NOCASE"));
+    if (!query.exec()) {
+        qWarning("kin-galeri: could not list places: %s", qUtf8Printable(query.lastError().text()));
+        return list;
+    }
+    while (query.next()) {
+        const qint64 coverId = query.value(4).toLongLong();
+        QVariantMap map;
+        map.insert(QStringLiteral("kind"), QStringLiteral("place"));
+        map.insert(QStringLiteral("id"), query.value(0).toLongLong());
+        map.insert(QStringLiteral("name"), query.value(1).toString());
+        map.insert(QStringLiteral("subtitle"), query.value(2).toString());
+        map.insert(QStringLiteral("count"), query.value(3).toInt());
+        map.insert(QStringLiteral("coverId"), coverId);
+        map.insert(QStringLiteral("coverUrl"), coverUrl(coverId));
+        list.append(map);
+    }
+    return list;
+}
+
+QVariantList MediaGridModel::events() const
+{
+    QVariantList list;
+    if (!m_database) {
+        return list;
+    }
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "SELECT e.id, COALESCE(e.name, ''), e.start_at, e.end_at, e.media_count, "
+        "  COALESCE(e.cover_media_id, 0), COALESCE(p.name, '') "
+        "FROM events e LEFT JOIN places p ON p.id = e.place_id "
+        "WHERE e.media_count > 0 ORDER BY e.start_at DESC"));
+    if (!query.exec()) {
+        qWarning("kin-galeri: could not list events: %s", qUtf8Printable(query.lastError().text()));
+        return list;
+    }
+    while (query.next()) {
+        const qint64 coverId = query.value(5).toLongLong();
+        QString name = query.value(1).toString();
+        if (name.isEmpty()) {
+            name = EventClusterer::labelForRange(query.value(2).toLongLong(),
+                                                 query.value(3).toLongLong());
+        }
+        QVariantMap map;
+        map.insert(QStringLiteral("kind"), QStringLiteral("event"));
+        map.insert(QStringLiteral("id"), query.value(0).toLongLong());
+        map.insert(QStringLiteral("name"), name);
+        map.insert(QStringLiteral("subtitle"), query.value(6).toString());
+        map.insert(QStringLiteral("count"), query.value(4).toInt());
+        map.insert(QStringLiteral("coverId"), coverId);
+        map.insert(QStringLiteral("coverUrl"), coverUrl(coverId));
+        list.append(map);
+    }
+    return list;
+}
+
+QVariantList MediaGridModel::people() const
+{
+    QVariantList list;
+    if (!m_database) {
+        return list;
+    }
+    // The cover falls back to the most confident face when no explicit cover has
+    // been chosen, so a freshly clustered person is never a blank tile.
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "SELECT p.id, COALESCE(p.name, ''), p.media_count, "
+        "  COALESCE(p.cover_media_id, "
+        "    (SELECT media_id FROM faces WHERE person_id = p.id ORDER BY confidence DESC LIMIT 1), 0) "
+        "FROM people p WHERE p.is_hidden = 0 AND p.media_count > 0 "
+        "ORDER BY p.media_count DESC, p.id ASC"));
+    if (!query.exec()) {
+        qWarning("kin-galeri: could not list people: %s", qUtf8Printable(query.lastError().text()));
+        return list;
+    }
+    while (query.next()) {
+        const qint64 coverId = query.value(3).toLongLong();
+        QVariantMap map;
+        map.insert(QStringLiteral("kind"), QStringLiteral("person"));
+        map.insert(QStringLiteral("id"), query.value(0).toLongLong());
+        map.insert(QStringLiteral("name"), query.value(1).toString());
+        map.insert(QStringLiteral("count"), query.value(2).toInt());
+        map.insert(QStringLiteral("coverId"), coverId);
+        map.insert(QStringLiteral("coverUrl"), coverUrl(coverId));
+        list.append(map);
+    }
+    return list;
+}
+
+QVariantList MediaGridModel::smartCategories() const
+{
+    QVariantList list;
+    if (!m_database) {
+        return list;
+    }
+
+    struct Smart
+    {
+        const char *key;
+        const char *where;
+    };
+    // Heuristic collections only. Scene/object categories need a model and are a
+    // PRD P2 idea, so they are not claimed here.
+    const Smart categories[] = {
+        {"screenshots", "(source_album = 'Screenshots' COLLATE NOCASE OR filename LIKE 'Screenshot%' "
+                        "OR filename LIKE 'Screen Shot%')"},
+        {"videos", "kind = 'video'"},
+        {"panoramas", "width > 0 AND height > 0 AND (CAST(width AS REAL) / height) >= 2.0"},
+        {"large", "size_bytes >= 20971520"},
+        {"recent", "taken_at >= :recentCutoff"},
+    };
+
+    for (const Smart &category : categories) {
+        // The cutoff is inlined rather than bound because the same placeholder
+        // would otherwise appear twice in one statement and Qt's SQLite driver
+        // only binds the first occurrence. It is an integer this code owns, so
+        // there is no injection surface.
+        QString where = QString::fromLatin1(category.where);
+        where.replace(QStringLiteral(":recentCutoff"),
+                      QString::number(QDateTime::currentMSecsSinceEpoch()
+                                      - 30LL * 24 * 60 * 60 * 1000));
+        QSqlQuery query(m_database->connection());
+        query.prepare(QStringLiteral("SELECT COUNT(*), COALESCE((SELECT id FROM media m2 WHERE ")
+                      + where
+                      + QStringLiteral(" AND deleted_at IS NULL ORDER BY taken_at DESC, id DESC LIMIT 1), 0) "
+                                     "FROM media WHERE deleted_at IS NULL AND is_hidden = 0 AND ")
+                      + where);
+        if (!query.exec() || !query.next()) {
+            continue;
+        }
+        const qint64 coverId = query.value(1).toLongLong();
+        QVariantMap map;
+        map.insert(QStringLiteral("kind"), QStringLiteral("smart"));
+        map.insert(QStringLiteral("key"), QString::fromLatin1(category.key));
+        map.insert(QStringLiteral("count"), query.value(0).toInt());
+        map.insert(QStringLiteral("coverId"), coverId);
+        map.insert(QStringLiteral("coverUrl"), coverUrl(coverId));
+        list.append(map);
+    }
+    return list;
+}
+
+void MediaGridModel::renamePerson(qint64 personId, const QString &name)
+{
+    if (!m_database || personId <= 0) {
+        return;
+    }
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty()) {
+        return;
+    }
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral("UPDATE people SET name = ? WHERE id = ?"));
+    query.addBindValue(trimmed);
+    query.addBindValue(personId);
+    if (query.exec()) {
+        Q_EMIT collectionsChanged();
+        Q_EMIT infoMessage(tr("Renamed person."));
+    }
+}
+
+void MediaGridModel::mergePeople(qint64 targetId, qint64 sourceId)
+{
+    if (!m_database || targetId <= 0 || sourceId <= 0 || targetId == sourceId) {
+        return;
+    }
+    if (!m_database->begin()) {
+        return;
+    }
+    QSqlQuery move(m_database->connection());
+    move.prepare(QStringLiteral("UPDATE faces SET person_id = ? WHERE person_id = ?"));
+    move.addBindValue(targetId);
+    move.addBindValue(sourceId);
+    if (!move.exec()) {
+        m_database->rollback();
+        return;
+    }
+    QSqlQuery drop(m_database->connection());
+    drop.prepare(QStringLiteral("DELETE FROM people WHERE id = ?"));
+    drop.addBindValue(sourceId);
+    if (!drop.exec()) {
+        m_database->rollback();
+        return;
+    }
+    // Recompute the derived counters from the faces table instead of trying to
+    // add them, which would double-count a media row that held both faces.
+    QSqlQuery refresh(m_database->connection());
+    refresh.prepare(QStringLiteral(
+        "UPDATE people SET "
+        "  media_count = (SELECT COUNT(DISTINCT media_id) FROM faces WHERE person_id = people.id), "
+        "  cover_media_id = (SELECT media_id FROM faces WHERE person_id = people.id "
+        "                    ORDER BY confidence DESC LIMIT 1) "
+        "WHERE id = ?"));
+    refresh.addBindValue(targetId);
+    if (!refresh.exec()) {
+        m_database->rollback();
+        return;
+    }
+    m_database->commit();
+    Q_EMIT collectionsChanged();
+    Q_EMIT infoMessage(tr("Merged people."));
+}
+
+bool MediaGridModel::rebuildSmartGrouping()
+{
+    if (!m_database) {
+        return false;
+    }
+    const GroupingService::Result result = GroupingService::rebuild(*m_database);
+    if (!result.error.isEmpty()) {
+        qWarning("kin-galeri: smart grouping failed: %s", qUtf8Printable(result.error));
+        return false;
+    }
+    Q_EMIT collectionsChanged();
+    // A place/event filter may be active; refresh so its membership is current.
+    if (m_placeId > 0 || m_eventId > 0 || !m_smartCategory.isEmpty()) {
+        reload();
+    }
+    return true;
 }
 
 qint64 MediaGridModel::createAlbum(const QString &name)

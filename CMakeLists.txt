@@ -25,6 +25,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
     QuickControls2
     Sql
     Concurrent
+    Network
 )
 
 find_package(SQLite3 REQUIRED)
@@ -57,6 +58,31 @@ if(TARGET SQLite3::SQLite3)
     set(KG_SQLITE_TARGET SQLite3::SQLite3)
 else()
     set(KG_SQLITE_TARGET SQLite::SQLite3)
+endif()
+
+# ---------------------------------------------------------------------------
+# Optional ML backend (M3 face grouping)
+#
+# ONNX Runtime is deliberately optional: the core gallery never needs it, and a
+# default build stays dependency-free. When enabled, the face backend is compiled
+# in and the Settings UI can turn it on; without it, the Settings page says so.
+#
+# Point KG_ORT_ROOT at an extracted onnxruntime-linux-x64-* archive (the CPU
+# build, ~17 MB), or have it installed system-wide.
+# ---------------------------------------------------------------------------
+option(KG_ENABLE_ML "Enable face grouping via ONNX Runtime" OFF)
+if(KG_ENABLE_ML)
+    set(KG_ORT_ROOT "" CACHE PATH "Path to an extracted ONNX Runtime distribution")
+    find_path(KG_ORT_INCLUDE_DIR onnxruntime_cxx_api.h
+        HINTS "${KG_ORT_ROOT}/include" "$ENV{ONNXRUNTIME_ROOT}/include")
+    find_library(KG_ORT_LIB onnxruntime
+        HINTS "${KG_ORT_ROOT}/lib" "$ENV{ONNXRUNTIME_ROOT}/lib")
+    if(NOT KG_ORT_INCLUDE_DIR OR NOT KG_ORT_LIB)
+        message(WARNING "kin-galeri: ONNX Runtime not found - ML disabled (set -DKG_ORT_ROOT=...)")
+        set(KG_ENABLE_ML OFF)
+    else()
+        message(STATUS "kin-galeri: ONNX Runtime found - face grouping enabled")
+    endif()
 endif()
 
 # Optional: video playback. Off by default in M0.
@@ -134,6 +160,8 @@ set(KG_SOURCES
     src/app/AppController.h
     src/app/AppSettings.cpp
     src/app/AppSettings.h
+    src/app/ShortcutRegistry.cpp
+    src/app/ShortcutRegistry.h
     src/app/PerfMonitor.cpp
     src/app/PerfMonitor.h
 
@@ -150,6 +178,17 @@ set(KG_SOURCES
 
     src/core/grouping/DateGrouper.cpp
     src/core/grouping/DateGrouper.h
+    src/core/grouping/GeoClusterer.cpp
+    src/core/grouping/GeoClusterer.h
+    src/core/grouping/EventClusterer.cpp
+    src/core/grouping/EventClusterer.h
+    src/core/grouping/GroupingService.cpp
+    src/core/grouping/GroupingService.h
+
+    src/core/ml/FaceEngine.cpp
+    src/core/ml/FaceEngine.h
+    src/core/ml/FacePipeline.cpp
+    src/core/ml/FacePipeline.h
 
     src/core/metadata/ExifReader.cpp
     src/core/metadata/ExifReader.h
@@ -185,6 +224,21 @@ set(KG_SOURCES
 
 target_sources(kin-galeri PRIVATE ${KG_SOURCES})
 
+# Face backend, only when ONNX Runtime was found.
+if(KG_ENABLE_ML)
+    target_include_directories(kin-galeri PRIVATE ${KG_ORT_INCLUDE_DIR})
+    target_link_libraries(kin-galeri PRIVATE ${KG_ORT_LIB})
+    target_compile_definitions(kin-galeri PRIVATE KG_ENABLE_ML=1)
+endif()
+
+# Offline reverse-geocoding index for Places (GeoNames cities15000, CC BY 4.0),
+# embedded so the feature works without a network call.
+qt_add_resources(kin-galeri "kg_data"
+    PREFIX "/"
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    FILES resources/data/cities.tsv
+)
+
 # `pragma Singleton` in the file is not enough on its own: the build system has to
 # be told *before* the file is added to the module, otherwise the generated qmldir
 # registers Theme as a plain type and every `Theme.<colour>` lookup is undefined.
@@ -199,6 +253,7 @@ set(KG_QML_FILES
     src/ui/qml/MediaGrid.qml
     src/ui/qml/AlbumsView.qml
     src/ui/qml/AlbumCard.qml
+    src/ui/qml/CollectionsView.qml
     src/ui/qml/SettingsView.qml
     src/ui/qml/MediaRow.qml
     src/ui/qml/MediaCell.qml

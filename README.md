@@ -67,6 +67,17 @@ Nama *kin* berarti keluarga/kerabat — mengacu ke fitur **People grouping** yan
 - **Benchmark bawaan** — seeding data sintetis deterministik + scroll benchmark terukur,
   dengan output machine-readable di stderr.
 - **`--no-ui`** untuk smoke test headless dan pekerjaan batch.
+- **Smart grouping (M3)** — **People**, **Places**, **Events**, dan **Smart** collections, semuanya
+  dihitung lokal dan disimpan di database library:
+  - **Places** mengelompokkan foto ber-GPS dan memberinya nama kota dari indeks GeoNames offline
+    (~6.400 kota) yang dibundel; tanpa jaringan, tanpa model.
+  - **Events** mengelompokkan rentetan foto yang berdekatan waktu (celah > 6 jam) dan lokasi
+    (lompatan GPS > 20 km memisahkan).
+  - **People** mendeteksi wajah (YuNet) dan meng-embed-nya (SFace) lalu meng-cluster; embedding
+    di-cache di DB sehingga hanya foto baru yang dianalisis. Butuh build `-DKG_ENABLE_ML=ON`.
+  - **Smart** berisi koleksi heuristik (Screenshots, Videos, Panoramas, Large files, Recently taken).
+  - Semua bisa dinyalakan dari **Settings → Smart**; model wajah (~40 MB) diunduh opt-in dari UI.
+    Thread inference, idle-only, dan pause-on-battery bisa diatur.
 
 ## Roadmap singkat
 
@@ -75,7 +86,7 @@ Nama *kin* berarti keluarga/kerabat — mengacu ke fitur **People grouping** yan
 | **M0** ✅ | Skeleton, schema + migrasi, indexing, thumbnail, grid timeline, benchmark |
 | **M1** ✅ | EXIF (tanpa dependensi), sticky header + scrubber, viewer layar penuh, pencarian, recycle bin, panel detail |
 | **M2** ✅ | Poster frame video (FFmpeg), pemutaran video (libmpv), album manual + seleksi batch, move/rename/delete + undo, filter rentang tanggal, inotify watcher, panel EXIF, memory budget adaptif |
-| **M3** | People/Places/Smart grouping, opsional AI (`-DENABLE_ML=ON`) |
+| **M3** ✅ | Smart grouping: Places (GPS, tanpa model) + Events + Smart, dan People/face clustering opsional (`-DKG_ENABLE_ML=ON`, model opt-in) dengan UI Settings + halaman koleksi |
 | **M4** ✅ | Tema terang/gelap + i18n EN/ID, HiDPI/fractional scaling, `--software-render`, aksesibilitas, skrip AppImage/Flatpak/.deb, unit test, user guide |
 | **M5+** | Ide, belum dijanjikan |
 
@@ -120,6 +131,8 @@ Binary: `build/kin-galeri`.
 | `KG_ENABLE_MPV` | `ON` | Pemutaran video via libmpv (butuh `mpvqt`). Matikan untuk memaksa Qt Multimedia. |
 | `KG_ENABLE_VIDEO_THUMBS` | `ON` | Poster frame video via FFmpeg. Otomatis nonaktif bila dev lib FFmpeg tidak ada. |
 | `KG_ENABLE_MULTIMEDIA` | `ON` | Pemutaran video via Qt Multimedia. |
+| `KG_ENABLE_ML` | `OFF` | Backend wajah (People) via ONNX Runtime. Butuh `KG_ORT_ROOT` atau ONNX Runtime terpasang. |
+| `KG_ORT_ROOT` | – | Path ke distribusi ONNX Runtime x64 yang sudah diekstrak (CPU build, ~17 MB). |
 | `KG_BUILD_TESTS` | `OFF` | Build unit test (`tests/`, Qt Test + CTest). |
 
 Contoh memaksa fallback Qt Multimedia:
@@ -127,6 +140,23 @@ Contoh memaksa fallback Qt Multimedia:
 ```bash
 cmake -S . -B build -G Ninja -DKG_VIDEO_BACKEND=qtmultimedia
 ```
+
+Contoh build dengan backend wajah (Opsional, M3):
+
+```bash
+# Unduh ONNX Runtime CPU build (tanpa GPU/CUDA) sekali saja.
+curl -L -o ort.tgz \
+  https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.20.1.tgz
+tar xzf ort.tgz
+
+cmake -S . -B build -G Ninja \
+  -DKG_ENABLE_ML=ON -DKG_ORT_ROOT="$PWD/onnxruntime-linux-x64-1.20.1"
+cmake --build build
+```
+
+Tanpa `KG_ENABLE_ML`, aplikasi tetap berjalan penuh; halaman People hanya menampilkan penjelasan
+bahwa build ini tidak punya backend wajah. Model wajah diunduh dari dalam **Settings → Smart**
+(opt-in, disimpan di `<data dir>/models/`).
 
 Unit test (tidak menyentuh library pengguna — semuanya memakai `QTemporaryDir`):
 
@@ -438,3 +468,11 @@ sumbernya.
 Lisensi ini dipilih karena aplikasi ini menautkan **Qt 6**, **libmpv/mpv**, dan
 **FFmpeg**, yang kompatibel penuh dengan GPL-3.0-or-later. Teks lisensi lengkap
 ada di file [`LICENSE`](LICENSE).
+
+### Atribusi data pihak ketiga
+
+- **Indeks kota offline** (`resources/data/cities.tsv`, dipakai fitur Places) berasal dari
+  **[GeoNames](https://www.geonames.org)** (`cities15000`), dilisensikan **CC BY 4.0**.
+- **Model wajah** (YuNet, SFace) berasal dari **[OpenCV Zoo](https://github.com/opencv/opencv_zoo)**
+  (Apache-2.0) dan **ONNX Runtime** dari Microsoft (MIT). Keduanya hanya diunduh bila pengguna
+  mengaktifkan backend wajah; tidak dibundel di repositori.

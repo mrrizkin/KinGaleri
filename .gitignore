@@ -1,0 +1,13 @@
+build/
+build-*/
+.cache/
+compile_commands.json
+*.user
+*~
+
+# local tooling / agent session artifacts
+.serena/
+session.jsonl
+
+# kin-galeri runtime artifacts (dev convenience)
+/bench-cache/

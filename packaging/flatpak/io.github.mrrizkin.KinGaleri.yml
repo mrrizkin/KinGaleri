@@ -1,0 +1,42 @@
+# Flatpak manifest for Kin Galeri (PRD 4.4 / 9).
+#
+# Build (needs flatpak-builder, not just the flatpak CLI):
+#   flatpak install flathub org.kde.Sdk//6.8 org.kde.Platform//6.8
+#   flatpak-builder --user --install --force-clean build-flatpak \
+#       packaging/flatpak/io.github.mrrizkin.KinGaleri.yml
+#
+# The KDE runtime is used because it already ships Qt 6 Quick/Sql/Multimedia
+# (FFmpeg backend) and the image/video codecs, so the bundle stays small. libmpv
+# is *not* part of the runtime, hence the mpv backend is disabled and playback
+# goes through Qt Multimedia's FFmpeg backend, which is the PRD 10.1 default
+# anyway.
+app-id: io.github.mrrizkin.KinGaleri
+runtime: org.kde.Platform
+runtime-version: '6.8'
+sdk: org.kde.Sdk
+command: kin-galeri
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # The whole point of the app is reading the user's photos, so home access is
+  # the default. Narrow it to xdg-pictures if you prefer.
+  - --filesystem=home
+  - --talk-name=org.freedesktop.portal.FileChooser
+  - --talk-name=org.freedesktop.portal.Desktop
+
+modules:
+  - name: kin-galeri
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DKG_BUILD_TESTS=OFF
+      - -DKG_ENABLE_MPV=OFF
+      - -DKG_VIDEO_BACKEND=qtmultimedia
+    sources:
+      - type: dir
+        path: ../..

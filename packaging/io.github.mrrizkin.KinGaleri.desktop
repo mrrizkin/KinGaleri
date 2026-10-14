@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Kin Galeri
+GenericName=Photo and Video Library
+Comment=Fast local photo and video library for Linux
+Comment[id]=Library foto dan video lokal yang cepat untuk Linux
+Exec=kin-galeri %F
+Icon=io.github.mrrizkin.KinGaleri
+Terminal=false
+Categories=Graphics;Photography;Viewer;
+Keywords=photo;image;video;gallery;library;album;
+StartupNotify=true
+StartupWMClass=kin-galeri
+MimeType=image/jpeg;image/png;image/webp;image/heic;image/heif;video/mp4;video/x-matroska;video/quicktime;

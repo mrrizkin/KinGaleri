@@ -1,0 +1,1056 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="id_ID">
+<context>
+    <name>ViewerOverlay</name>
+    <message>
+        <source>Fit</source>
+        <translation>Pas</translation>
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation>%1 dari %2</translation>
+    </message>
+    <message>
+        <source>Toggle favorite</source>
+        <translation>Alihkan favorit</translation>
+    </message>
+    <message>
+        <source>Next (→)</source>
+        <translation>Berikutnya (→)</translation>
+    </message>
+    <message>
+        <source>Close (Esc)</source>
+        <translation>Tutup (Esc)</translation>
+    </message>
+    <message>
+        <source>rotated</source>
+        <translation>diputar</translation>
+    </message>
+    <message>
+        <source>Details</source>
+        <translation>Detail</translation>
+    </message>
+    <message>
+        <source>Previous (←)</source>
+        <translation>Sebelumnya (←)</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsView</name>
+    <message>
+        <source>Dark</source>
+        <translation>Gelap</translation>
+    </message>
+    <message>
+        <source>The default tile size in the photo grid. The toolbar +/− buttons change the same value.</source>
+        <translation>Ukuran tile default di grid foto. Tombol +/− di toolbar mengubah nilai yang sama.</translation>
+    </message>
+    <message>
+        <source>Thumbnail size</source>
+        <translation>Ukuran thumbnail</translation>
+    </message>
+    <message>
+        <source>%1 px</source>
+        <translation>%1 px</translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation>Tentang</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Terang</translation>
+    </message>
+    <message>
+        <source>Thumbnail cache</source>
+        <translation>Cache thumbnail</translation>
+    </message>
+    <message>
+        <source>Cache folder</source>
+        <translation>Folder cache</translation>
+    </message>
+    <message>
+        <source>Bahasa Indonesia</source>
+        <translation>Bahasa Indonesia</translation>
+    </message>
+    <message>
+        <source>Video backend</source>
+        <translation>Backend video</translation>
+    </message>
+    <message>
+        <source>System follows your desktop&apos;s light/dark preference and switches live.</source>
+        <translation>Sistem mengikuti preferensi terang/gelap desktop Anda dan berganti secara langsung.</translation>
+    </message>
+    <message>
+        <source>Add folder…</source>
+        <translation>Tambah folder…</translation>
+    </message>
+    <message>
+        <source>System</source>
+        <translation>Sistem</translation>
+    </message>
+    <message>
+        <source>Kin Galeri — a local photo and video gallery. Files are never modified without an explicit action.</source>
+        <translation>Kin Galeri — galeri foto dan video lokal. File tidak pernah diubah tanpa tindakan eksplisit.</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>Bahasa</translation>
+    </message>
+    <message>
+        <source>Database</source>
+        <translation>Basis data</translation>
+    </message>
+    <message>
+        <source>Storage</source>
+        <translation>Penyimpanan</translation>
+    </message>
+    <message>
+        <source>Appearance</source>
+        <translation>Tampilan</translation>
+    </message>
+    <message>
+        <source>English</source>
+        <translation>Inggris</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>Pengaturan</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation>Versi</translation>
+    </message>
+    <message>
+        <source>Clear thumbnail cache</source>
+        <translation>Bersihkan cache thumbnail</translation>
+    </message>
+
+    <message>
+        <source>General</source>
+        <translation>Umum</translation>
+    </message>
+    <message>
+        <source>Interface</source>
+        <translation>Antarmuka</translation>
+    </message>
+    <message>
+        <source>Library</source>
+        <translation>Pustaka</translation>
+    </message>
+    <message>
+        <source>Thumbnails</source>
+        <translation>Thumbnail</translation>
+    </message>
+    <message>
+        <source>Playback</source>
+        <translation>Pemutaran</translation>
+    </message>
+    <message>
+        <source>Startup</source>
+        <translation>Saat Mulai</translation>
+    </message>
+    <message>
+        <source>Page shown when the app opens</source>
+        <translation>Halaman yang ditampilkan saat aplikasi dibuka</translation>
+    </message>
+    <message>
+        <source>Resume where I left off</source>
+        <translation>Lanjutkan dari terakhir</translation>
+    </message>
+    <message>
+        <source>Safety</source>
+        <translation>Keamanan</translation>
+    </message>
+    <message>
+        <source>Confirm before removing to the recycle bin</source>
+        <translation>Konfirmasi sebelum memindahkan ke tempat sampah</translation>
+    </message>
+    <message>
+        <source>Ask for confirmation before items leave the library. Files on disk are never deleted.</source>
+        <translation>Minta konfirmasi sebelum item keluar dari pustaka. File di disk tidak pernah dihapus.</translation>
+    </message>
+    <message>
+        <source>Diagnostics</source>
+        <translation>Diagnostik</translation>
+    </message>
+    <message>
+        <source>Show the frame-time overlay on start</source>
+        <translation>Tampilkan overlay waktu frame saat mulai</translation>
+    </message>
+    <message>
+        <source>F12 toggles it while the app runs.</source>
+        <translation>F12 mengaktifkannya saat aplikasi berjalan.</translation>
+    </message>
+    <message>
+        <source>Theme</source>
+        <translation>Tema</translation>
+    </message>
+    <message>
+        <source>Accent colour</source>
+        <translation>Warna aksen</translation>
+    </message>
+    <message>
+        <source>Layout</source>
+        <translation>Tata Letak</translation>
+    </message>
+    <message>
+        <source>Show the sidebar</source>
+        <translation>Tampilkan bilah samping</translation>
+    </message>
+    <message>
+        <source>Navigate photos, albums and settings from the left rail.</source>
+        <translation>Navigasi foto, album, dan pengaturan dari bilah kiri.</translation>
+    </message>
+    <message>
+        <source>Sidebar width</source>
+        <translation>Lebar bilah samping</translation>
+    </message>
+    <message>
+        <source>Photo grid</source>
+        <translation>Grid foto</translation>
+    </message>
+    <message>
+        <source>The toolbar +/− buttons change the same value.</source>
+        <translation>Tombol +/− di toolbar mengubah nilai yang sama.</translation>
+    </message>
+    <message>
+        <source>Spacing between tiles</source>
+        <translation>Jarak antar tile</translation>
+    </message>
+    <message>
+        <source>Show date headers</source>
+        <translation>Tampilkan header tanggal</translation>
+    </message>
+    <message>
+        <source>Group the timeline into sticky day sections.</source>
+        <translation>Kelompokkan timeline menjadi bagian hari yang lengket.</translation>
+    </message>
+    <message>
+        <source>Effects</source>
+        <translation>Efek</translation>
+    </message>
+    <message>
+        <source>Animate transitions</source>
+        <translation>Animasi transisi</translation>
+    </message>
+    <message>
+        <source>Fade and slide effects. Turning this off can help on slow GPUs.</source>
+        <translation>Efek fade dan geser. Mematikannya bisa membantu pada GPU lambat.</translation>
+    </message>
+    <message>
+        <source>Hover highlight</source>
+        <translation>Sorotan hover</translation>
+    </message>
+    <message>
+        <source>Draw an accent frame around the tile under the pointer.</source>
+        <translation>Gambar bingkai aksen di sekitar tile yang ditunjuk kursor.</translation>
+    </message>
+    <message>
+        <source>Folders</source>
+        <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Every folder below is scanned recursively. Removing one forgets its items but never touches the files on disk.</source>
+        <translation>Setiap folder di bawah dipindai secara rekursif. Menghapusnya melupakan itemnya tetapi tidak pernah menyentuh file di disk.</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Hapus</translation>
+    </message>
+    <message>
+        <source>No folders yet — add one to start building your library.</source>
+        <translation>Belum ada folder — tambahkan satu untuk mulai membangun pustaka.</translation>
+    </message>
+    <message>
+        <source>Rescan now</source>
+        <translation>Pindai ulang sekarang</translation>
+    </message>
+    <message>
+        <source>Watching</source>
+        <translation>Pemantauan</translation>
+    </message>
+    <message>
+        <source>Watch folders for changes</source>
+        <translation>Pantau perubahan folder</translation>
+    </message>
+    <message>
+        <source>Rescan automatically when files are added, moved or deleted.</source>
+        <translation>Pindai ulang otomatis saat file ditambah, dipindah, atau dihapus.</translation>
+    </message>
+    <message>
+        <source>Rescan the library on startup</source>
+        <translation>Pindai ulang pustaka saat mulai</translation>
+    </message>
+    <message>
+        <source>Re-index every folder each time the app launches. Slower to start, but catches drifted files.</source>
+        <translation>Indeks ulang setiap folder ketika aplikasi dijalankan. Lebih lambat saat mulai, tetapi menangkap file yang berubah.</translation>
+    </message>
+    <message>
+        <source>Scanning</source>
+        <translation>Pemindaian</translation>
+    </message>
+    <message>
+        <source>Follow symlinked folders</source>
+        <translation>Ikuti folder symlink</translation>
+    </message>
+    <message>
+        <source>Descend into directory symbolic links. Off by default to avoid loops and duplicate items.</source>
+        <translation>Masuk ke tautan simbolik direktori. Nonaktif secara default untuk menghindari loop dan item duplikat.</translation>
+    </message>
+    <message>
+        <source>Include hidden folders</source>
+        <translation>Sertakan folder tersembunyi</translation>
+    </message>
+    <message>
+        <source>Walk into dotted directories such as ~/.local/share.</source>
+        <translation>Telusuri direktori bertitik seperti ~/.local/share.</translation>
+    </message>
+    <message>
+        <source>Skip junk folders</source>
+        <translation>Lewati folder sampah</translation>
+    </message>
+    <message>
+        <source>Ignore node_modules, caches, toolchains and similar non-media trees. The exact list is editable below.</source>
+        <translation>Abaikan node_modules, cache, toolchain, dan pohon non-media serupa. Daftar persisnya dapat diedit di bawah.</translation>
+    </message>
+    <message>
+        <source>%1 built-in junk pattern(s)</source>
+        <translation>%1 pola sampah bawaan</translation>
+    </message>
+    <message>
+        <source>Customize…</source>
+        <translation>Sesuaikan…</translation>
+    </message>
+    <message>
+        <source>Hide</source>
+        <translation>Sembunyikan</translation>
+    </message>
+    <message>
+        <source>Add junk pattern (e.g. node_modules, build-*)</source>
+        <translation>Tambah pola sampah (mis. node_modules, build-*)</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Tambah</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Atur ulang</translation>
+    </message>
+    <message>
+        <source>Applied only while “Skip junk folders” is on. Patterns are case-insensitive globs, so build-* matches build-debug too.</source>
+        <translation>Hanya berlaku saat “Lewati folder sampah” aktif. Pola berupa glob tanpa membedakan huruf besar/kecil, jadi build-* juga cocok dengan build-debug.</translation>
+    </message>
+    <message>
+        <source>Scanning options apply to the next scan. Use “Rescan now” to apply them immediately.</source>
+        <translation>Opsi pemindaian berlaku pada pemindaian berikutnya. Gunakan “Pindai ulang sekarang” untuk menerapkannya segera.</translation>
+    </message>
+    <message>
+        <source>Memory cache</source>
+        <translation>Cache memori</translation>
+    </message>
+    <message>
+        <source>Adaptive budget</source>
+        <translation>Anggaran adaptif</translation>
+    </message>
+    <message>
+        <source>Size the decoded-thumbnail cache from what is visible on screen.</source>
+        <translation>Ukuran cache thumbnail ter-dekode berdasarkan yang terlihat di layar.</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Otomatis</translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation>%1 MB</translation>
+    </message>
+    <message>
+        <source>In use</source>
+        <translation>Sedang dipakai</translation>
+    </message>
+    <message>
+        <source>Disk cache</source>
+        <translation>Cache disk</translation>
+    </message>
+    <message>
+        <source>Cache</source>
+        <translation>Cache</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>Folder</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>Play videos automatically</source>
+        <translation>Putar video otomatis</translation>
+    </message>
+    <message>
+        <source>Start playback as soon as the viewer opens a clip.</source>
+        <translation>Mulai pemutaran begitu penampil membuka klip.</translation>
+    </message>
+    <message>
+        <source>Loop videos</source>
+        <translation>Ulang video</translation>
+    </message>
+    <message>
+        <source>Restart from the beginning at the end of a clip.</source>
+        <translation>Mulai lagi dari awal di akhir klip.</translation>
+    </message>
+    <message>
+        <source>Start muted</source>
+        <translation>Mulai tanpa suara</translation>
+    </message>
+    <message>
+        <source>Open every clip with the sound off.</source>
+        <translation>Buka setiap klip tanpa suara.</translation>
+    </message>
+    <message>
+        <source>Default volume</source>
+        <translation>Volume default</translation>
+    </message>
+    <message>
+        <source>%1 %</source>
+        <translation>%1 %</translation>
+    </message>
+    <message>
+        <source>Backend</source>
+        <translation>Backend</translation>
+    </message>
+    <message>
+        <source>Files</source>
+        <translation>File</translation>
+    </message>
+    <message>
+        <source>A local photo and video gallery for Linux. Files are never modified without an explicit action.</source>
+        <translation>Galeri foto dan video lokal untuk Linux. File tidak pernah diubah tanpa tindakan eksplisit.</translation>
+    </message>
+    <message>
+        <source>Developer</source>
+        <translation>Pengembang</translation>
+    </message>
+    <message>
+        <source>Developer mode</source>
+        <translation>Mode pengembang</translation>
+    </message>
+    <message>
+        <source>Reveal benchmark tools, the frame-time overlay button and storage internals in the status bar.</source>
+        <translation>Tampilkan alat benchmark, tombol overlay waktu frame, dan detail penyimpanan di bilah status.</translation>
+    </message>
+    <message>
+        <source>Leave this off for day-to-day use. The command line flags (--bench-scroll, --seed-benchmark) keep working either way.</source>
+        <translation>Biarkan nonaktif untuk pemakaian sehari-hari. Opsi baris perintah (--bench-scroll, --seed-benchmark) tetap berfungsi.</translation>
+    </message>
+    <message>
+        <source>Ignored folders</source>
+        <translation>Folder yang diabaikan</translation>
+    </message>
+    <message>
+        <source>Folders here are skipped during scanning, including everything inside them. Adding one never deletes anything from disk.</source>
+        <translation>Folder di sini dilewati saat pemindaian, termasuk semua isinya. Menambahkannya tidak pernah menghapus apa pun dari disk.</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Hapus</translation>
+    </message>
+    <message>
+        <source>No ignored folders yet.</source>
+        <translation>Belum ada folder yang diabaikan.</translation>
+    </message>
+    <message>
+        <source>Add ignored folder…</source>
+        <translation>Tambah folder yang diabaikan…</translation>
+    </message>
+    <message>
+        <source>Ignored name patterns</source>
+        <translation>Pola nama yang diabaikan</translation>
+    </message>
+    <message>
+        <source>e.g. Screenshots, backup*, *.tmp</source>
+        <translation>mis. Screenshots, backup*, *.tmp</translation>
+    </message>
+    <message>
+        <source>Comma-separated globs matched against folder names anywhere in the library.</source>
+        <translation>Glob dipisah koma yang dicocokkan dengan nama folder di mana pun dalam pustaka.</translation>
+    </message>
+    <message>
+        <source>Choose a folder to ignore</source>
+        <translation>Pilih folder untuk diabaikan</translation>
+    </message>
+    <message>
+        <source>Icons</source>
+        <translation>Ikon</translation>
+    </message>
+    <message>
+        <source>Use system icons</source>
+        <translation>Gunakan ikon sistem</translation>
+    </message>
+    <message>
+        <source>Use the desktop's icon theme for the sidebar, settings and toolbar. Turn this off to use the built-in text glyphs instead.</source>
+        <translation>Gunakan tema ikon desktop untuk sidebar, pengaturan, dan bilah alat. Matikan untuk memakai glif teks bawaan.</translation>
+    </message>
+</context>
+<context>
+    <name>Main</name>
+    <message>
+        <source>Add a folder with your photos to get started.</source>
+        <translation>Tambahkan folder berisi foto Anda untuk memulai.</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Lens</source>
+        <translation>Lensa</translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation>Path</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Ukuran</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Jenis</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>Batalkan</translation>
+    </message>
+    <message>
+        <source>Move to folder</source>
+        <translation>Pindahkan ke folder</translation>
+    </message>
+    <message>
+        <source>Album</source>
+        <translation>Album</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Bersihkan</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Tutup</translation>
+    </message>
+    <message>
+        <source>Indexed</source>
+        <translation>Terindeks</translation>
+    </message>
+    <message>
+        <source>This year</source>
+        <translation>Tahun ini</translation>
+    </message>
+    <message>
+        <source>Today</source>
+        <translation>Hari ini</translation>
+    </message>
+    <message>
+        <source>%1 item(s)</source>
+        <translation>%1 item</translation>
+    </message>
+    <message>
+        <source>Language: English</source>
+        <translation>Bahasa: English</translation>
+    </message>
+    <message>
+        <source>Nothing to undo</source>
+        <translation>Tidak ada yang bisa dibatalkan</translation>
+    </message>
+    <message>
+        <source>Back to albums</source>
+        <translation>Kembali ke album</translation>
+    </message>
+    <message>
+        <source>%1 album(s)</source>
+        <translation>%1 album</translation>
+    </message>
+    <message>
+        <source>Selecting</source>
+        <translation>Memilih</translation>
+    </message>
+    <message>
+        <source>Clear date filter</source>
+        <translation>Bersihkan filter tanggal</translation>
+    </message>
+    <message>
+        <source>Filter by capture date (F-4.2)</source>
+        <translation>Filter berdasarkan tanggal pengambilan (F-4.2)</translation>
+    </message>
+    <message>
+        <source>Last 30 days</source>
+        <translation>30 hari terakhir</translation>
+    </message>
+    <message>
+        <source>Rename file</source>
+        <translation>Ganti nama file</translation>
+    </message>
+    <message>
+        <source>Remove from album</source>
+        <translation>Hapus dari album</translation>
+    </message>
+    <message>
+        <source>Language: Bahasa Indonesia</source>
+        <translation>Bahasa: Bahasa Indonesia</translation>
+    </message>
+    <message>
+        <source>Create + add</source>
+        <translation>Buat + tambah</translation>
+    </message>
+    <message>
+        <source>No matches</source>
+        <translation>Tidak ada yang cocok</translation>
+    </message>
+    <message>
+        <source>Last 7 days</source>
+        <translation>7 hari terakhir</translation>
+    </message>
+    <message>
+        <source>Add a folder with your photos, or generate a synthetic library to measure scroll performance.</source>
+        <translation>Tambahkan folder berisi foto Anda, atau buat library sintetis untuk mengukur performa gulir.</translation>
+    </message>
+    <message>
+        <source>Focal length</source>
+        <translation>Panjang fokus</translation>
+    </message>
+    <message>
+        <source>Camera</source>
+        <translation>Kamera</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Add to album…</source>
+        <translation>Tambah ke album…</translation>
+    </message>
+    <message>
+        <source>Add folder…</source>
+        <translation>Tambah folder…</translation>
+    </message>
+    <message>
+        <source>Add to album</source>
+        <translation>Tambah ke album</translation>
+    </message>
+    <message>
+        <source>Reveal</source>
+        <translation>Tampilkan</translation>
+    </message>
+    <message>
+        <source>Location</source>
+        <translation>Lokasi</translation>
+    </message>
+    <message>
+        <source>Select</source>
+        <translation>Pilih</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>Diubah</translation>
+    </message>
+    <message>
+        <source>Any time</source>
+        <translation>Kapan saja</translation>
+    </message>
+    <message>
+        <source>Resolution</source>
+        <translation>Resolusi</translation>
+    </message>
+    <message>
+        <source>Items you remove from the library land here. Files on disk are never touched.</source>
+        <translation>Item yang Anda keluarkan dari library akan muncul di sini. File di disk tidak pernah disentuh.</translation>
+    </message>
+    <message>
+        <source>watching %1 folders</source>
+        <translation>memantau %1 folder</translation>
+    </message>
+    <message>
+        <source>Aperture</source>
+        <translation>Bukaan</translation>
+    </message>
+    <message>
+        <source>Undo: %1 (Ctrl+Z)</source>
+        <translation>Batalkan: %1 (Ctrl+Z)</translation>
+    </message>
+    <message>
+        <source>Add a folder to the library</source>
+        <translation>Tambahkan folder ke library</translation>
+    </message>
+    <message>
+        <source>Copy path</source>
+        <translation>Salin path</translation>
+    </message>
+    <message>
+        <source>Recycle bin is empty</source>
+        <translation>Tong sampah kosong</translation>
+    </message>
+    <message>
+        <source>Generate 50,000 rows</source>
+        <translation>Buat 50.000 baris</translation>
+    </message>
+    <message>
+        <source>Captured</source>
+        <translation>Diambil</translation>
+    </message>
+    <message>
+        <source>Theme: Dark</source>
+        <translation>Tema: Gelap</translation>
+    </message>
+    <message>
+        <source>Date ▾</source>
+        <translation>Tanggal ▾</translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation>Pulihkan</translation>
+    </message>
+    <message>
+        <source>Unfavorite</source>
+        <translation>Hapus favorit</translation>
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation>Favoritkan</translation>
+    </message>
+    <message>
+        <source>Selection mode (batch actions)</source>
+        <translation>Mode pilih (tindakan massal)</translation>
+    </message>
+    <message>
+        <source>No albums yet — create one above</source>
+        <translation>Belum ada album — buat satu di atas</translation>
+    </message>
+    <message>
+        <source>Theme: Light</source>
+        <translation>Tema: Terang</translation>
+    </message>
+    <message>
+        <source>Smaller thumbnails</source>
+        <translation>Thumbnail lebih kecil</translation>
+    </message>
+    <message>
+        <source>Appearance and language</source>
+        <translation>Tampilan dan bahasa</translation>
+    </message>
+    <message>
+        <source>Language: System</source>
+        <translation>Bahasa: Sistem</translation>
+    </message>
+    <message>
+        <source>Select all</source>
+        <translation>Pilih semua</translation>
+    </message>
+    <message>
+        <source>%1 selected</source>
+        <translation>%1 dipilih</translation>
+    </message>
+    <message>
+        <source>New album name…</source>
+        <translation>Nama album baru…</translation>
+    </message>
+    <message>
+        <source>Dimensions</source>
+        <translation>Dimensi</translation>
+    </message>
+    <message>
+        <source>Could not complete the action</source>
+        <translation>Tidak dapat menyelesaikan tindakan</translation>
+    </message>
+    <message>
+        <source>Duration</source>
+        <translation>Durasi</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>Pengaturan</translation>
+    </message>
+    <message>
+        <source>Move to recycle bin</source>
+        <translation>Pindahkan ke tong sampah</translation>
+    </message>
+    <message>
+        <source>Frame time overlay (F12)</source>
+        <translation>Overlay waktu frame (F12)</translation>
+    </message>
+    <message>
+        <source>Search file name…  (Ctrl+F)</source>
+        <translation>Cari nama file…  (Ctrl+F)</translation>
+    </message>
+    <message>
+        <source>Theme: System</source>
+        <translation>Tema: Sistem</translation>
+    </message>
+    <message>
+        <source>Exposure</source>
+        <translation>Eksposur</translation>
+    </message>
+    <message>
+        <source>Larger thumbnails</source>
+        <translation>Thumbnail lebih besar</translation>
+    </message>
+    <message>
+        <source>No media yet</source>
+        <translation>Belum ada media</translation>
+    </message>
+
+    <message>
+        <source>Move '%1' to the recycle bin?</source>
+        <translation>Pindahkan '%1' ke tempat sampah?</translation>
+    </message>
+    <message>
+        <source>Move %1 item(s) to the recycle bin?</source>
+        <translation>Pindahkan %1 item ke tempat sampah?</translation>
+    </message>
+    <message>
+        <source>Confirm</source>
+        <translation>Konfirmasi</translation>
+    </message>
+    <message>
+        <source>Search file name</source>
+        <translation>Cari nama file</translation>
+    </message>
+</context>
+<context>
+    <name>PerfOverlay</name>
+    <message>
+        <source>Reset</source>
+        <translation>Reset</translation>
+    </message>
+</context>
+<context>
+    <name>Sidebar</name>
+    <message>
+        <source>Smart</source>
+        <translation>Pintar</translation>
+    </message>
+    <message>
+        <source>LIBRARY</source>
+        <translation>LIBRARY</translation>
+    </message>
+    <message>
+        <source>Empty recycle bin?</source>
+        <translation>Kosongkan tong sampah?</translation>
+    </message>
+    <message>
+        <source>Rename album</source>
+        <translation>Ganti nama album</translation>
+    </message>
+    <message>
+        <source>Empty recycle bin</source>
+        <translation>Kosongkan tong sampah</translation>
+    </message>
+    <message>
+        <source>Delete album</source>
+        <translation>Hapus album</translation>
+    </message>
+    <message>
+        <source>ALBUMS</source>
+        <translation>ALBUM</translation>
+    </message>
+    <message>
+        <source>Albums</source>
+        <translation>Album</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>Ganti nama…</translation>
+    </message>
+    <message>
+        <source>Removes %1 item(s) from the library. Files on disk are not deleted.</source>
+        <translation>Menghapus %1 item dari library. File di disk tidak dihapus.</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Gambar</translation>
+    </message>
+    <message>
+        <source>No albums yet — index a folder to populate this list</source>
+        <translation>Belum ada album — indeks folder untuk mengisi daftar ini</translation>
+    </message>
+    <message>
+        <source>Add folder…</source>
+        <translation>Tambah folder…</translation>
+    </message>
+    <message>
+        <source>People</source>
+        <translation>Orang</translation>
+    </message>
+    <message>
+        <source>Places</source>
+        <translation>Tempat</translation>
+    </message>
+    <message>
+        <source>Videos</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>Not yet implemented — planned for M2/M3</source>
+        <translation>Belum diimplementasikan — direncanakan untuk M2/M3</translation>
+    </message>
+    <message>
+        <source>All photos</source>
+        <translation>Semua foto</translation>
+    </message>
+    <message>
+        <source>+  New album…</source>
+        <translation>+  Album baru…</translation>
+    </message>
+    <message>
+        <source>New album</source>
+        <translation>Album baru</translation>
+    </message>
+    <message>
+        <source>COLLECTIONS</source>
+        <translation>KOLEKSI</translation>
+    </message>
+    <message>
+        <source>Recycle bin</source>
+        <translation>Tong sampah</translation>
+    </message>
+    <message>
+        <source>Album name</source>
+        <translation>Nama album</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>Pengaturan</translation>
+    </message>
+    <message>
+        <source>Favorites</source>
+        <translation>Favorit</translation>
+    </message>
+    <message>
+        <source>Clear thumbnail cache</source>
+        <translation>Bersihkan cache thumbnail</translation>
+    </message>
+</context>
+<context>
+    <name>AlbumCard</name>
+    <message>
+        <source>%1 item(s)</source>
+        <translation>%1 item</translation>
+    </message>
+</context>
+<context>
+    <name>MpvVideoSurface</name>
+    <message>
+        <source>Replay (Space)</source>
+        <translation>Putar ulang (Space)</translation>
+    </message>
+    <message>
+        <source>Audio only — this file has no video track</source>
+        <translation>Hanya audio — file ini tidak punya track video</translation>
+    </message>
+    <message>
+        <source>Play / pause (Space)</source>
+        <translation>Putar / jeda (Space)</translation>
+    </message>
+    <message>
+        <source>Mute (M)</source>
+        <translation>Bisukan (M)</translation>
+    </message>
+    <message>
+        <source>Playback speed</source>
+        <translation>Kecepatan putar</translation>
+    </message>
+</context>
+<context>
+    <name>MediaGrid</name>
+    <message>
+        <source>Remove from favorites</source>
+        <translation>Hapus dari favorit</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>Ganti nama…</translation>
+    </message>
+    <message>
+        <source>Add to album…</source>
+        <translation>Tambah ke album…</translation>
+    </message>
+    <message>
+        <source>Select</source>
+        <translation>Pilih</translation>
+    </message>
+    <message>
+        <source>Remove from this album</source>
+        <translation>Hapus dari album ini</translation>
+    </message>
+    <message>
+        <source>Move to…</source>
+        <translation>Pindahkan ke…</translation>
+    </message>
+    <message>
+        <source>Copy path</source>
+        <translation>Salin path</translation>
+    </message>
+    <message>
+        <source>Details…</source>
+        <translation>Detail…</translation>
+    </message>
+    <message>
+        <source>Show in file manager</source>
+        <translation>Tampilkan di file manager</translation>
+    </message>
+    <message>
+        <source>Add to favorites</source>
+        <translation>Tambah ke favorit</translation>
+    </message>
+    <message>
+        <source>Move to recycle bin</source>
+        <translation>Pindahkan ke tong sampah</translation>
+    </message>
+    <message>
+        <source>Restore to library</source>
+        <translation>Pulihkan ke library</translation>
+    </message>
+</context>
+<context>
+    <name>AlbumsView</name>
+    <message>
+        <source>Rename album</source>
+        <translation>Ganti nama album</translation>
+    </message>
+    <message>
+        <source>Delete album</source>
+        <translation>Hapus album</translation>
+    </message>
+    <message>
+        <source>No albums yet — index a folder or create an album to populate this page</source>
+        <translation>Belum ada album — indeks folder atau buat album untuk mengisi halaman ini</translation>
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation>Ganti nama…</translation>
+    </message>
+    <message>
+        <source>+ New album…</source>
+        <translation>+ Album baru…</translation>
+    </message>
+    <message>
+        <source>New album</source>
+        <translation>Album baru</translation>
+    </message>
+    <message>
+        <source>Album name</source>
+        <translation>Nama album</translation>
+    </message>
+</context>
+<context>
+    <name>KinMpvItem</name>
+    <message>
+        <source>File not found: %1</source>
+        <translation>File tidak ditemukan: %1</translation>
+    </message>
+</context>
+</TS>

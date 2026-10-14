@@ -493,14 +493,14 @@ QString MediaGridModel::dateRangeLabel() const
         if (from == to) {
             return locale.toString(from, QLocale::ShortFormat);
         }
-        return QStringLiteral("%1 – %2")
+        return tr("%1 – %2")
             .arg(locale.toString(from, QLocale::ShortFormat),
                  locale.toString(to, QLocale::ShortFormat));
     }
     if (from.isValid()) {
-        return QStringLiteral("from %1").arg(locale.toString(from, QLocale::ShortFormat));
+        return tr("from %1").arg(locale.toString(from, QLocale::ShortFormat));
     }
-    return QStringLiteral("until %1").arg(locale.toString(to, QLocale::ShortFormat));
+    return tr("until %1").arg(locale.toString(to, QLocale::ShortFormat));
 }
 
 void MediaGridModel::clearFilters()
@@ -567,7 +567,7 @@ void MediaGridModel::reload()
     m_totalBytes = 0;
 
     if (!m_database) {
-        m_error = QStringLiteral("No database attached");
+        m_error = tr("No database attached");
         beginResetModel();
         invalidateRows();
         endResetModel();
@@ -801,19 +801,20 @@ void MediaGridModel::rebuildSummary()
 
     QString filterText;
     if (m_trashOnly) {
-        filterText += QStringLiteral(" · recycle bin");
+        filterText += tr(" · recycle bin");
     }
     if (m_favoritesOnly) {
-        filterText += QStringLiteral(" · favorites");
+        filterText += tr(" · favorites");
     }
     if (!m_filterKind.isEmpty()) {
-        filterText += QStringLiteral(" · ") + m_filterKind;
+        filterText += QStringLiteral(" · ")
+                      + (m_filterKind == QLatin1String("video") ? tr("videos") : tr("images"));
     }
     if (!m_sourceAlbum.isEmpty()) {
         filterText += QStringLiteral(" · ") + m_sourceAlbum;
     }
     if (!m_searchQuery.isEmpty()) {
-        filterText += QStringLiteral(" · \"%1\"").arg(m_searchQuery);
+        filterText += tr(" · \"%1\"").arg(m_searchQuery);
     }
     const QString range = dateRangeLabel();
     if (!range.isEmpty()) {
@@ -823,13 +824,13 @@ void MediaGridModel::rebuildSummary()
         for (const QVariant &entry : albums()) {
             const QVariantMap map = entry.toMap();
             if (map.value(QStringLiteral("id")).toLongLong() == m_albumId) {
-                filterText += QStringLiteral(" · album: ") + map.value(QStringLiteral("name")).toString();
+                filterText += tr(" · album: ") + map.value(QStringLiteral("name")).toString();
                 break;
             }
         }
     }
 
-    m_summary = QStringLiteral("%1 items · %2%3").arg(itemText, sizeText, filterText);
+    m_summary = tr("%1 items · %2%3").arg(itemText, sizeText, filterText);
     Q_EMIT summaryChanged();
 }
 
@@ -1120,7 +1121,7 @@ void MediaGridModel::moveToTrashById(qint64 mediaId)
 
     UndoAction action;
     action.type = UndoAction::Trash;
-    action.label = QStringLiteral("Move to recycle bin");
+    action.label = tr("Move to recycle bin");
     action.ids = {mediaId};
     pushUndo(action);
     Q_EMIT actionPerformed(action.label);
@@ -1148,7 +1149,7 @@ void MediaGridModel::restoreFromTrashById(qint64 mediaId)
 
     UndoAction action;
     action.type = UndoAction::Restore;
-    action.label = QStringLiteral("Restore from recycle bin");
+    action.label = tr("Restore from recycle bin");
     action.ids = {mediaId};
     pushUndo(action);
     Q_EMIT actionPerformed(action.label);
@@ -2077,7 +2078,7 @@ void MediaGridModel::trashSelection()
 
     UndoAction action;
     action.type = UndoAction::Trash;
-    action.label = QStringLiteral("Move %1 item(s) to recycle bin").arg(ids.size());
+    action.label = tr("Move %1 item(s) to recycle bin").arg(ids.size());
     action.ids = ids;
     pushUndo(action);
     Q_EMIT actionPerformed(action.label);
@@ -2098,7 +2099,7 @@ void MediaGridModel::restoreSelection()
 
     UndoAction action;
     action.type = UndoAction::Restore;
-    action.label = QStringLiteral("Restore %1 item(s)").arg(ids.size());
+    action.label = tr("Restore %1 item(s)").arg(ids.size());
     action.ids = ids;
     pushUndo(action);
     Q_EMIT actionPerformed(action.label);
@@ -2204,16 +2205,16 @@ bool MediaGridModel::moveOnDisk(const QString &from, const QString &to) const
 QString MediaGridModel::renameMedia(qint64 mediaId, const QString &newName)
 {
     if (!m_database) {
-        return QStringLiteral("No database attached");
+        return tr("No database attached");
     }
     const int index = indexOfId(mediaId);
     if (index < 0) {
-        return QStringLiteral("The item is not loaded");
+        return tr("The item is not loaded");
     }
 
     const QString trimmed = newName.trimmed();
     if (trimmed.isEmpty() || trimmed.contains(QLatin1Char('/'))) {
-        return QStringLiteral("Enter a file name without a path separator");
+        return tr("Enter a file name without a path separator");
     }
 
     const QString oldPath = m_entries.at(index).item.path;
@@ -2224,22 +2225,22 @@ QString MediaGridModel::renameMedia(qint64 mediaId, const QString &newName)
 
     const QString newPath = oldInfo.absolutePath() + QLatin1Char('/') + trimmed;
     if (QFileInfo::exists(newPath)) {
-        return QStringLiteral("A file named '%1' already exists here").arg(trimmed);
+        return tr("A file named '%1' already exists here").arg(trimmed);
     }
     if (!moveOnDisk(oldPath, newPath)) {
-        return QStringLiteral("Could not rename the file on disk");
+        return tr("Could not rename the file on disk");
     }
 
     QString dbError;
     if (!updateMediaPath(mediaId, newPath, &dbError)) {
         // Keep disk and database consistent: put the file back.
         moveOnDisk(newPath, oldPath);
-        return QStringLiteral("Could not update the library: %1").arg(dbError);
+        return tr("Could not update the library: %1").arg(dbError);
     }
 
     UndoAction action;
     action.type = UndoAction::Rename;
-    action.label = QStringLiteral("Rename to %1").arg(trimmed);
+    action.label = tr("Rename to %1").arg(trimmed);
     action.ids = {mediaId};
     action.oldPaths = {oldPath};
     action.newPaths = {newPath};
@@ -2252,12 +2253,12 @@ QString MediaGridModel::renameMedia(qint64 mediaId, const QString &newName)
 QString MediaGridModel::moveMedia(const QVariantList &mediaIds, const QString &targetDir)
 {
     if (!m_database) {
-        return QStringLiteral("No database attached");
+        return tr("No database attached");
     }
 
     const QFileInfo dirInfo(localPath(targetDir));
     if (!dirInfo.exists() || !dirInfo.isDir()) {
-        return QStringLiteral("Target folder does not exist");
+        return tr("Target folder does not exist");
     }
 
     UndoAction action;
@@ -2281,14 +2282,14 @@ QString MediaGridModel::moveMedia(const QVariantList &mediaIds, const QString &t
             for (int i = 0; i < action.ids.size(); ++i) {
                 moveOnDisk(action.newPaths.at(i), action.oldPaths.at(i));
             }
-            return QStringLiteral("'%1' already exists in the target folder")
+            return tr("'%1' already exists in the target folder")
                 .arg(QFileInfo(oldPath).fileName());
         }
         if (!moveOnDisk(oldPath, newPath)) {
             for (int i = 0; i < action.ids.size(); ++i) {
                 moveOnDisk(action.newPaths.at(i), action.oldPaths.at(i));
             }
-            return QStringLiteral("Could not move '%1'").arg(QFileInfo(oldPath).fileName());
+            return tr("Could not move '%1'").arg(QFileInfo(oldPath).fileName());
         }
 
         action.ids.append(mediaId);
@@ -2306,11 +2307,11 @@ QString MediaGridModel::moveMedia(const QVariantList &mediaIds, const QString &t
             for (int j = 0; j < action.ids.size(); ++j) {
                 moveOnDisk(action.newPaths.at(j), action.oldPaths.at(j));
             }
-            return QStringLiteral("Could not update the library: %1").arg(dbError);
+            return tr("Could not update the library: %1").arg(dbError);
         }
     }
 
-    action.label = QStringLiteral("Move %1 item(s)").arg(action.ids.size());
+    action.label = tr("Move %1 item(s)").arg(action.ids.size());
     pushUndo(action);
     Q_EMIT actionPerformed(action.label);
     reload();
@@ -2338,18 +2339,18 @@ void MediaGridModel::undo()
             }
             updateMediaPath(action.ids.at(i), to, nullptr);
         }
-        Q_EMIT actionPerformed(QStringLiteral("Undid ") + action.label);
+        Q_EMIT actionPerformed(tr("Undid %1").arg(action.label));
         reload();
         break;
     case UndoAction::Trash:
         applyDeleted(action.ids, false);
-        Q_EMIT actionPerformed(QStringLiteral("Undid ") + action.label);
+        Q_EMIT actionPerformed(tr("Undid %1").arg(action.label));
         Q_EMIT trashChanged();
         reload();
         break;
     case UndoAction::Restore:
         applyDeleted(action.ids, true);
-        Q_EMIT actionPerformed(QStringLiteral("Undid ") + action.label);
+        Q_EMIT actionPerformed(tr("Undid %1").arg(action.label));
         Q_EMIT trashChanged();
         reload();
         break;

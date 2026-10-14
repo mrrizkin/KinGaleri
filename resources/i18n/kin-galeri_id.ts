@@ -456,10 +456,6 @@
         <translation>Folder di sini dilewati saat pemindaian, termasuk semua isinya. Menambahkannya tidak pernah menghapus apa pun dari disk.</translation>
     </message>
     <message>
-        <source>Remove</source>
-        <translation>Hapus</translation>
-    </message>
-    <message>
         <source>No ignored folders yet.</source>
         <translation>Belum ada folder yang diabaikan.</translation>
     </message>
@@ -1063,6 +1059,383 @@
     <message>
         <source>File not found: %1</source>
         <translation>File tidak ditemukan: %1</translation>
+    </message>
+</context>
+<context>
+    <name>kg::AppController</name>
+    <message>
+        <source>Benchmark library cleared</source>
+        <translation>Library benchmark dibersihkan</translation>
+    </message>
+    <message>
+        <source>Benchmark seeding failed</source>
+        <translation>Gagal menyemai data benchmark</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Could not clear the benchmark library: %1</source>
+        <translation>Tidak bisa membersihkan library benchmark: %1</translation>
+    </message>
+    <message>
+        <source>Could not clear the thumbnail cache: %1</source>
+        <translation>Tidak bisa membersihkan cache thumbnail: %1</translation>
+    </message>
+    <message>
+        <source>Could not remove folder: %1</source>
+        <translation>Tidak bisa menghapus folder: %1</translation>
+    </message>
+    <message>
+        <source>Could not save the face model to %1</source>
+        <translation>Tidak bisa menyimpan model wajah ke %1</translation>
+    </message>
+    <message>
+        <source>Downloading face models…</source>
+        <translation>Mengunduh model wajah…</translation>
+    </message>
+    <message>
+        <source>Enable smart grouping in Settings first.</source>
+        <translation>Aktifkan smart grouping di Pengaturan dulu.</translation>
+    </message>
+    <message>
+        <source>Face model downloaded.</source>
+        <translation>Model wajah terunduh.</translation>
+    </message>
+    <message>
+        <source>First run — indexing %1…</source>
+        <translation>Jalan pertama — mengindeks %1…</translation>
+    </message>
+    <message>
+        <source>Generating %1 synthetic rows…</source>
+        <translation>Membuat %1 baris sintetis…</translation>
+    </message>
+    <message>
+        <source>Indexed %1 files (%2 changed, %3 unchanged, %4 failed) in %5 s</source>
+        <translation>Terindeks %1 berkas (%2 berubah, %3 tetap, %4 gagal) dalam %5 s</translation>
+    </message>
+    <message>
+        <source>Indexing stopped</source>
+        <translation>Pengindeksan dihentikan</translation>
+    </message>
+    <message>
+        <source>Library changed — rescanning…</source>
+        <translation>Library berubah — memindai ulang…</translation>
+    </message>
+    <message>
+        <source>No folders to rescan</source>
+        <translation>Tidak ada folder untuk dipindai ulang</translation>
+    </message>
+    <message>
+        <source>Removed '%1' from the library</source>
+        <translation>'%1' dihapus dari library</translation>
+    </message>
+    <message>
+        <source>Rescanning library…</source>
+        <translation>Memindai ulang library…</translation>
+    </message>
+    <message>
+        <source>Scanning %1 folder(s)…</source>
+        <translation>Memindai %1 folder…</translation>
+    </message>
+    <message>
+        <source>Scanning… %1 seen, %2 indexed\n%3</source>
+        <translation>Memindai… %1 terlihat, %2 terindeks\n%3</translation>
+    </message>
+    <message>
+        <source>Scroll benchmark: %1 fps, avg %2 ms, worst %3 ms, %4/%5 frames over budget</source>
+        <translation>Benchmark gulir: %1 fps, rata-rata %2 ms, terburuk %3 ms, %4/%5 frame di atas anggaran</translation>
+    </message>
+    <message>
+        <source>Seeded %1 rows in %2 ms (%3 rows/s)</source>
+        <translation>Menyemai %1 baris dalam %2 ms (%3 baris/s)</translation>
+    </message>
+    <message>
+        <source>Smart grouping updated: %1</source>
+        <translation>Smart grouping diperbarui: %1</translation>
+    </message>
+    <message>
+        <source>This build has no ML backend.</source>
+        <translation>Build ini tidak punya backend ML.</translation>
+    </message>
+    <message>
+        <source>Thumbnail cache cleared</source>
+        <translation>Cache thumbnail dibersihkan</translation>
+    </message>
+    <message>
+        <source>Not grouped yet</source>
+        <translation>Belum dikelompokkan</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Nonaktif</translation>
+    </message>
+    <message>
+        <source>The database is not open</source>
+        <translation>Basis data tidak terbuka</translation>
+    </message>
+    <message>
+        <source>Grouping photos…</source>
+        <translation>Mengelompokkan foto…</translation>
+    </message>
+    <message>
+        <source>Grouping failed</source>
+        <translation>Pengelompokan gagal</translation>
+    </message>
+    <message>
+        <source>%1 place(s) · %2 event(s)</source>
+        <translation>%1 tempat · %2 peristiwa</translation>
+    </message>
+    <message>
+        <source> · faces: %1</source>
+        <translation> · wajah: %1</translation>
+    </message>
+    <message>
+        <source> · %1 face(s), %2 person(s)</source>
+        <translation> · %1 wajah, %2 orang</translation>
+    </message>
+    <message>
+        <source>Downloading face model…</source>
+        <translation>Mengunduh model wajah…</translation>
+    </message>
+    <message>
+        <source>Face model ready</source>
+        <translation>Model wajah siap</translation>
+    </message>
+    <message>
+        <source>Download failed</source>
+        <translation>Unduhan gagal</translation>
+    </message>
+    <message>
+        <source>Could not download the face model: %1</source>
+        <translation>Tidak bisa mengunduh model wajah: %1</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>Siap</translation>
+    </message>
+    <message>
+        <source>%1 files · %2 · %3 · mem %4 items · hits mem %5 / disk %6 · miss %7 · gen %8 (avg %9 ms) · pending %10 · failed %11</source>
+        <translation>%1 berkas · %2 · %3 · mem %4 item · hit mem %5 / disk %6 · meleset %7 · dibuat %8 (rata-rata %9 ms) · tertunda %10 · gagal %11</translation>
+    </message>
+    <message>
+        <source>FTS5 on</source>
+        <translation>FTS5 aktif</translation>
+    </message>
+    <message>
+        <source>FTS5 off</source>
+        <translation>FTS5 nonaktif</translation>
+    </message>
+</context>
+<context>
+    <name>kg::MediaGridModel</name>
+    <message>
+        <source>Could not rename tag: %1</source>
+        <translation>Tidak bisa mengganti nama tag: %1</translation>
+    </message>
+    <message>
+        <source>Deleted tag “%1”.</source>
+        <translation>Tag “%1” dihapus.</translation>
+    </message>
+    <message>
+        <source>Merged people.</source>
+        <translation>Orang digabungkan.</translation>
+    </message>
+    <message>
+        <source>Removed tag “%1”.</source>
+        <translation>Tag “%1” dilepas.</translation>
+    </message>
+    <message>
+        <source>Renamed person.</source>
+        <translation>Nama orang diperbarui.</translation>
+    </message>
+    <message>
+        <source>Renamed tag to “%1”.</source>
+        <translation>Tag diubah menjadi “%1”.</translation>
+    </message>
+    <message>
+        <source>Tagged %1 item(s) “%2”.</source>
+        <translation>%1 item diberi tag “%2”.</translation>
+    </message>
+    <message>
+        <source>No database attached</source>
+        <translation>Tidak ada basis data</translation>
+    </message>
+    <message>
+        <source> · recycle bin</source>
+        <translation> · tong sampah</translation>
+    </message>
+    <message>
+        <source> · favorites</source>
+        <translation> · favorit</translation>
+    </message>
+    <message>
+        <source> · album: </source>
+        <translation> · album: </translation>
+    </message>
+    <message>
+        <source> · "%1"</source>
+        <translation> · "%1"</translation>
+    </message>
+    <message>
+        <source>%1 items · %2%3</source>
+        <translation>%1 item · %2%3</translation>
+    </message>
+    <message>
+        <source>from %1</source>
+        <translation>dari %1</translation>
+    </message>
+    <message>
+        <source>until %1</source>
+        <translation>sampai %1</translation>
+    </message>
+    <message>
+        <source>%1 – %2</source>
+        <translation>%1 – %2</translation>
+    </message>
+    <message>
+        <source>Restore from recycle bin</source>
+        <translation>Pulihkan dari tong sampah</translation>
+    </message>
+    <message>
+        <source>Move %1 item(s) to recycle bin</source>
+        <translation>Pindahkan %1 item ke tong sampah</translation>
+    </message>
+    <message>
+        <source>Restore %1 item(s)</source>
+        <translation>Pulihkan %1 item</translation>
+    </message>
+    <message>
+        <source>Move %1 item(s)</source>
+        <translation>Pindahkan %1 item</translation>
+    </message>
+    <message>
+        <source>Rename to %1</source>
+        <translation>Ganti nama jadi %1</translation>
+    </message>
+    <message>
+        <source>The item is not loaded</source>
+        <translation>Item belum dimuat</translation>
+    </message>
+    <message>
+        <source>Enter a file name without a path separator</source>
+        <translation>Masukkan nama berkas tanpa pemisah path</translation>
+    </message>
+    <message>
+        <source>A file named '%1' already exists here</source>
+        <translation>Sudah ada berkas bernama '%1' di sini</translation>
+    </message>
+    <message>
+        <source>Could not rename the file on disk</source>
+        <translation>Tidak bisa mengganti nama berkas di disk</translation>
+    </message>
+    <message>
+        <source>Could not update the library: %1</source>
+        <translation>Tidak bisa memperbarui library: %1</translation>
+    </message>
+    <message>
+        <source>Target folder does not exist</source>
+        <translation>Folder tujuan tidak ada</translation>
+    </message>
+    <message>
+        <source>'%1' already exists in the target folder</source>
+        <translation>'%1' sudah ada di folder tujuan</translation>
+    </message>
+    <message>
+        <source>Could not move '%1'</source>
+        <translation>Tidak bisa memindahkan '%1'</translation>
+    </message>
+    <message>
+        <source>Undid %1</source>
+        <translation>Membatalkan: %1</translation>
+    </message>
+    <message>
+        <source>videos</source>
+        <translation>video</translation>
+    </message>
+    <message>
+        <source>images</source>
+        <translation>gambar</translation>
+    </message>
+    <message>
+        <source>Move to recycle bin</source>
+        <translation>Pindahkan ke tong sampah</translation>
+    </message>
+</context>
+<context>
+    <name>kg::ShortcutRegistry</name>
+    <message>
+        <source>Already used by “%1”.</source>
+        <translation>Sudah dipakai oleh “%1”.</translation>
+    </message>
+    <message>
+        <source>Close / clear focus</source>
+        <translation>Tutup / bersihkan fokus</translation>
+    </message>
+    <message>
+        <source>Focus search</source>
+        <translation>Fokus ke pencarian</translation>
+    </message>
+    <message>
+        <source>Global</source>
+        <translation>Global</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation>Grid</translation>
+    </message>
+    <message>
+        <source>Mute video</source>
+        <translation>Bisukan video</translation>
+    </message>
+    <message>
+        <source>Next item / seek forward</source>
+        <translation>Item berikutnya / maju</translation>
+    </message>
+    <message>
+        <source>Play-pause / reset view</source>
+        <translation>Putar-jeda / reset tampilan</translation>
+    </message>
+    <message>
+        <source>Previous item / seek back</source>
+        <translation>Item sebelumnya / mundur</translation>
+    </message>
+    <message>
+        <source>Reload library</source>
+        <translation>Muat ulang library</translation>
+    </message>
+    <message>
+        <source>That key combination cannot be used.</source>
+        <translation>Kombinasi tombol itu tidak bisa dipakai.</translation>
+    </message>
+    <message>
+        <source>Toggle favourite</source>
+        <translation>Alihkan favorit</translation>
+    </message>
+    <message>
+        <source>Undo last action</source>
+        <translation>Batalkan aksi terakhir</translation>
+    </message>
+    <message>
+        <source>Unknown action.</source>
+        <translation>Aksi tidak dikenal.</translation>
+    </message>
+    <message>
+        <source>Viewer</source>
+        <translation>Penampil</translation>
+    </message>
+    <message>
+        <source>Zoom in</source>
+        <translation>Perbesar</translation>
+    </message>
+    <message>
+        <source>Zoom out</source>
+        <translation>Perkecil</translation>
+    </message>
+    <message>
+        <source>Move to recycle bin</source>
+        <translation>Pindahkan ke tong sampah</translation>
     </message>
 </context>
 </TS>

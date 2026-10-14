@@ -162,8 +162,8 @@ bool AppController::initialise(const QString &databasePath, int thumbnailEdge, Q
 
     // A library that was already indexed before smart grouping was enabled gets
     // its Places/Events without another scan.
-    setSmartStatus(m_settings->smartEnabled() ? QStringLiteral("Not grouped yet")
-                                              : QStringLiteral("Off"));
+    setSmartStatus(m_settings->smartEnabled() ? tr("Not grouped yet")
+                                              : tr("Off"));
 
     return true;
 }
@@ -196,7 +196,7 @@ bool AppController::rebuildSearchIndex(QString *error)
 {
     if (!m_database) {
         if (error) {
-            *error = QStringLiteral("The database is not open");
+            *error = tr("The database is not open");
         }
         return false;
     }
@@ -333,7 +333,7 @@ void AppController::runSmartGrouping()
     }
     m_smartRunning = true;
     Q_EMIT smartStatusChanged();
-    setSmartStatus(QStringLiteral("Grouping photos…"));
+    setSmartStatus(tr("Grouping photos…"));
 
     const bool wantFaces = m_settings->smartEnabled() && m_settings->smartFaces()
                            && smartFacesAvailable() && faceModelsReady();
@@ -350,17 +350,17 @@ void AppController::runSmartGrouping()
         m_smartRunning = false;
 
         if (!outcome.grouping.error.isEmpty()) {
-            setSmartStatus(QStringLiteral("Grouping failed"));
+            setSmartStatus(tr("Grouping failed"));
             Q_EMIT errorOccurred(outcome.grouping.error);
         } else {
-            QString text = QStringLiteral("%1 place(s) · %2 event(s)")
+            QString text = tr("%1 place(s) · %2 event(s)")
                                .arg(outcome.grouping.places)
                                .arg(outcome.grouping.events);
             if (outcome.facesRan) {
                 if (!outcome.faceError.isEmpty()) {
-                    text += QStringLiteral(" · faces: %1").arg(outcome.faceError);
+                    text += tr(" · faces: %1").arg(outcome.faceError);
                 } else {
-                    text += QStringLiteral(" · %1 face(s), %2 person(s)")
+                    text += tr(" · %1 face(s), %2 person(s)")
                                 .arg(outcome.facesDetected)
                                 .arg(outcome.people);
                 }
@@ -429,7 +429,7 @@ void AppController::downloadFaceModels()
     QDir().mkpath(faceModelDir());
     m_faceModelDownloading = true;
     Q_EMIT faceModelsChanged();
-    setSmartStatus(QStringLiteral("Downloading face model…"));
+    setSmartStatus(tr("Downloading face model…"));
     Q_EMIT infoMessage(tr("Downloading face models…"));
 
     const auto manager = new QNetworkAccessManager(this);
@@ -454,7 +454,7 @@ void AppController::downloadFaceModels()
         if (index >= downloads->size()) {
             m_faceModelDownloading = false;
             Q_EMIT faceModelsChanged();
-            setSmartStatus(QStringLiteral("Face model ready"));
+            setSmartStatus(tr("Face model ready"));
             Q_EMIT infoMessage(tr("Face model downloaded."));
             manager->deleteLater();
             return;
@@ -469,9 +469,9 @@ void AppController::downloadFaceModels()
             if (reply->error() != QNetworkReply::NoError) {
                 m_faceModelDownloading = false;
                 Q_EMIT faceModelsChanged();
-                setSmartStatus(QStringLiteral("Download failed"));
+                setSmartStatus(tr("Download failed"));
                 Q_EMIT errorOccurred(
-                    QStringLiteral("Could not download the face model: %1").arg(reply->errorString()));
+                    tr("Could not download the face model: %1").arg(reply->errorString()));
                 return;
             }
             QSaveFile file(item.file);
@@ -479,7 +479,7 @@ void AppController::downloadFaceModels()
                 || !file.commit()) {
                 m_faceModelDownloading = false;
                 Q_EMIT faceModelsChanged();
-                setSmartStatus(QStringLiteral("Download failed"));
+                setSmartStatus(tr("Download failed"));
                 Q_EMIT errorOccurred(tr("Could not save the face model to %1").arg(item.file));
                 return;
             }
@@ -707,7 +707,7 @@ void AppController::reload()
 {
     m_thumbnails->clearSources();
     m_model->reload();
-    setStatus(m_model->currentError().isEmpty() ? QStringLiteral("Ready") : m_model->currentError());
+    setStatus(m_model->currentError().isEmpty() ? tr("Ready") : m_model->currentError());
 }
 
 void AppController::registerThumbnailSources()
@@ -1096,7 +1096,7 @@ QString AppController::thumbnailInfo() const
                             ? QString::number(static_cast<double>(stats.generationMs) / stats.generated, 'f', 1)
                             : QStringLiteral("0.0");
 
-    return QStringLiteral("%1 files · %2 · %3 · mem %4 items · hits mem %5 / disk %6 · miss %7 · gen %8 (avg %9 ms) · pending %10 · failed %11")
+    return tr("%1 files · %2 · %3 · mem %4 items · hits mem %5 / disk %6 · miss %7 · gen %8 (avg %9 ms) · pending %10 · failed %11")
         .arg(m_thumbnails->diskCacheFileCount())
         .arg(Paths::sizeForLog(m_thumbnails->diskCacheBytes()))
         .arg(m_thumbnails->format())
@@ -1116,8 +1116,8 @@ QString AppController::storageInfo() const
         return {};
     }
     return QStringLiteral("%1 · %2").arg(Paths::sizeForLog(m_database->fileSizeBytes()),
-                                         m_database->ftsAvailable() ? QStringLiteral("FTS5 on")
-                                                                    : QStringLiteral("FTS5 off"));
+                                         m_database->ftsAvailable() ? tr("FTS5 on")
+                                                                    : tr("FTS5 off"));
 }
 
 QString AppController::databasePath() const

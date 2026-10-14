@@ -87,3 +87,9 @@ kg_add_test(tst_librarymaintenance)
 kg_add_test(tst_folderindexer)
 kg_add_test(tst_grouping)
 kg_add_test(tst_imageloader)
+
+# The i18n guard reads the hand-maintained catalog directly, so it needs the path
+# to the source file. See tst_i18n.cpp for why the C++ contexts are pinned.
+kg_add_test(tst_i18n)
+target_compile_definitions(tst_i18n PRIVATE
+    KG_TS_PATH="${CMAKE_SOURCE_DIR}/resources/i18n/kin-galeri_id.ts")

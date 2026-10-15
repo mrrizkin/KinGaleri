@@ -237,7 +237,16 @@ jobs:
           ls squashfs-root/usr/lib/libmpv.so.2*
           timeout 12 ./Kin_Galeri*.AppImage --appimage-extract-and-run \
             --no-home-scan --db /tmp/gui.db --cache /tmp/gui-cache > /tmp/gui.log 2>&1 || true
-          test -s /tmp/gui.db
+          # Print the log unconditionally: when this step fails, the log is the only
+          # thing that says why, and an empty log plus a missing database means the
+          # process died before it could write anything - i.e. at load time.
+          cat /tmp/gui.log || true
+          if [ ! -s /tmp/gui.db ]; then
+            echo "::error::the GUI never created its database - see the log above"
+            LD_LIBRARY_PATH="$PWD/squashfs-root/usr/lib" \
+              ldd squashfs-root/usr/bin/kin-galeri | grep -i 'not found' || true
+            exit 1
+          fi
           ./Kin_Galeri*.AppImage --appimage-extract-and-run --version | grep 'ml: on'
           ./Kin_Galeri*.AppImage --appimage-extract-and-run --version | grep 'video: mpv'
           ! grep -E "is not installed|was not found|not a type|Driver not loaded|Cannot assign to non-existent|QQmlApplicationEngine failed" /tmp/gui.log

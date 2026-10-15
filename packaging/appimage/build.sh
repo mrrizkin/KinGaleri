@@ -174,6 +174,23 @@ if [[ "${PRUNE_QT_SQLDRIVERS:-0}" == "1" ]]; then
     fi
 fi
 
+# Same story for multimedia: linuxdeploy-plugin-qt deploys every plugin in the
+# category it picks, so the GStreamer backend comes along even though the app can
+# only ever use FFmpeg (Qt prefers it, and nothing sets QT_MEDIA_BACKEND). It then
+# fails the deployment with "Could not find dependency: libgstpbutils-1.0.so.0",
+# because the whole GStreamer stack would have to be installed just to be copied.
+# Removing the plugin is opt-in for the same reason as the SQL drivers above: it
+# edits the Qt installation.
+if [[ "${PRUNE_QT_GSTREAMER:-0}" == "1" ]]; then
+    if [[ -n "${qt_plugins_dir}" && -d "${qt_plugins_dir}/multimedia" ]]; then
+        for plugin in "${qt_plugins_dir}"/multimedia/*gstreamer*mediaplugin.so; do
+            [[ -e "${plugin}" ]] || continue
+            rm -f "${plugin}"
+            echo "    removed $(basename "${plugin}") from ${qt_plugins_dir}/multimedia"
+        done
+    fi
+fi
+
 linuxdeploy --appimage-extract-and-run \
     --appdir "${appdir}" \
     --plugin qt \

@@ -93,6 +93,9 @@ jobs:
           # aqtinstall's Qt ships the MySQL/PostgreSQL/ODBC SQL drivers, whose
           # client libraries the runner does not have; see the script's comment.
           PRUNE_QT_SQLDRIVERS: '1'
+          # ...and the GStreamer multimedia backend, which is never selected but
+          # would need the whole GStreamer stack to be deployable.
+          PRUNE_QT_GSTREAMER: '1'
           CMAKE_ARGS: "-DKG_ENABLE_ML=ON -DKG_ORT_ROOT=${{ env.ORT_ROOT }}"
 
       # The version line names the build's optional features, so it is also the

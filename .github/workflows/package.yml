@@ -206,14 +206,16 @@ jobs:
               libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-render0 libxcb-shm0 \
               libxcb-xfixes0 libxcb-image0 libxcb-randr0 libxcb-sync1 libxcb-xkb1 \
               libxrender1 libsm6 libice6 libglib2.0-0 \
-              libasound2t64
+              libasound2t64 \
+              libjack-jackd2-0 libpipewire-0.3-0 libusb-1.0-0
           else
             dnf install -y -q --setopt=install_weak_deps=False \
               libglvnd-glx libglvnd-opengl libglvnd-egl mesa-libGL \
               fontconfig freetype harfbuzz fribidi dbus-libs \
               libX11 libX11-xcb libxcb libxkbcommon libxkbcommon-x11 \
               xcb-util-cursor xcb-util-keysyms xcb-util-image libXrender libSM libICE glib2 \
-              alsa-lib
+              alsa-lib \
+              pipewire-jack-audio-connection-kit pipewire-libs libusb1
           fi
 
       # `--no-ui` never loads QML, so on its own it cannot catch a missing QML

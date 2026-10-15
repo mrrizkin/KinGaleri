@@ -271,7 +271,25 @@ libc/X11/OpenGL/font/dbus — itu memang kontraknya, dan setiap desktop Ubuntu/F
 Smoke test CI memasang tepat stack baseline itu (tanpa paket `libqt6*`) sebagai bukti bahwa sisanya
 memang ikut terbundel; kalau suatu saat perlu satu paket `libqt6*`, berarti AppImage-nya rusak.
 
-Satu hal yang tetap belum: belum ada tag/rilis yang diterbitkan (CI baru berjalan setelah di-push).
+Keempat artefak sekarang dibangun dan diperiksa oleh CI pada setiap perubahan
+(`.github/workflows/package.yml`, run `38673799398` semuanya hijau): AppImage di runner
+ubuntu-24.04 dengan Qt 6.8, `.deb` di `debian:trixie` lalu **dipasang di container trixie yang
+benar-benar bersih**, Flatpak dari runtime KDE 6.8, paket Arch lewat `makepkg` sebagai user biasa,
+dan AppImage dijalankan di `ubuntu:24.04` **dan** `fedora:40`. Smoke test-nya tidak berhenti di
+`--no-ui` (yang tidak pernah memuat QML): ia mengekstrak bundle, memastikan
+`usr/qml/QtMultimedia/qmldir`, `usr/plugins/multimedia/`, `usr/plugins/iconengines/`,
+`usr/lib/libQt6Multimedia.so.6*` dan `usr/lib/libonnxruntime.so.1*` ada, lalu menjalankan GUI
+offscreen dan gagal bila log memuat error QML. `kin-galeri --version | grep 'ml: on'` dijalankan pada
+AppImage, pada `.deb` yang terpasang, dan pada build di `ci.yml`.
+
+Empat bug nyata ditemukan justru oleh pemeriksaan itu, dan semuanya tidak mungkin terlihat di mesin
+development: `.deb` kehilangan driver SQLite dan seluruh modul QML (keduanya lewat `dlopen`, jadi
+`dpkg-shlibdeps` buta), paket tanpa mpv tidak punya pemutaran video sama sekali, AppImage tidak
+membawa `libQt6Multimedia`/`libonnxruntime` (linuxdeploy tidak menelusuri berkas yang sudah kita
+salin ke AppDir), dan `--version`/`--help` menuntut display karena `QGuiApplication` dibuat sebelum
+argumen CLI diperiksa.
+
+Satu hal yang tetap belum: belum ada tag/rilis yang diterbitkan.
 Ada pula satu warning kosmetik
 (`setHighDpiScaleFactorRoundingPolicy must be called before creating the QGuiApplication instance`)
 yang **tidak** berasal dari kode ini: `grep` di `src/` tidak menemukan pemanggilan itu sama sekali.

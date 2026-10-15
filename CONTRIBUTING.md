@@ -128,6 +128,27 @@ object has no `muted`/`volume` (they live on a separate `AudioOutput`), and the
 video connection is `MediaPlayer.videoOutput: output` rather than Qt 5's
 `VideoOutput.source: player`.
 
+## Versions and releases
+
+Versions follow `v<year>.<ISO week>.<patch>`, the scheme this author's other
+repositories use. The tag is the source of truth:
+
+```bash
+scripts/next-version.sh            # v2026.42.0 - the tag to create
+scripts/next-version.sh --current  # 2026.42.0 - what the binary reports
+```
+
+The patch counts releases inside a single week, so it resets when the week rolls
+over - one of those repositories went `v2026.40.8` straight to `v2026.42.0`. The
+value written into `CMakeLists.txt` (`project(... VERSION ...)`) is what `--version`
+and the packages report, so bump it when you tag, and keep the AppStream `<release>`
+entry and the PKGBUILD's `pkgver` in step with it. The `v` belongs to the tag only.
+
+Releasing is deliberately manual: pushing a `v*` tag runs
+`.github/workflows/package.yml`, which builds and smoke-tests the AppImage, `.deb`,
+Flatpak and Arch packages and attaches them, with `SHA256SUMS`, to a GitHub release.
+A plain push to `main` publishes nothing.
+
 ## Code style
 
 - C++20, Qt 6 conventions. Match the style of the file you are editing.

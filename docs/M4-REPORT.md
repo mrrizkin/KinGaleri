@@ -265,6 +265,13 @@ tanpa `sudo`), jadi verifikasinya dilakukan di container Docker — seperti prof
 | Flatpak | bundle **638 KB** dari runtime KDE 6.8; `flatpak install` + `flatpak run --command=kin-galeri … --version` → **"Kin Galeri 0.1.0 (Qt 6.8.3)"** |
 | Arch (AUR) | `makepkg -sf` di `archlinux:base-devel` → `kin-galeri-git-0.1.0.r15…-x86_64.pkg.tar.zst` 874 KB; `--printsrcinfo` benar |
 
+> **Nama berkas di tabel ini adalah yang benar-benar diukur, jadi masih memakai `0.1.0`.** Setelah
+tabel ini ditulis, skema versi proyek berubah menjadi `v<tahun>.<minggu ISO>.<patch>` (tag `v0.1.0`
+batal; rilis pertama `v2026.42.0`) mengikuti pola repo-repo lain pemilik proyek. Angka pengukuran tidak
+ditulis ulang - yang berubah hanya cara versi dihitung: `scripts/next-version.sh` mencetak tag
+berikutnya, `--current` mencetak nilai yang dikompilasi, dan `CMakeLists.txt` tetap satu-satunya
+tempat versi binary berasal. Lihat `CONTRIBUTING.md` bagian "Versions and releases".
+
 Jadi DoD §9 "AppImage bisa dijalankan di Ubuntu 24.04 & Fedora 40" sekarang punya bukti, dengan satu
 kualifikasi yang ditulis apa adanya di `packaging/README.md`: AppImage tidak membundel
 libc/X11/OpenGL/font/dbus — itu memang kontraknya, dan setiap desktop Ubuntu/Fedora sudah punya.

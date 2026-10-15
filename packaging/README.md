@@ -12,7 +12,7 @@ what it actually is:
 
 ```
 $ kin-galeri --version
-Kin Galeri 0.1.0 (Qt 6.8.2, video: mpv, ml: on)
+Kin Galeri 2026.42.0 (Qt 6.8.2, video: mpv, ml: on)
 ```
 
 | Target | Built on | How it was verified |

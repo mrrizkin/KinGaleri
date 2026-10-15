@@ -8,7 +8,7 @@ Galeri foto & video **lokal-first** untuk Linux desktop — dibangun dengan **Qt
 Tanpa server, tanpa akun, tanpa network call wajib. Library Anda tetap di disk Anda.
 
 > **Status: M0–M4 selesai**, plus tag dengan indeks FTS5 dan fallback HEIC/HEIF di luar roadmap
-> milestone awal — versi `0.1.0`, diuji pada Qt 6.12.0 (+ libmpv/mpvqt).
+> milestone awal — versi `2026.42.0`, diuji pada Qt 6.12.0 (+ libmpv/mpvqt).
 > Yang sudah jalan: schema DB + migrasi, indexing folder dengan **EXIF**, thumbnail cache,
 > grid bertimeline dengan **sticky header + scrollbar tanggal**, **viewer layar penuh**, pencarian **FTS5**,
 > **recycle bin**, filter album **di SQL**, **poster frame video** (FFmpeg), **pemutaran video

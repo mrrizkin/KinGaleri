@@ -111,7 +111,27 @@ option(KG_ENABLE_MPV "Enable libmpv video playback (requires mpvqt)" ON)
 if(KG_ENABLE_MPV AND NOT KG_VIDEO_BACKEND STREQUAL "qtmultimedia")
     find_package(MpvQt QUIET)
     if(MpvQt_FOUND)
+        # Where mpvqt expects its headers to be found from changed between
+        # versions: 1.2.0 exports <prefix>/include, while 1.1.0 - the version
+        # Debian 13 ships, and the one the AppImage builds from source - exports
+        # <prefix>/include/MpvQt and installs the headers there. This project
+        # includes <MpvQt/mpvabstractitem.h>, which resolves for 1.2.0, for any
+        # distro install (where /usr/include is a default search path) and for
+        # 1.1.0 in a private prefix *only* if the parent directory is on the
+        # include path too. Detect which layout we got and record the extra
+        # directory; it is applied below, once the target exists.
+        get_target_property(_mpvqt_include_dirs MpvQt::MpvQt INTERFACE_INCLUDE_DIRECTORIES)
+        foreach(_dir IN LISTS _mpvqt_include_dirs)
+            if(EXISTS "${_dir}/mpvabstractitem.h")
+                get_filename_component(_mpvqt_parent "${_dir}" DIRECTORY)
+                set(KG_MPVQT_EXTRA_INCLUDE "${_mpvqt_parent}")
+            endif()
+        endforeach()
         message(STATUS "kin-galeri: mpvqt found - libmpv backend available")
+        if(KG_MPVQT_EXTRA_INCLUDE)
+            message(STATUS "kin-galeri: mpvqt headers are installed under MpvQt/ "
+                           "(pre-1.2.0 layout), adding ${KG_MPVQT_EXTRA_INCLUDE} to the include path")
+        endif()
     else()
         message(STATUS "kin-galeri: mpvqt NOT found - libmpv backend disabled")
         set(KG_ENABLE_MPV OFF)
@@ -375,6 +395,9 @@ endif()
 if(KG_ENABLE_MPV)
     target_link_libraries(kin-galeri PRIVATE MpvQt::MpvQt)
     target_compile_definitions(kin-galeri PRIVATE KG_HAS_MPV=1)
+    if(KG_MPVQT_EXTRA_INCLUDE)
+        target_include_directories(kin-galeri PRIVATE "${KG_MPVQT_EXTRA_INCLUDE}")
+    endif()
 endif()
 
 if(KG_ENABLE_VIDEO_THUMBS)

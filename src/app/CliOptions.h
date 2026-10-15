@@ -21,6 +21,11 @@ struct CliOptions
     /// --rebuild-search-index: rebuild media_fts from media and exit.
     bool rebuildSearchIndex = false;
 
+    /// --clear-benchmark: delete every synthetic row plus the `<benchmark>` root.
+    /// The counterpart of --seed-benchmark, so a library seeded into by mistake
+    /// (or by the developer-mode button) can be cleaned up without the GUI.
+    bool clearBenchmark = false;
+
     /// --software-render: force the Qt Quick software renderer (PRD risk table:
     /// broken Wayland/GPU drivers). Applied before QGuiApplication starts.
     bool softwareRender = false;

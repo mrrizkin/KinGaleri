@@ -177,6 +177,9 @@ public:
 
     Q_INVOKABLE void seedBenchmark(int rows);
     Q_INVOKABLE void clearBenchmark();
+    /// The same deletion without the signal plumbing, so --clear-benchmark can
+    /// report failure and set an exit code.
+    bool clearBenchmarkLibrary(QString *error = nullptr);
 
     Q_INVOKABLE void indexFolder(const QString &folder);
     Q_INVOKABLE void indexFolders(const QStringList &folders);

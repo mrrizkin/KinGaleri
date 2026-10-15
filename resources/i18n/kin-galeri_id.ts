@@ -691,6 +691,14 @@
         <source>%1 items</source>
         <translation>%1 item</translation>
     </message>
+    <message>
+        <source>Remove generated rows</source>
+        <translation>Hapus baris hasil generate</translation>
+    </message>
+    <message>
+        <source>Deletes the synthetic rows the scroll benchmark adds, and the placeholder folder they live in. Real items are never touched. The same thing is available to scripts as --clear-benchmark.</source>
+        <translation>Menghapus baris sintetis yang ditambahkan benchmark scroll, beserta folder placeholder tempat baris itu tinggal. Item asli tidak pernah disentuh. Hal yang sama tersedia untuk skrip lewat --clear-benchmark.</translation>
+    </message>
 </context>
 <context>
     <name>Main</name>
@@ -1174,6 +1182,14 @@
     <message>
         <source>Tag name</source>
         <translation>Nama tag</translation>
+    </message>
+    <message>
+        <source>Remove generated rows</source>
+        <translation>Hapus baris hasil generate</translation>
+    </message>
+    <message>
+        <source>This adds 50,000 synthetic rows to the library that is open. They are marked as generated, so "Remove generated rows" takes them out again without touching your files.</source>
+        <translation>Ini menambahkan 50.000 baris sintetis ke pustaka yang sedang dibuka. Barisnya ditandai sebagai hasil generate, jadi "Hapus baris hasil generate" membuangnya lagi tanpa menyentuh berkas Anda.</translation>
     </message>
 </context>
 <context>

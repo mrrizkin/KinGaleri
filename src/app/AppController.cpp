@@ -827,14 +827,25 @@ void AppController::seedBenchmark(int rows)
     }));
 }
 
+bool AppController::clearBenchmarkLibrary(QString *error)
+{
+    if (!m_database) {
+        if (error) {
+            *error = tr("No database attached");
+        }
+        return false;
+    }
+    BenchmarkSeeder seeder(m_database.get());
+    return seeder.clear(error);
+}
+
 void AppController::clearBenchmark()
 {
     if (m_busy || !m_database) {
         return;
     }
     QString error;
-    BenchmarkSeeder seeder(m_database.get());
-    if (!seeder.clear(&error)) {
+    if (!clearBenchmarkLibrary(&error)) {
         Q_EMIT errorOccurred(tr("Could not clear the benchmark library: %1").arg(error));
         return;
     }

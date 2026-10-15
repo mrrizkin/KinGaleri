@@ -59,6 +59,9 @@ CliOptions parseCli(const QStringList &args)
     QCommandLineOption optRebuildFts(
         QStringLiteral("rebuild-search-index"),
         QStringLiteral("Rebuild the full-text search index from the media table and exit."));
+    QCommandLineOption optClearBench(
+        QStringLiteral("clear-benchmark"),
+        QStringLiteral("Delete the synthetic rows created by --seed-benchmark and exit."));
     QCommandLineOption optSoftware(
         QStringLiteral("software-render"),
         QStringLiteral("Force the Qt Quick software renderer (fallback for broken GPU drivers)."));
@@ -78,6 +81,7 @@ CliOptions parseCli(const QStringList &args)
     parser.addOption(optBench);
     parser.addOption(optNoUi);
     parser.addOption(optRebuildFts);
+    parser.addOption(optClearBench);
     parser.addOption(optSoftware);
     parser.addOption(optNoHomeScan);
 
@@ -92,6 +96,7 @@ CliOptions parseCli(const QStringList &args)
     opts.showPerfOverlay = parser.isSet(optPerf);
     opts.skipUi = parser.isSet(optNoUi);
     opts.rebuildSearchIndex = parser.isSet(optRebuildFts);
+    opts.clearBenchmark = parser.isSet(optClearBench);
     opts.softwareRender = parser.isSet(optSoftware);
     opts.autoHomeScan = !parser.isSet(optNoHomeScan);
     opts.indexFolders = parser.values(optIndex);
@@ -178,6 +183,7 @@ void printHelp(const QString &programName)
         << "      --bench-scroll <s>     Automated scroll benchmark for <s> seconds, then exit.\n"
         << "      --no-ui                Headless mode.\n"
         << "      --rebuild-search-index Rebuild the full-text search index and exit.\n"
+        << "      --clear-benchmark      Delete the synthetic rows --seed-benchmark created, and exit.\n"
         << "      --software-render      Force the Qt Quick software renderer.\n"
         << "      --no-home-scan         Do not seed a fresh library with the home folder.\n\n";
     out << "Benchmark examples:\n"

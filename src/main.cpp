@@ -212,6 +212,21 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // The counterpart of --seed-benchmark. The developer-mode button in the empty
+    // library view seeds into whatever library is open - the real one - and until
+    // this existed there was no way to undo that from the interface at all.
+    if (options.clearBenchmark) {
+        QString clearError;
+        if (!controller.clearBenchmarkLibrary(&clearError)) {
+            std::fprintf(stderr, "kin-galeri: could not remove the benchmark rows: %s\n",
+                         qUtf8Printable(clearError));
+            return 6;
+        }
+        std::fprintf(stderr, "kin-galeri: synthetic benchmark rows removed from %s\n",
+                     qUtf8Printable(Paths::databaseFile()));
+        return 0;
+    }
+
     controller.setStartupRequests(options.seedBenchmarkCount, options.indexFolders);
     controller.setScrollBenchmarkSeconds(options.benchScrollSeconds);
     // Precedence: explicit --thumb-memory-cache pins the budget, otherwise the

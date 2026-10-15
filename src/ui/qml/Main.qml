@@ -716,7 +716,17 @@ ApplicationWindow {
                     Button {
                         visible: window.developerMode
                         text: qsTr("Generate 50,000 rows")
-                        onClicked: window.app.seedBenchmark(50000)
+                        // These rows land in whichever library is open, which is
+                        // normally the real one, so this is treated like any other
+                        // library change and asks first.
+                        onClicked: window.confirmThen(
+                                       qsTr("This adds 50,000 synthetic rows to the library that is open. They are marked as generated, so \"Remove generated rows\" takes them out again without touching your files."),
+                                       function () { window.app.seedBenchmark(50000) })
+                    }
+                    Button {
+                        visible: window.developerMode
+                        text: qsTr("Remove generated rows")
+                        onClicked: window.app.clearBenchmark()
                     }
                 }
             }

@@ -223,6 +223,28 @@ Item {
                     font.pixelSize: 11
                     wrapMode: Text.WordWrap
                 }
+
+                // The seeding button lives in the empty-library view, which means it
+                // is unreachable exactly when the rows it added are filling the
+                // library. This is the way back out, and it is idempotent.
+                RowLayout {
+                    visible: root.settings.developerMode
+                    Layout.fillWidth: true
+
+                    Button {
+                        text: qsTr("Remove generated rows")
+                        onClicked: root.app.clearBenchmark()
+                    }
+                }
+
+                Label {
+                    visible: root.settings.developerMode
+                    Layout.fillWidth: true
+                    text: qsTr("Deletes the synthetic rows the scroll benchmark adds, and the placeholder folder they live in. Real items are never touched. The same thing is available to scripts as --clear-benchmark.")
+                    color: Theme.textFaint
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
             }
         }
     }

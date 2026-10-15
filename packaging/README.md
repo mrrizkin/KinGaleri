@@ -12,13 +12,13 @@ what it actually is:
 
 ```
 $ kin-galeri --version
-Kin Galeri 0.1.0 (Qt 6.8.2, video: qtmultimedia, ml: on)
+Kin Galeri 0.1.0 (Qt 6.8.2, video: mpv, ml: on)
 ```
 
 | Target | Built on | How it was verified |
 |---|---|---|
-| AppImage | Ubuntu 24.04 + Qt 6.8 (aqtinstall) — 99.5 MB | Ran in `ubuntu:24.04` **and** `fedora:40` containers with `--appimage-extract-and-run`: QML modules, multimedia plugin and ONNX Runtime present in the bundle, GUI runs offscreen, `--version` = `… video: qtmultimedia, ml: on` |
-| `.deb` | Debian 13 (`debian:trixie`, Qt 6.8.2) — 914 KB | Installed into a **clean** `debian:trixie` (only its declared dependencies), then plugins/QML modules asserted, GUI run offscreen, `desktop-file-validate` + `appstreamcli validate --no-net` |
+| AppImage | Ubuntu 24.04 + Qt 6.8 (aqtinstall) — 99.5 MB | Ran in `ubuntu:24.04` **and** `fedora:40` containers with `--appimage-extract-and-run`: QML modules, the multimedia plugin, ONNX Runtime, `libmpv` and `libMpvQt` present in the bundle, GUI runs offscreen, `--version` = `… video: mpv, ml: on` |
+| `.deb` | Debian 13 (`debian:trixie`, Qt 6.8.2) — 914 KB | Installed into a **clean** `debian:trixie` (only its declared dependencies), then plugins/QML modules and `libMpvQt.so.1`/`libmpv.so.2` with their `Depends` lines asserted, GUI run offscreen, `desktop-file-validate` + `appstreamcli validate --no-net` |
 | Flatpak | KDE 6.8 runtime — 638 KB bundle | `flatpak-builder` → `flatpak build-bundle`; ONNX Runtime asserted inside `/app` |
 | Arch | `archlinux:base-devel` — 874 KB | `makepkg -sf` as a non-root user, against the real GitHub URL (see `arch/README.md` for AUR) |
 
@@ -26,8 +26,8 @@ Kin Galeri 0.1.0 (Qt 6.8.2, video: qtmultimedia, ml: on)
 
 | Target | Video backend | Face grouping | ONNX Runtime from |
 |---|---|---|---|
-| AppImage | Qt Multimedia | **on** | the pinned 1.20.1 archive, bundled |
-| `.deb` | Qt Multimedia | **on** | Debian's `libonnxruntime1.21`, declared as a dependency |
+| AppImage | **mpv** — mpvqt 1.2.0 and ECM 6.15.0 built from sha256-pinned upstream tarballs (Ubuntu 24.04 packages neither) | **on** | the pinned 1.20.1 archive, bundled |
+| `.deb` | **mpv** — Debian's own `libmpvqt1` + `libmpv2`, derived by `dpkg-shlibdeps` | **on** | Debian's `libonnxruntime1.21`, declared as a dependency |
 | Flatpak | Qt Multimedia | **on** | the pinned 1.20.1 archive, built as a module into `/app` |
 | Arch (AUR) | **mpv** (mpvqt is in `extra`) | **on** | the pinned 1.20.1 archive, installed to `/usr/lib` |
 
@@ -41,11 +41,33 @@ Debian is the one target that does not bundle ONNX Runtime: Debian 13 packages
 dependency. Its SONAME is `libonnxruntime.so.1.21`, so the upstream 1.20.1 archive
 could not satisfy it anyway — which is why the other three carry their own copy.
 
-mpv is only built where mpvqt is packaged. Debian, Ubuntu and Flathub do not ship
-mpvqt, so those targets use the Qt Multimedia backend, which PRD §10.1 makes the
-default regardless; Arch does have it, so the AUR package gets mpv. Asking for
-`-DKG_VIDEO_BACKEND=mpv` on a machine without mpvqt is now an error rather than a
-silent fallback, so a request for mpv is never quietly downgraded to something else.
+Three of the four targets play video through **mpv**. `mpvqt` is a small KDE
+library, not an Arch-only one: Debian 13, Fedora and Arch all package it, so the
+`.deb` and the AUR package just use the distribution's copy. Ubuntu 24.04 does not
+package it — and the `extra-cmake-modules` it needs is 5.115 there, below its 6.0
+floor — so the AppImage builds ECM 6.15.0 and mpvqt 1.2.0 from the pinned upstream
+releases instead. Neither is statically linked: libmpv comes from the distribution
+and `libMpvQt` is dynamic, which is also the simpler LGPL arrangement.
+
+The Flatpak runtime carries neither libmpv nor mpvqt, and a flatpak cannot borrow
+the host's. The app compiles against mpvqt headers (`#include <MpvQt/...>`), and
+those have to exist in the SDK at build time — a copy in the user's `/usr` is
+invisible to the build. At runtime `--filesystem=host-os` mounts the host at
+`/run/host`, but nothing looks there unless `LD_LIBRARY_PATH` is forced to point at
+it, which then drags the host's ffmpeg/libplacebo/glibc in over the runtime's own
+libraries; Flathub also rejects apps that depend on host components for core
+functionality. So the Flatpak deliberately uses Qt Multimedia — which PRD §10.1
+makes the default backend anyway — and that is a difference in backend, not in
+features.
+
+Asking for `-DKG_VIDEO_BACKEND=mpv` on a machine without mpvqt is an error rather
+than a silent fallback, so a request for mpv is never quietly downgraded to
+something else.
+
+The Flatpak bundle references the KDE runtime rather than embedding it, so on a
+fresh machine it needs one command first:
+`flatpak install flathub org.kde.Platform//6.8`. Everything else it needs is inside
+the bundle.
 
 The face models themselves (about 37 MB) are still a user action: the Settings page
 downloads them on request rather than shipping them, which keeps the packages small.

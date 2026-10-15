@@ -18,9 +18,11 @@ Tanpa server, tanpa akun, tanpa network call wajib. Library Anda tetap di disk A
 > **kustomisasi keyboard shortcut**.
 > Artefak paket: AppImage, `.deb`, Flatpak, dan paket Arch sudah **dibangun dan dijalankan** di
 > container bersih (`docs/M4-REPORT.md` §7); belum ada tag/rilis yang diterbitkan. Keempatnya
-> membawa **face grouping** (`-DKG_ENABLE_ML=ON`); mpv hanya di paket Arch karena mpvqt tidak
-> dipaketkan distro/runtime lain (`packaging/README.md`). `kin-galeri --version` menyebut
-> backend video dan status ML supaya tiap artefak bisa diperiksa.
+> membawa **face grouping** (`-DKG_ENABLE_ML=ON`); pemutaran video memakai **mpv** di AppImage,
+> `.deb`, dan paket Arch (mpvqt sebagai paket Debian/Arch, atau dibangun dari rilis upstream yang
+> di-pin untuk AppImage), sementara Flatpak sengaja memakai Qt Multimedia karena runtime KDE tidak
+> membawa libmpv/mpvqt (`packaging/README.md`). `kin-galeri --version` menyebut backend video dan
+> status ML supaya tiap artefak bisa diperiksa.
 > Belum ada: split manual klaster wajah (M5).
 > Laporan: [`docs/M4-REPORT.md`](docs/M4-REPORT.md) · [`docs/M3-REPORT.md`](docs/M3-REPORT.md) · [`docs/M2-REPORT.md`](docs/M2-REPORT.md) · [`docs/M1-REPORT.md`](docs/M1-REPORT.md) · [`docs/M0-REPORT.md`](docs/M0-REPORT.md) · [`docs/TECH-DEBT-REPORT.md`](docs/TECH-DEBT-REPORT.md) · [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) · [`PRD.md`](PRD.md).
 

@@ -342,9 +342,9 @@ mengikuti default. Sekarang keempat target memakai `-DKG_ENABLE_ML=ON`:
 
 | Target | ONNX Runtime dari | Backend video |
 |---|---|---|
-| AppImage | arsip resmi 1.20.1 (sha256 dipin), dibundel | Qt Multimedia |
-| `.deb` | `libonnxruntime1.21` Debian → `Depends` (SHLIBDEPS) | Qt Multimedia |
-| Flatpak | arsip resmi 1.20.1 sebagai modul ke `/app` | Qt Multimedia |
+| AppImage | arsip resmi 1.20.1 (sha256 dipin), dibundel | **mpv** — mpvqt 1.2.0 + ECM 6.15.0 dibangun dari rilis upstream yang di-pin (Ubuntu 24.04 tidak memaketkan keduanya) |
+| `.deb` | `libonnxruntime1.21` Debian → `Depends` (SHLIBDEPS) | **mpv** — paket Debian sendiri (`libmpvqt1` + `libmpv2`), diturunkan SHLIBDEPS |
+| Flatpak | arsip resmi 1.20.1 sebagai modul ke `/app` | Qt Multimedia (runtime KDE 6.8 tidak membawa libmpv/mpvqt; §7.6) |
 | Arch/AUR | arsip resmi 1.20.1 ke `/usr/lib` (Arch tidak punya paketnya) | **mpv** (mpvqt ada di `extra`) |
 
 Model wajah (~37 MB) tetap diunduh atas permintaan pengguna lewat Settings, tidak dibundel —
@@ -364,15 +364,20 @@ Tiga hal ikut diperbaiki supaya klaim di atas bisa dibuktikan, bukan diasumsikan
    sekarang gagal. `auto` dan `KG_ENABLE_MPV=ON` tetap best-effort, karena `ON` memang default
    sehingga tidak bisa dibaca sebagai permintaan eksplisit.
 
-Kenapa mpv tidak ada di AppImage/`.deb`/Flatpak: aplikasi memakai pembungkus Qt **mpvqt**
-(bukan libmpv langsung), dan mpvqt hanya dipaketkan Arch. libmpv sendiri tersedia luas
-(`libmpv2` Debian 13 = 0.40.0, `libmpv-dev` Ubuntu 24.04 = 0.37.0), jadi menambahkannya ke
-ketiga target lain berarti mem-*vendor* mpvqt dari sumber sekaligus menyamakan versi libmpv
-yang berbeda-beda per target. PRD §10.1 menetapkan Qt Multimedia sebagai default, jadi ini
-keputusan, bukan kelalaian — tetapi AppImage bahkan tidak pernah mengirim
-`-DKG_ENABLE_MPV=OFF`: mpv hilang hanya karena `find_package(MpvQt QUIET)` gagal di runner dan
-CMake mematikannya sendiri tanpa suara. Poin 3 di atas membuat keadaan itu terlihat, dan
-`--version` menyebut backend yang benar-benar dipakai.
+Backend video per target. Sempat ditulis di sini bahwa "mpvqt hanya dipaketkan Arch"; **itu
+salah**, dan §7.6 mencatat pemeriksaan yang membantahnya. mpv sekarang ada di **tiga** dari
+empat target: `.deb` memakai `libmpvqt1` + `libmpv2` milik Debian tanpa vendoring sama sekali,
+AppImage membangun mpvqt 1.2.0 + ECM 6.15.0 dari rilis upstream yang di-pin, dan AUR memakai
+paket `extra`. Hanya **Flatpak** yang tetap Qt Multimedia: runtime KDE 6.8 tidak membawa libmpv
+maupun mpvqt, dan flatpak tidak boleh meminjam milik host — header-nya dibutuhkan saat build di
+dalam SDK (salinan di `/usr` user tidak terlihat oleh build), sementara memuat library
+`/run/host` saat runtime rapuh dan melanggar syarat Flathub. PRD §10.1 menetapkan Qt Multimedia
+sebagai default, jadi itu perbedaan backend, bukan perbedaan fitur.
+
+Poin 3 di atas berperan penting di sini: AppImage dulu bahkan tidak pernah mengirim
+`-DKG_ENABLE_MPV=OFF` — mpv hilang hanya karena `find_package(MpvQt QUIET)` gagal di runner dan
+CMake mematikannya sendiri tanpa suara. Sekarang permintaan eksplisit gagal, dan `--version`
+menyebut backend yang benar-benar dipakai.
 
 ## 8. Profiling performa (PRD §4.1)
 

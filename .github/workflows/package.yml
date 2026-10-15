@@ -519,10 +519,21 @@ jobs:
       - name: Show what will be published
         run: find dist -type f -printf '%P  %s bytes\n' | sort
 
+      # The AppImage is ~100 MB and the release is the only place the checksums
+      # can come from, so generate them here rather than after the fact.
+      - name: Write checksums
+        run: |
+          set -eux
+          cd dist
+          find . -type f ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS
+          sha256sum -c --quiet SHA256SUMS
+          cat SHA256SUMS
+
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -eux
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Kin Galeri $GITHUB_REF_NAME" \

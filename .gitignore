@@ -15,3 +15,10 @@ session.jsonl
 # python helper scripts (scripts/*.py)
 __pycache__/
 *.pyc
+
+# makepkg working directories and output (packaging/arch)
+packaging/arch/src/
+packaging/arch/pkg/
+packaging/arch/kin-galeri-git/
+packaging/arch/*.pkg.tar.zst
+packaging/arch/*.tgz

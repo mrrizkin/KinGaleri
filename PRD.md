@@ -579,9 +579,11 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - [x] Accessibility pass + kustomisasi shortcut (halaman Shortcuts + `ShortcutRegistry`; dulu ditandai item M5, sekarang selesai)
 - [x] Performance profiling pass (target semua metrik §4.1 terpenuhi)
 - [x] Docs + user guide (`docs/USER-GUIDE.md`, `docs/M4-REPORT.md`)
-- [~] AppImage + Flatpak + .deb — skrip & manifest siap (`packaging/`), **belum dibangun** di
-  lingkungan dev karena `linuxdeploy`/`flatpak-builder`/`dpkg-deb` tidak tersedia (tanpa `sudo`).
-  Lihat `docs/M4-REPORT.md` §7.
+- [x] AppImage + Flatpak + .deb — keempat target (plus paket Arch/AUR) sudah **dibangun dan
+dijalankan** di container bersih: `.deb` di `debian:trixie`, AppImage di `ubuntu:24.04` **dan**
+`fedora:40`, Flatpak lewat runtime KDE 6.8, paket Arch via `makepkg`. `linuxdeploy` /
+`flatpak-builder` / `dpkg-deb` / `rpmbuild` tetap tidak ada di mesin dev, jadi Docker yang menjadi
+verifier. Lihat `docs/M4-REPORT.md` §7 dan `packaging/README.md`.
 
 ### M5+ — Ideas (belum dijanjikan)
 - Semantic search (CLIP), duplicate finder UI, slideshow, event auto-title, Android companion.
@@ -632,8 +634,12 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
   — `AppController::downloadFaceModels()` (dua berkas model dari OpenCV Zoo) — dan satu-satunya
   pemanggil adalah tombol di `SettingsView.qml` (`onClicked: root.app.downloadFaceModels()`).
   Tidak ada unduhan otomatis; saat model belum ada, pass wajah dilewati.
-- [ ] **AppImage bisa dijalankan di Ubuntu 24.04 & Fedora 40 tanpa dependency manual.** Belum
-  dibangun — ini pekerjaan packaging, ditunda atas instruksi user.
+- [x] **AppImage bisa dijalankan di Ubuntu 24.04 & Fedora 40 tanpa dependency manual.** Dibangun
+  (99,5 MB, Qt 6.8.0 ikut terbundel) dan dijalankan `--no-ui` di container bersih `ubuntu:24.04`
+  **dan** `fedora:40`: exit 0, DB dibuat, `--version` melaporkan benar. Satu catatan jujur: seperti
+  AppImage lain ia **tidak** mandiri untuk libc/X11/OpenGL/font/dbus — linuxdeploy memang menolak
+  membundel yang disebutnya "system libraries" — jadi smoke test memasang stack baseline desktop
+  itu (tanpa satu pun paket `libqt6*`) lalu membuktikan seluruh sisa runtime ikut terbundel.
 - [x] **Dokumentasi build + user guide tersedia.** `README.md` (prasyarat, build, test, CLI) dan
   `docs/USER-GUIDE.md`; `CONTRIBUTING.md` untuk gate (lint, i18n, a11y, test).
 

@@ -16,8 +16,9 @@ Tanpa server, tanpa akun, tanpa network call wajib. Library Anda tetap di disk A
 > rentang tanggal, **tema terang/gelap**, **i18n EN/ID**, HiDPI/fractional scaling, unit test,
 > skrip pemaketan AppImage/Flatpak/.deb, **smart grouping (People/Places/Events, M3)**, dan
 > **kustomisasi keyboard shortcut**.
-> Belum ada: artefak AppImage/Flatpak/.deb yang sudah dibangun (skrip siap, belum divalidasi di
-> lingkungan paket nyata) dan split manual klaster wajah (M5).
+> Artefak paket: AppImage, `.deb`, Flatpak, dan paket Arch sudah **dibangun dan dijalankan** di
+> container bersih (`docs/M4-REPORT.md` §7); belum ada tag/rilis yang diterbitkan.
+> Belum ada: split manual klaster wajah (M5).
 > Laporan: [`docs/M4-REPORT.md`](docs/M4-REPORT.md) · [`docs/M3-REPORT.md`](docs/M3-REPORT.md) · [`docs/M2-REPORT.md`](docs/M2-REPORT.md) · [`docs/M1-REPORT.md`](docs/M1-REPORT.md) · [`docs/M0-REPORT.md`](docs/M0-REPORT.md) · [`docs/TECH-DEBT-REPORT.md`](docs/TECH-DEBT-REPORT.md) · [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) · [`PRD.md`](PRD.md).
 
 ---

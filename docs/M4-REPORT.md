@@ -168,20 +168,61 @@ kombinasi Qt/CMake deploy-tool tertentu.
 Menjalankan `cmake --install` ke sebuah `AppDir`, lalu `linuxdeploy --plugin qt`. Alat diunduh ke
 `build-appimage/tools/` saat pertama. Desktop file + ikon juga disalin ke akar AppDir.
 
+Tiga hal yang baru kelihatan setelah benar-benar dibangun:
+
+* **Qt harus ada di `LD_LIBRARY_PATH`.** Kalau Qt ada di prefix non-sistem (mis. hasil `aqtinstall`
+  di `/opt/Qt`), plugin Qt dari linuxdeploy berhenti dengan "Could not find dependency:
+  libQt6QuickControls2.so.6". Skrip menurunkan `qt_lib_dir` dari `qmake6 -query` dan mengekspornya.
+* **Plugin platform `offscreen` harus dibundel sendiri.** Plugin Qt hanya membawa `xcb`, sehingga
+  mode headless `--no-ui` yang diiklankan README mustahil tanpa X server. Skrip menyalin
+  `libqoffscreen.so` ke AppDir sebelum linuxdeploy supaya dependensinya ikut diselesaikan.
+* **Driver SQL dipangkas, tapi harus setelah configure.** Menautkan QtSql membuat plugin Qt
+  men-deploy *semua* driver (PostgreSQL, MySQL, ODBC, Mimer) dan gagal pada pustaka klien pertama
+  yang tidak ada. `PRUNE_QT_SQLDRIVERS=1` menyisakan `libqsqlite.so` saja — tapi `Qt6SqlConfig.cmake`
+  mereferensikan berkas yang dihapus, jadi CMake gagal kalau pemangkasan dilakukan sebelum configure.
+
 ### 7.3 Flatpak — `packaging/flatpak/io.github.mrrizkin.KinGaleri.yml`
 
 Memakai `org.kde.Platform`/`Sdk` 6.8 (sudah berisi Qt6 + FFmpeg). Backend mpv dimatikan karena
 libmpv tidak ada di runtime; playback lewat Qt Multimedia (default PRD §10.1).
 
+Dua catatan operasional: `flatpak-builder` menolak jalan kalau direktori state dan direktori
+build/repo berada di filesystem berbeda (pakai `--state-dir`), dan tahap `appstreamcli compose`
+memerlukan rasterizer SVG (`librsvg2-common` di Debian/Ubuntu) — tanpa itu compose gagal dengan
+"Unrecognized image file format" untuk ikon SVG yang sebenarnya sah (`appstreamcli validate` tetap
+lolos, jadi ini jebakan yang hanya muncul saat compose).
+
 ### 7.4 `.deb` — `packaging/deb/build-deb.sh` + CPack
 
 CPack `DEB` dengan `SHLIBDEPS ON`; skrip menolak jalan bila `dpkg-deb`/`dpkg-shlibdeps` tidak ada.
+`SHLIBDEPS` juga memerlukan utilitas `file`; tanpa itu CPack gagal dengan pesan dari `CPackDeb.cmake`
+yang menyesatkan, jadi skrip memeriksanya di depan.
 
-**Catatan lingkungan.** Di mesin dev (Artix, tanpa `sudo`): `linuxdeploy`, `flatpak-builder`, dan
-`dpkg-deb` tidak terpasang, jadi ketiga artefak **tidak dibangun di sini**. Yang bisa diverifikasi:
-`cmake --install` menghasilkan pohon install yang benar (`usr/bin/kin-galeri`,
-`.desktop`, ikon), binary hasil install berjalan (`--no-ui` exit 0), dan
-`desktop-file-validate` melaporkan desktop file valid.
+### 7.5 Hasil: dibangun dan dijalankan di container, karena alatnya tidak ada di mesin dev
+
+`linuxdeploy`, `flatpak-builder`, `dpkg-deb`, dan `rpmbuild` tidak terpasang di mesin dev (Artix,
+tanpa `sudo`), jadi verifikasinya dilakukan di container Docker — seperti profiling dan pengujian UI
+— dan `.github/workflows/package.yml` mengencode langkah yang sama untuk CI:
+
+| Artefak | Hasil |
+|---|---|
+| AppImage | `Kin_Galeri-x86_64.AppImage` **99,5 MB**, Qt 6.8.0 (aqtinstall) terbundel, plugin `offscreen`+`xcb`, hanya `libqsqlite.so` di `sqldrivers/`. Dijalankan di `ubuntu:24.04` **dan** `fedora:40`: `--version` benar, `--no-ui` exit 0, DB terbentuk |
+| `.deb` | `kin-galeri_0.1.0_amd64.deb` **914 KB** di `debian:trixie`; `apt-get install ./…deb` di container bersih lalu headless exit 0 (8 migrasi), `--version` = Qt 6.8.2; `desktop-file-validate` + `appstreamcli validate` lolos |
+| Flatpak | bundle **638 KB** dari runtime KDE 6.8; `flatpak install` + `flatpak run --command=kin-galeri … --version` → **"Kin Galeri 0.1.0 (Qt 6.8.3)"** |
+| Arch (AUR) | `makepkg -sf` di `archlinux:base-devel` → `kin-galeri-git-0.1.0.r15…-x86_64.pkg.tar.zst` 874 KB; `--printsrcinfo` benar |
+
+Jadi DoD §9 "AppImage bisa dijalankan di Ubuntu 24.04 & Fedora 40" sekarang punya bukti, dengan satu
+kualifikasi yang ditulis apa adanya di `packaging/README.md`: AppImage tidak membundel
+libc/X11/OpenGL/font/dbus — itu memang kontraknya, dan setiap desktop Ubuntu/Fedora sudah punya.
+Smoke test CI memasang tepat stack baseline itu (tanpa paket `libqt6*`) sebagai bukti bahwa sisanya
+memang ikut terbundel; kalau suatu saat perlu satu paket `libqt6*`, berarti AppImage-nya rusak.
+
+Dua hal yang tetap belum: belum ada tag/rilis yang diterbitkan (CI baru berjalan setelah di-push),
+dan Flatpak memunculkan satu warning kosmetik dari runtime-nya sendiri
+(`setHighDpiScaleFactorRoundingPolicy must be called before creating the QGuiApplication instance`)
+yang tidak berasal dari kode kita — `grep` di `src/` tidak menemukan pemanggilan itu dan build native
+Qt 6.12 tidak memicunya. Nilai yang kita minta (`QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, PRD
+F-3.10) dipasang sebagai variabel lingkungan sebelum `QGuiApplication`, jadi tetap berlaku.
 
 ## 8. Profiling performa (PRD §4.1)
 

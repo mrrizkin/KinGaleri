@@ -281,6 +281,45 @@ Qt 6.12 tidak. Jadi ini perilaku Qt 6.8 saat QML diinisialisasi. Nilai yang kita
 (`QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, PRD F-3.10) dipasang sebagai variabel lingkungan
 sebelum `QGuiApplication`, jadi tetap berlaku.
 
+### 7.6 Fitur opsional di setiap artefak (dan kenapa mpv hanya di Arch)
+
+Permintaan pemilik proyek: paket-paketnya harus membawa **face grouping** (ML), bukan hanya
+mengikuti default. Sekarang keempat target memakai `-DKG_ENABLE_ML=ON`:
+
+| Target | ONNX Runtime dari | Backend video |
+|---|---|---|
+| AppImage | arsip resmi 1.20.1 (sha256 dipin), dibundel | Qt Multimedia |
+| `.deb` | `libonnxruntime1.21` Debian → `Depends` (SHLIBDEPS) | Qt Multimedia |
+| Flatpak | arsip resmi 1.20.1 sebagai modul ke `/app` | Qt Multimedia |
+| Arch/AUR | arsip resmi 1.20.1 ke `/usr/lib` (Arch tidak punya paketnya) | **mpv** (mpvqt ada di `extra`) |
+
+Model wajah (~37 MB) tetap diunduh atas permintaan pengguna lewat Settings, tidak dibundel —
+keputusan ukuran, bukan kelalaian.
+
+Tiga hal ikut diperbaiki supaya klaim di atas bisa dibuktikan, bukan diasumsikan:
+
+1. `--version` sekarang mencetak backend dan status ML
+   (`Kin Galeri 0.1.0 (Qt 6.12.0, video: mpv, ml: off)`), dan CI memeriksanya (`grep 'ml: on'`)
+   di AppImage dan `.deb`. Sebelumnya tidak ada cara menjawab "artefak ini punya apa" selain
+   mencoba fiturnya satu per satu.
+2. `KG_ENABLE_ML=ON` tanpa ONNX Runtime dulu hanya `WARNING` lalu **diam-diam** mematikan
+   fiturnya; sekarang `FATAL_ERROR` dengan pesan yang menyebut `-DKG_ORT_ROOT`,
+   `libonnxruntime-dev`, dan `-DKG_ENABLE_ML=OFF`. Ini kelas bug yang sama dengan backend
+   video yang hilang dari `.deb`.
+3. `-DKG_VIDEO_BACKEND=mpv` eksplisit tanpa mpvqt dulu `WARNING` + fallback ke Qt Multimedia;
+   sekarang gagal. `auto` dan `KG_ENABLE_MPV=ON` tetap best-effort, karena `ON` memang default
+   sehingga tidak bisa dibaca sebagai permintaan eksplisit.
+
+Kenapa mpv tidak ada di AppImage/`.deb`/Flatpak: aplikasi memakai pembungkus Qt **mpvqt**
+(bukan libmpv langsung), dan mpvqt hanya dipaketkan Arch. libmpv sendiri tersedia luas
+(`libmpv2` Debian 13 = 0.40.0, `libmpv-dev` Ubuntu 24.04 = 0.37.0), jadi menambahkannya ke
+ketiga target lain berarti mem-*vendor* mpvqt dari sumber sekaligus menyamakan versi libmpv
+yang berbeda-beda per target. PRD §10.1 menetapkan Qt Multimedia sebagai default, jadi ini
+keputusan, bukan kelalaian — tetapi AppImage bahkan tidak pernah mengirim
+`-DKG_ENABLE_MPV=OFF`: mpv hilang hanya karena `find_package(MpvQt QUIET)` gagal di runner dan
+CMake mematikannya sendiri tanpa suara. Poin 3 di atas membuat keadaan itu terlihat, dan
+`--version` menyebut backend yang benar-benar dipakai.
+
 ## 8. Profiling performa (PRD §4.1)
 
 Build mpv, `QT_QPA_PLATFORM=offscreen`, `--bench-scroll`:

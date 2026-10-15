@@ -25,7 +25,8 @@ echo "==> configure & build"
 cmake -S "${root}" -B "${build_dir}" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DKG_BUILD_TESTS=OFF
+    -DKG_BUILD_TESTS=OFF \
+    ${CMAKE_ARGS:-}
 cmake --build "${build_dir}"
 
 echo "==> install into ${appdir}"
@@ -95,15 +96,14 @@ fi
 # linuxdeploy-plugin-qt finds QML modules by scanning imports, so it does bring
 # QtMultimedia's QML files and libquickmultimediaplugin.so. What it does not bring
 # is the piece that module loads back into C++: plugins/multimedia (the FFmpeg
-# media plugin). And libQt6Multimedia is missing too, because the application never
-# references a Multimedia symbol itself - the import is QML-only, so the linker
-# drops Qt6::Multimedia from DT_NEEDED under --as-needed and linuxdeploy has no
-# dependency graph to follow. The result is a bundle whose video surface compiles,
-# loads, and then plays nothing at all.
+# media plugin). Dropping that plugin into the AppDir does not pull its library
+# in either - linuxdeploy resolves the dependencies of the main binary and of the
+# files it deploys itself, not of files that appeared in the AppDir behind its
+# back, and the application never references a Multimedia symbol, so the linker
+# dropped Qt6::Multimedia from DT_NEEDED under --as-needed. The result is a bundle
+# whose video surface compiles, loads, and then plays nothing at all. So the
+# library is copied explicitly, below.
 #
-# So copy both plugin categories in before linuxdeploy runs, exactly like the
-# offscreen platform plugin above: once they are files in the AppDir, linuxdeploy
-# resolves their dependencies (which is how libQt6Multimedia gets bundled).
 # iconengines comes too, because without the SVG icon engine the themed icons in
 # AppIcon.qml have no way to render.
 if [[ -n "${qt_plugins_dir}" && -d "${qt_plugins_dir}/iconengines" ]]; then
@@ -123,18 +123,27 @@ if [[ -n "${qt_plugins_dir}" && -d "${qt_plugins_dir}/multimedia" ]]; then
     done
     echo "    bundled plugins/multimedia (ffmpeg)"
 fi
-
-# ...and the library it links. Dropping the plugin into the AppDir is not enough:
-# linuxdeploy resolves the dependencies of the binary and of the files it deploys
-# itself, not of files that appeared in the AppDir behind its back, so it never
-# notices libQt6Multimedia - the plugin is there, the thing it needs is not, and
-# video still does not play.
+# ...and the QtMultimedia library itself (see the note above).
 if [[ -n "${qt_lib_dir:-}" ]]; then
     for lib in "${qt_lib_dir}"/libQt6Multimedia.so.6*; do
         [[ -e "${lib}" ]] || continue
         cp -a "${lib}" "${appdir}/usr/lib/"
     done
     echo "    bundled libQt6Multimedia"
+fi
+
+# ONNX Runtime, when the build asked for face grouping. It *is* a DT_NEEDED of
+# the binary, so linuxdeploy would follow it, but copying the whole symlink chain
+# from the cache keeps the bundle the same whether or not that works out, and the
+# smoke test then asserts the file is there instead of trusting either step.
+ort_lib="$(sed -n 's/^KG_ORT_LIB:[^=]*=//p' "${build_dir}/CMakeCache.txt" 2>/dev/null | head -n1)"
+if [[ -n "${ort_lib}" && -e "${ort_lib}" ]]; then
+    ort_lib_dir="$(dirname "$(readlink -f "${ort_lib}")")"
+    for lib in "${ort_lib_dir}"/libonnxruntime*.so*; do
+        [[ -e "${lib}" ]] || continue
+        cp -a "${lib}" "${appdir}/usr/lib/"
+    done
+    echo "    bundled libonnxruntime (${ort_lib_dir})"
 fi
 
 # linuxdeploy-plugin-qt deploys *every* plugin in a category it decides the binary

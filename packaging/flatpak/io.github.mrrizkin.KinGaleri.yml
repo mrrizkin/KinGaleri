@@ -28,6 +28,29 @@ finish-args:
   - --talk-name=org.freedesktop.portal.Desktop
 
 modules:
+  # ONNX Runtime, for face grouping. The KDE runtime does not carry it and Flathub
+  # has no module for the version this project is tested against, so the official
+  # CPU build is pinned by tag and sha256 - literally the same file the AppImage
+  # and the AUR package build against, which keeps the three consistent.
+  #
+  # The paths are discovered with `find` instead of being written out, because
+  # whether flatpak-builder strips the archive's single top-level directory is an
+  # implementation detail we would rather not depend on.
+  - name: onnxruntime
+    buildsystem: simple
+    build-commands:
+      - install -d /app/lib /app/include
+      - |
+        set -e
+        inc="$(dirname "$(find . -name onnxruntime_cxx_api.h -print -quit)")"
+        lib="$(dirname "$(find . -name 'libonnxruntime.so' -print -quit)")"
+        cp -a "$inc/." /app/include/
+        cp -a "$lib/." /app/lib/
+    sources:
+      - type: archive
+        url: https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.20.1.tgz
+        sha256: 67db4dc1561f1e3fd42e619575c82c601ef89849afc7ea85a003abbac1a1a105
+
   - name: kin-galeri
     buildsystem: cmake-ninja
     builddir: true
@@ -37,6 +60,11 @@ modules:
       - -DKG_BUILD_TESTS=OFF
       - -DKG_ENABLE_MPV=OFF
       - -DKG_VIDEO_BACKEND=qtmultimedia
+      # Face grouping, against the module above. KG_ENABLE_ML now fails the build
+      # rather than quietly dropping the feature, so a typo here cannot ship a
+      # bundle without it.
+      - -DKG_ENABLE_ML=ON
+      - -DKG_ORT_ROOT=/app
     sources:
       - type: dir
         path: ../..

@@ -36,7 +36,7 @@ jobs:
             qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
             qt6-declarative-dev-tools qt6-svg-dev qt6-multimedia-dev \
             libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
-            libqt6sql6-sqlite qt6-l10n-tools
+            libqt6sql6-sqlite qt6-l10n-tools libonnxruntime-dev
 
       # mpvqt has no Debian package, so the mpv backend is off here. The
       # translation catalogs need qt6-l10n-tools (without LinguistTools the build
@@ -48,8 +48,13 @@ jobs:
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DKG_BUILD_TESTS=ON \
-            -DKG_ENABLE_MPV=OFF
+            -DKG_ENABLE_MPV=OFF \
+            -DKG_ENABLE_ML=ON
 
+      # ML is on here for the same reason it is on in the packages: a build that
+      # asks for face grouping and silently does not get it is exactly the class of
+      # defect this workflow exists to catch. KG_ENABLE_ML now fails the configure
+      # step outright when ONNX Runtime is missing, and this asserts the link.
       - name: Build
         run: cmake --build build
 

@@ -109,7 +109,17 @@ int main(int argc, char *argv[])
     }
     if (options.versionRequested) {
         QTextStream out(stdout);
-        out << KG_APP_NAME << ' ' << KG_APP_VERSION << " (Qt " << QT_VERSION_STR << ")\n";
+        // The optional features are part of the version line on purpose: they are
+        // what a bug report needs, and they let a packaged artifact prove which
+        // video backend and whether face grouping actually came with it.
+        out << KG_APP_NAME << ' ' << KG_APP_VERSION << " (Qt " << QT_VERSION_STR
+            << ", video: " << QStringLiteral(KG_VIDEO_BACKEND)
+#ifdef KG_ENABLE_ML
+            << ", ml: on"
+#else
+            << ", ml: off"
+#endif
+            << ")\n";
         out.flush();
         return 0;
     }

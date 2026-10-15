@@ -1,18 +1,54 @@
 # Packaging
 
 Four targets, all **built and run** for real. The workflow in
-[`.github/workflows/package.yml`](../.github/workflows/package.yml) encodes the
-same steps, but it has not run yet (nothing has been pushed or tagged), so the
-results below come from running the same commands in Docker containers on the dev
-machine. None of them need a local toolchain if you just want the artifacts: push
-a `v*` tag and the workflow attaches them to the release.
+[`.github/workflows/package.yml`](../.github/workflows/package.yml) encodes the same
+steps; the results below come from running them both in Docker containers on the dev
+machine and in CI. Building is only half of it — the install and smoke jobs are what
+prove an artifact works, and they have already earned their keep (see "Notes that cost
+time to learn").
+
+The version line reports the build's optional features, so any artifact can be asked
+what it actually is:
+
+```
+$ kin-galeri --version
+Kin Galeri 0.1.0 (Qt 6.8.2, video: qtmultimedia, ml: on)
+```
 
 | Target | Built on | How it was verified |
 |---|---|---|
-| AppImage | Ubuntu 24.04 + Qt 6.8 (aqtinstall) — 99.5 MB | Ran headless in `ubuntu:24.04` **and** `fedora:40` containers with `--appimage-extract-and-run --no-ui`: exit 0, database created, `--version` = `Kin Galeri 0.1.0 (Qt 6.8.0)` |
-| `.deb` | Debian 13 (`debian:trixie`, Qt 6.8.2) — 914 KB | `apt-get install ./kin-galeri_*.deb` in a clean container, then run headless (exit 0, 8 migrations); `desktop-file-validate` + `appstreamcli validate --no-net` |
-| Flatpak | KDE 6.8 runtime — 638 KB bundle | `flatpak-builder` → `flatpak build-bundle` → `flatpak install` → `flatpak run --command=kin-galeri … --version` = `Kin Galeri 0.1.0 (Qt 6.8.3)` |
+| AppImage | Ubuntu 24.04 + Qt 6.8 (aqtinstall) — 99.5 MB | Ran in `ubuntu:24.04` **and** `fedora:40` containers with `--appimage-extract-and-run`: QML modules, multimedia plugin and ONNX Runtime present in the bundle, GUI runs offscreen, `--version` = `… video: qtmultimedia, ml: on` |
+| `.deb` | Debian 13 (`debian:trixie`, Qt 6.8.2) — 914 KB | Installed into a **clean** `debian:trixie` (only its declared dependencies), then plugins/QML modules asserted, GUI run offscreen, `desktop-file-validate` + `appstreamcli validate --no-net` |
+| Flatpak | KDE 6.8 runtime — 638 KB bundle | `flatpak-builder` → `flatpak build-bundle`; ONNX Runtime asserted inside `/app` |
 | Arch | `archlinux:base-devel` — 874 KB | `makepkg -sf` as a non-root user, against the real GitHub URL (see `arch/README.md` for AUR) |
+
+## Optional features per target
+
+| Target | Video backend | Face grouping | ONNX Runtime from |
+|---|---|---|---|
+| AppImage | Qt Multimedia | **on** | the pinned 1.20.1 archive, bundled |
+| `.deb` | Qt Multimedia | **on** | Debian's `libonnxruntime1.21`, declared as a dependency |
+| Flatpak | Qt Multimedia | **on** | the pinned 1.20.1 archive, built as a module into `/app` |
+| Arch (AUR) | **mpv** (mpvqt is in `extra`) | **on** | the pinned 1.20.1 archive, installed to `/usr/lib` |
+
+Face grouping is ONNX Runtime, and it is on in every target by request. A build that
+cannot configure it now fails outright instead of quietly dropping the feature, and
+CI asserts `--version | grep 'ml: on'` on the artifacts — the version line is the
+cheapest place to prove a package has what it claims.
+
+Debian is the one target that does not bundle ONNX Runtime: Debian 13 packages
+`libonnxruntime1.21`, so the `.deb` links it and lets `dpkg-shlibdeps` derive the
+dependency. Its SONAME is `libonnxruntime.so.1.21`, so the upstream 1.20.1 archive
+could not satisfy it anyway — which is why the other three carry their own copy.
+
+mpv is only built where mpvqt is packaged. Debian, Ubuntu and Flathub do not ship
+mpvqt, so those targets use the Qt Multimedia backend, which PRD §10.1 makes the
+default regardless; Arch does have it, so the AUR package gets mpv. Asking for
+`-DKG_VIDEO_BACKEND=mpv` on a machine without mpvqt is now an error rather than a
+silent fallback, so a request for mpv is never quietly downgraded to something else.
+
+The face models themselves (about 37 MB) are still a user action: the Settings page
+downloads them on request rather than shipping them, which keeps the packages small.
 
 ## What the AppImage expects from the host
 

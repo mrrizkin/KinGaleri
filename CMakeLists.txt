@@ -73,16 +73,24 @@ endif()
 option(KG_ENABLE_ML "Enable face grouping via ONNX Runtime" OFF)
 if(KG_ENABLE_ML)
     set(KG_ORT_ROOT "" CACHE PATH "Path to an extracted ONNX Runtime distribution")
+    # PATH_SUFFIXES covers the layout Debian uses (/usr/include/onnxruntime/), while
+    # the plain hints cover the upstream archive (include/onnxruntime_cxx_api.h).
     find_path(KG_ORT_INCLUDE_DIR onnxruntime_cxx_api.h
-        HINTS "${KG_ORT_ROOT}/include" "$ENV{ONNXRUNTIME_ROOT}/include")
+        HINTS "${KG_ORT_ROOT}/include" "$ENV{ONNXRUNTIME_ROOT}/include"
+        PATH_SUFFIXES onnxruntime)
     find_library(KG_ORT_LIB onnxruntime
         HINTS "${KG_ORT_ROOT}/lib" "$ENV{ONNXRUNTIME_ROOT}/lib")
     if(NOT KG_ORT_INCLUDE_DIR OR NOT KG_ORT_LIB)
-        message(WARNING "kin-galeri: ONNX Runtime not found - ML disabled (set -DKG_ORT_ROOT=...)")
-        set(KG_ENABLE_ML OFF)
-    else()
-        message(STATUS "kin-galeri: ONNX Runtime found - face grouping enabled")
+        # Deliberately fatal. This used to print a warning and switch itself off,
+        # which is how a release build could ask for face grouping, quietly get a
+        # binary without it, and ship. Silently dropping a requested feature is
+        # worse than not building.
+        message(FATAL_ERROR
+            "kin-galeri: KG_ENABLE_ML=ON but ONNX Runtime was not found. Point -DKG_ORT_ROOT "
+            "at an extracted onnxruntime-linux-x64-* archive, or install libonnxruntime-dev "
+            "(Debian), or set ONNXRUNTIME_ROOT. Build with -DKG_ENABLE_ML=OFF to skip it.")
     endif()
+    message(STATUS "kin-galeri: ONNX Runtime found - face grouping enabled")
 endif()
 
 # Optional: video playback. Off by default in M0.
@@ -123,13 +131,14 @@ if(KG_VIDEO_BACKEND STREQUAL "auto")
     endif()
 endif()
 
+# An explicit request must be honoured. `auto` (the default) is allowed to pick what
+# the machine can actually build, and KG_ENABLE_MPV=ON is best-effort by design - but
+# asking for `-DKG_VIDEO_BACKEND=mpv` and silently getting Qt Multimedia instead is
+# how the AppImage ended up with no mpv while nothing said so.
 if(KG_VIDEO_BACKEND STREQUAL "mpv" AND NOT KG_ENABLE_MPV)
-    message(WARNING "kin-galeri: KG_VIDEO_BACKEND=mpv but mpvqt is unavailable; falling back")
-    if(KG_ENABLE_MULTIMEDIA)
-        set(KG_VIDEO_BACKEND "qtmultimedia")
-    else()
-        set(KG_VIDEO_BACKEND "none")
-    endif()
+    message(FATAL_ERROR
+        "kin-galeri: KG_VIDEO_BACKEND=mpv was requested but mpvqt was not found. Install "
+        "mpvqt (Arch: mpvqt) or set -DKG_VIDEO_BACKEND=auto to let the build choose.")
 endif()
 
 if(KG_ENABLE_MULTIMEDIA)

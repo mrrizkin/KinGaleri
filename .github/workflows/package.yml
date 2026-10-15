@@ -68,12 +68,35 @@ jobs:
             -m qtmultimedia qtimageformats -O "$HOME/Qt"
           echo "$HOME/Qt/6.8.0/gcc_64/bin" >> "$GITHUB_PATH"
 
+      # ONNX Runtime powers face grouping and is not something the runner has, so
+      # it comes from the pinned upstream archive - the same tag and sha256 the
+      # Flatpak manifest and the PKGBUILD use, which is what makes the three
+      # builds comparable.
+      - name: Install ONNX Runtime
+        run: |
+          set -eux
+          mkdir -p "$GITHUB_WORKSPACE/build-tools"
+          curl -fL --retry 3 -o /tmp/ort.tgz \
+            https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.20.1.tgz
+          echo "67db4dc1561f1e3fd42e619575c82c601ef89849afc7ea85a003abbac1a1a105  /tmp/ort.tgz" | sha256sum -c -
+          tar -xzf /tmp/ort.tgz -C "$GITHUB_WORKSPACE/build-tools"
+          echo "ORT_ROOT=$GITHUB_WORKSPACE/build-tools/onnxruntime-linux-x64-1.20.1" >> "$GITHUB_ENV"
+
       - name: Build AppImage
         run: packaging/appimage/build.sh
         env:
           # aqtinstall's Qt ships the MySQL/PostgreSQL/ODBC SQL drivers, whose
           # client libraries the runner does not have; see the script's comment.
           PRUNE_QT_SQLDRIVERS: '1'
+          CMAKE_ARGS: "-DKG_ENABLE_ML=ON -DKG_ORT_ROOT=${{ env.ORT_ROOT }}"
+
+      # The version line names the build's optional features, so it is also the
+      # cheapest way to prove this AppImage was not built without them.
+      - name: Confirm face grouping is really in the binary
+        run: |
+          set -eux
+          ./build-appimage/kin-galeri --version | grep 'ml: on'
+          ./build-appimage/kin-galeri --version
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
@@ -145,6 +168,10 @@ jobs:
           ./Kin_Galeri*.AppImage --appimage-extract >/dev/null
           ls squashfs-root/usr/qml/QtMultimedia/qmldir
           ls squashfs-root/usr/plugins/multimedia/
+          ls squashfs-root/usr/lib/libQt6Multimedia.so.6*
+          # Face grouping: the ONNX Runtime library has to be inside the bundle,
+          # since no target desktop ships a compatible one.
+          ls squashfs-root/usr/lib/libonnxruntime.so.1*
           ls squashfs-root/usr/plugins/iconengines/
           # Qt Multimedia is QML-only from the app's side, so the linker drops it
           # from DT_NEEDED; it has to arrive through the plugin above.
@@ -152,6 +179,7 @@ jobs:
           timeout 12 ./Kin_Galeri*.AppImage --appimage-extract-and-run \
             --no-home-scan --db /tmp/gui.db --cache /tmp/gui-cache > /tmp/gui.log 2>&1 || true
           test -s /tmp/gui.db
+          ./Kin_Galeri*.AppImage --appimage-extract-and-run --version | grep 'ml: on'
           ! grep -E "is not installed|was not found|not a type|Driver not loaded|Cannot assign to non-existent|QQmlApplicationEngine failed" /tmp/gui.log
 
       # `--appimage-extract-and-run` needs no FUSE; `--no-ui` keeps it headless,
@@ -189,13 +217,18 @@ jobs:
             pkg-config libsqlite3-dev \
             qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
             qt6-svg-dev qt6-multimedia-dev qt6-l10n-tools \
+            libonnxruntime-dev \
             libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
             dpkg-dev fakeroot file desktop-file-utils appstream
 
       - name: Build .deb
         run: packaging/deb/build-deb.sh
         env:
-          CMAKE_ARGS: -DKG_ENABLE_MPV=OFF   # no mpvqt package in Debian
+          # No mpvqt package in Debian, so playback goes through Qt Multimedia.
+          # Face grouping is ON: Debian 13 ships libonnxruntime1.21 and its headers,
+          # so this package links the distro library and depends on it, rather than
+          # shipping a private copy like the AppImage and the Flatpak have to.
+          CMAKE_ARGS: "-DKG_ENABLE_MPV=OFF -DKG_ENABLE_ML=ON"
 
       # NOT installed here on purpose. This container has qt6-base-dev and friends,
       # which provide every plugin and QML module the app loads at runtime, so an
@@ -262,6 +295,10 @@ jobs:
           ls $QTPLUG/multimedia/
           ls $QMLDIR/QtQuick/Controls/qmldir
           ls $QMLDIR/QtMultimedia/qmldir
+          # Face grouping: the driver comes in as a real dependency, because the
+          # binary links it directly.
+          ls /usr/lib/x86_64-linux-gnu/libonnxruntime.so.1.21
+          dpkg -s kin-galeri | grep -E '^Depends:.*libonnxruntime1.21'
 
       - name: Headless run
         run: |
@@ -269,6 +306,8 @@ jobs:
           QT_QPA_PLATFORM=offscreen kin-galeri --no-ui --no-home-scan \
             --db /tmp/deb-clean.db --cache /tmp/deb-clean-cache
           test -s /tmp/deb-clean.db
+          # No QT_QPA_PLATFORM on purpose: --version has to work without a display.
+          kin-galeri --version | grep 'ml: on'
           kin-galeri --version
 
       # --no-ui never loads QML, so it cannot catch a missing module or a QML file
@@ -312,6 +351,16 @@ jobs:
             --install-deps-from=flathub \
             build-flatpak packaging/flatpak/io.github.mrrizkin.KinGaleri.yml
           flatpak build-bundle repo KinGaleri.flatpak io.github.mrrizkin.KinGaleri
+
+      # The build itself now fails if face grouping cannot be configured, so this
+      # only has to prove the library ended up in the bundle's /app - the runtime
+      # failure mode (installs fine, cannot load its library) is the one that
+      # cannot be seen from a successful build.
+      - name: Confirm face grouping is inside the bundle
+        run: |
+          set -eux
+          test -f build-flatpak/files/lib/libonnxruntime.so.1
+          test -f build-flatpak/files/lib/libonnxruntime.so.1.20.1
 
       - name: Upload Flatpak bundle
         uses: actions/upload-artifact@v4

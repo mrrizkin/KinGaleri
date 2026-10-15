@@ -10,7 +10,9 @@ pkgname=kin-galeri-git
 pkgver=0.1.0
 pkgrel=1
 pkgdesc='Fast local photo and video library for Linux, built with Qt 6/QML'
-arch=('x86_64' 'aarch64')
+# x86_64 only: the pinned ONNX Runtime archive is the x64 CPU build, and
+# aarch64 would need a matching archive and checksum of its own.
+arch=('x86_64')
 url='https://github.com/mrrizkin/KinGaleri'
 license=('GPL3')
 depends=(
@@ -36,8 +38,20 @@ optdepends=(
 )
 provides=('kin-galeri')
 conflicts=('kin-galeri')
-source=("$pkgname::git+$url.git")
-sha256sums=('SKIP')
+# The VCS checkout, plus ONNX Runtime for face grouping. Arch has no onnxruntime
+# package at all, so the official CPU build is pinned by tag and sha256 and shipped
+# in the package - the same archive the AppImage and the Flatpak manifest use.
+# Note the library is installed as libonnxruntime.so.1 (its SONAME), which is what
+# makes it usable by this package without a dependency; if distro packages for
+# onnxruntime ever appear, this copy is what would need revisiting.
+source=(
+    "$pkgname::git+$url.git"
+    "onnxruntime-linux-x64-1.20.1.tgz::https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.20.1.tgz"
+)
+sha256sums=(
+    'SKIP'
+    '67db4dc1561f1e3fd42e619575c82c601ef89849afc7ea85a003abbac1a1a105'
+)
 
 pkgver() {
     cd "$pkgname"
@@ -50,10 +64,16 @@ pkgver() {
 
 build() {
     # Tests are built here rather than in check() so the object files are shared.
+    # Face grouping is on: the ORT archive above is extracted into $srcdir and
+    # pointed at directly, and KG_ENABLE_ML fails the build if it is not found
+    # (it used to warn and quietly drop the feature, which is how a binary could
+    # lose face grouping without anyone noticing).
     cmake -S "$pkgname" -B build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DKG_BUILD_TESTS=ON
+        -DKG_BUILD_TESTS=ON \
+        -DKG_ENABLE_ML=ON \
+        -DKG_ORT_ROOT="$srcdir/onnxruntime-linux-x64-1.20.1"
     cmake --build build
 }
 
@@ -65,4 +85,10 @@ check() {
 package() {
     DESTDIR="$pkgdir" cmake --install build
     install -Dm644 "$pkgname/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+    # ONNX Runtime: the symlink chain and the real library, plus its licence.
+    install -d "$pkgdir/usr/lib"
+    cp -a "$srcdir"/onnxruntime-linux-x64-1.20.1/lib/libonnxruntime*.so* "$pkgdir/usr/lib/"
+    install -Dm644 "$srcdir/onnxruntime-linux-x64-1.20.1/LICENSE" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE.onnxruntime"
 }

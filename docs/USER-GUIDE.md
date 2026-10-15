@@ -1,7 +1,7 @@
 # Panduan Pengguna — Kin Galeri
 
 Panduan ini ditujukan untuk pengguna akhir. Untuk arsitektur dan keputusan teknis, lihat
-[`PRD.md`](../PRD.md) dan laporan per milestone di `docs/`.
+[`PRD.md`](PRD.md) dan laporan per milestone di `docs/`.
 
 Kin Galeri adalah penjelajah foto & video **lokal**: semua data disimpan di komputer Anda, tidak ada
 jaringan, tidak ada telemetry.
@@ -24,7 +24,7 @@ cmake --build build
 - **Flatpak:** `flatpak run io.github.mrrizkin.KinGaleri`
 - **Debian/Ubuntu:** `sudo dpkg -i kin-galeri_*.deb`
 
-Cara membangun paket ada di `packaging/` dan `docs/M4-REPORT.md` §7.
+Cara membangun paket ada di `packaging/`, `PACKAGING.md` dan `../packaging/README.md`.
 
 ## 2. Menambahkan foto
 

@@ -502,7 +502,7 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 
 ## 7. Milestones / Roadmap
 
-### M0 — Skeleton & spike — ✅ **SELESAI** (laporan: `docs/M0-REPORT.md`)
+### M0 — Skeleton & spike — ✅ **SELESAI** (lihat riwayat git)
 - [x] CMake project, Qt6 QML app shell, CI build
 - [x] SQLite schema + migration framework — `PRAGMA user_version`, migrasi append-only
 - [x] Basic folder scan + insert metadata (tanpa thumbnail)
@@ -514,10 +514,10 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - **Temuan yang merevisi PRD:** target memory "< 400 MB untuk 100k" **tidak dapat dicapai secara
   aritmatika** — baseline Qt 6.12 + Quick + Fusion + Mesa saja 214 MB. Target direvisi di §4.1.1.
 
-### M1 — MVP: Index + Browse — ✅ **SELESAI** (laporan: `docs/M1-REPORT.md`)
+### M1 — MVP: Index + Browse — ✅ **SELESAI** (lihat riwayat git)
 - [x] Exiv2 metadata extraction, all P0 formats — **deviasi: diganti `ExifReader` tanpa dependensi**
       (Exiv2 tidak dapat dipasang di lingkungan pengembangan & menambah dependensi build bagi pengguna;
-      hasil diverifikasi **0 mismatch** terhadap PIL 12.3.0). Lihat `docs/M1-REPORT.md` §2.
+      hasil diverifikasi **0 mismatch** terhadap PIL 12.3.0). Lihat `PERFORMANCE.md`.
 - [x] Thumbnail generation (multi-thread) + disk cache — **WebP tidak dapat dipenuhi** di lingkungan ini
       (tidak ada image plugin WebP untuk Qt; probe runtime jatuh ke `jpg` — kode siap bila plugin ada)
 - [x] Date grouping + sticky headers + timeline scrubber
@@ -528,9 +528,9 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
   → **Terverifikasi:** 60,00 fps · 0/600 dropped pada 50k item (sticky header aktif, tanpa regresi);
     indexing **1.355 file/s** (target ≥ 150, ~9× margin) → **50k foto ≈ 37 detik** vs batas 10 menit (~15× margin).
     Caveat: angka throughput mengisolasi biaya CPU+DB (path hardlink berbagi inode), bukan I/O disk.
-    Lihat `docs/M1-REPORT.md` §4.
+    Lihat `PERFORMANCE.md`.
 
-> **Utang teknis M1 — KEDUANYA SUDAH DITUTUP** (laporan: `docs/TECH-DEBT-REPORT.md`):
+> **Utang teknis M1 — KEDUANYA SUDAH DITUTUP** (lihat `TECH-DEBT.md`):
 > 1. ~~FTS5 belum diisi~~ → sekarang dipelihara **trigger SQLite** (migrasi v4/v5) + `LibraryMaintenance`;
 >    target "< 50 ms di 100k" **terbukti**.
 > 2. ~~Filter `SourceAlbum` di memori~~ → sekarang kolom `source_album` (migrasi v3) dengan index parsial
@@ -549,7 +549,7 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - [x] inotify watcher (live update)
 - [x] Video playback (Qt Multimedia + backend FFmpeg; libmpv opsional via `-DVIDEO_BACKEND=mpv`)
 - **Exit criteria:** daily-driver bisa dipakai menggantikan file manager untuk browsing.
-- Catatan: detail & bukti verifikasi di [`docs/M2-REPORT.md`](docs/M2-REPORT.md) §9–§10. Sisa yang belum:
+- Catatan: detail & bukti verifikasi di [`PERFORMANCE.md`](PERFORMANCE.md). Sisa yang belum:
   target memori 100k (§4.1.1) dan `tests/`.
 
 ### M3 — AI Grouping (4–6 minggu) — **implementasi selesai; exit criteria diukur, belum lolos pada set teradversarial**
@@ -566,10 +566,10 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
   dinyatakan lolos dengan definisi operasional **purity >= 95% pada set penuh 5.749 identitas**.
   Biaya trade-off-nya jujur dicatat: accuracy verifikasi pada ambang itu turun ke 94,73%
   (false reject 10,53%), sedangkan ambang verifikasi sendiri tetap 0,346–0,40. Angka, analisis, dan
-  bukti bahwa membekukan centroid **bukan** penyebab utamanya ada di `docs/M3-REPORT.md`
+  bukti bahwa membekukan centroid **bukan** penyebab utamanya ada di `PERFORMANCE.md`
   §"Exit criteria PRD"; klusteringnya sendiri kini diuji di `tests/tst_faceclusterer.cpp`.
   Reproduksi: `scripts/evaluate-lfw.py` (perintah lengkap di kepala skrip), detail di
-  `docs/M3-REPORT.md` §"Exit criteria PRD".
+  `PERFORMANCE.md`.
 
 > Catatan: nama flag di draf awal PRD (`ENABLE_ML`) adalah `KG_ENABLE_ML` di implementasi.
 
@@ -578,12 +578,12 @@ Widgets bisa (dibuktikan digiKam & Gwenview) tapi hasilnya tetap CPU-raster dan 
 - [x] i18n EN/ID
 - [x] Accessibility pass + kustomisasi shortcut (halaman Shortcuts + `ShortcutRegistry`; dulu ditandai item M5, sekarang selesai)
 - [x] Performance profiling pass (target semua metrik §4.1 terpenuhi)
-- [x] Docs + user guide (`docs/USER-GUIDE.md`, `docs/M4-REPORT.md`)
+- [x] Docs + user guide (`USER-GUIDE.md`, `PACKAGING.md`)
 - [x] AppImage + Flatpak + .deb — keempat target (plus paket Arch/AUR) sudah **dibangun dan
 dijalankan** di container bersih: `.deb` di `debian:trixie`, AppImage di `ubuntu:24.04` **dan**
 `fedora:40`, Flatpak lewat runtime KDE 6.8, paket Arch via `makepkg`. `linuxdeploy` /
 `flatpak-builder` / `dpkg-deb` / `rpmbuild` tetap tidak ada di mesin dev, jadi Docker yang menjadi
-verifier. Lihat `docs/M4-REPORT.md` §7 dan `packaging/README.md`.
+verifier. Lihat `PACKAGING.md` dan `../packaging/README.md`.
 
 ### M5+ — Ideas (belum dijanjikan)
 - Semantic search (CLIP), duplicate finder UI, slideshow, event auto-title, Android companion.
@@ -610,7 +610,7 @@ verifier. Lihat `docs/M4-REPORT.md` §7 dan `packaging/README.md`.
 > Diukur 2026-10-15 di laptop **AMD Ryzen 7 PRO 5850U** (8C/16T, yaitu "hardware mid-range" yang
 > dimaksud kriteria), build Release, `QT_QPA_PLATFORM=offscreen`, library **100.000 berkas PNG
 > nyata** di `/tmp/kg100k` (bukan baris sintetis). Metode, angka mentah, dan analisis:
-> `docs/M4-REPORT.md` §11.
+> `PERFORMANCE.md`.
 
 - [x] **Index 100.000 media tanpa crash; DB & cache konsisten setelah restart.** 100.000 berkas
   nyata terindeks dalam **8 s** (rc=0). Sesudahnya: `media`=100.000, `media_fts`=100.000,
@@ -624,12 +624,12 @@ verifier. Lihat `docs/M4-REPORT.md` §7 dan `packaging/README.md`.
   12 ms); ditambah cache agregat. Sekarang **1,31–1,35 s** (median 1,32 s dari 6 kali, `limit=0` =
   semua item) dan **≈0,9 s** dengan batas grid. Batas itu kini ada di UI: Settings → Interface →
   Photo grid → "Items loaded in the grid" (`library/grid_limit`), jadi pengguna dengan 100k item
-  tidak lagi wajib membayar penuh biaya frame pertama. Detail: `docs/M4-REPORT.md` §11.1.
+  tidak lagi wajib membayar penuh biaya frame pertama. Detail: `PERFORMANCE.md`.
 - [x] **Semua grouping P0 (date, source, favorite, recycle) berfungsi & akurat.**
   `tst_mediagridmodel` (`dateRangeFiltersInclusive`, `dateRangeSwapsReversedBounds`,
   `trashSelectionSoftDeletesAndUndoRestores`, `batchFavoritePersists`,
   `albumCardsMergeManualAndSource`, `albumCrudAndFiltering`) plus verifikasi GUI di
-  `docs/M2-REPORT.md` §10 (filter tanggal, recycle bin, favorite, album).
+  `ARCHITECTURE.md` (filter tanggal, recycle bin, favorite, album).
 - [x] **Tidak ada operasi network tanpa persetujuan user.** Audit `src/`: hanya satu pemakai network
   — `AppController::downloadFaceModels()` (dua berkas model dari OpenCV Zoo) — dan satu-satunya
   pemanggil adalah tombol di `SettingsView.qml` (`onClicked: root.app.downloadFaceModels()`).
@@ -641,7 +641,7 @@ verifier. Lihat `docs/M4-REPORT.md` §7 dan `packaging/README.md`.
   membundel yang disebutnya "system libraries" — jadi smoke test memasang stack baseline desktop
   itu (tanpa satu pun paket `libqt6*`) lalu membuktikan seluruh sisa runtime ikut terbundel.
 - [x] **Dokumentasi build + user guide tersedia.** `README.md` (prasyarat, build, test, CLI) dan
-  `docs/USER-GUIDE.md`; `CONTRIBUTING.md` untuk gate (lint, i18n, a11y, test).
+  `USER-GUIDE.md`; `CONTRIBUTING.md` untuk gate (lint, i18n, a11y, test).
 
 ---
 
@@ -706,7 +706,7 @@ kin-galeri/
 ## 12. Lampiran B — Daftar Library Inti (build deps)
 
 Kolom "Status di mesin dev" = terverifikasi ada/tidak ada (bukan asumsi). Lihat juga koreksi libmpv di
-`docs/M0-REPORT.md`.
+riwayat git.
 
 | Library | Peran | Status di mesin dev |
 |---|---|---|

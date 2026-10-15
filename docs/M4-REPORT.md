@@ -271,6 +271,42 @@ libc/X11/OpenGL/font/dbus — itu memang kontraknya, dan setiap desktop Ubuntu/F
 Smoke test CI memasang tepat stack baseline itu (tanpa paket `libqt6*`) sebagai bukti bahwa sisanya
 memang ikut terbundel; kalau suatu saat perlu satu paket `libqt6*`, berarti AppImage-nya rusak.
 
+### 7.6 mpv kini ada di tiga dari empat paket
+
+Sempat dilaporkan di sini bahwa "mpvqt hanya dipaketkan Arch". Itu salah, dan pemeriksaan
+ulangnya sendiri yang membuktikan:
+
+| Target | Backend video | Bagaimana |
+|---|---|---|
+| AUR (Arch) | **mpv** | `makedepends=(mpvqt)`, paket distro |
+| `.deb` | **mpv** | `libmpvqt-dev` + `libmpv-dev` ada di Debian 13 (mpvqt 1.1.0, libmpv 0.40); `dpkg-shlibdeps` menurunkan `libmpvqt1` + `libmpv2` dari DT_NEEDED — tanpa vendoring sama sekali |
+| AppImage | **mpv** | mpvqt tidak dipaketkan untuk Ubuntu 24.04 dan ECM-nya 5.115 (mpvqt minta ≥ 6.0), jadi keduanya dibangun dari rilis upstream yang di-pin: ECM 6.15.0 dan mpvqt 1.2.0, sha256 dicatat di workflow |
+| Flatpak | Qt Multimedia | runtime KDE 6.8 tidak punya libmpv maupun mpvqt; menambahkannya berarti membangun libmpv (+libass, libplacebo, luajit, libXpresent, uchardet) lalu mpvqt. PRD §10.1 menetapkan Qt Multimedia sebagai default, jadi ini belum celah fungsional — tapi perlu keputusan bila mpv diinginkan di sana juga |
+
+Dua bug portabilitas nyata muncul dari pekerjaan ini, dan keduanya hanya mungkin terlihat karena
+proyek akhirnya dikompilasi di distro selain Arch:
+
+1. `KinMpvItem.cpp` memanggil `mpvController()->setProperty()` dan menyambung
+   `MpvController::propertyChanged`, sedangkan `mpvqt 1.1.0` hanya mem-forward-declare
+   `MpvController` (1.2.0 menambahkan include-nya sendiri). Artinya kode ini **hanya pernah bisa
+   dikompilasi di Arch**. Sekarang header-nya di-include eksplisit.
+2. Layout header mpvqt berbeda antar versi: 1.1.0 mengekspor `<prefix>/include/MpvQt` dan memasang
+   header di sana, 1.2.0 mengekspor `<prefix>/include`. Kode memakai `<MpvQt/mpvabstractitem.h>`,
+   yang benar untuk 1.2.0 dan untuk semua paket distro, tapi salah untuk 1.1.0 di prefix privat.
+   `CMakeLists.txt` sekarang mendeteksi layout-nya dan menambahkan direktori induknya bila perlu.
+
+Yang juga tercatat: `libmpv` dari Ubuntu **tidak** sepenuhnya terbundel. Ia terhubung langsung ke
+libasound, libjack, libpipewire dan libusb, dan itu memang harus tetap milik host — pustaka klien
+audio wajib cocok dengan sound server yang benar-benar berjalan. Maka klaim "AppImage tanpa
+`dependency` manual" punya satu kualifikasi jujur: ia memerlukan desktop dengan stack audio yang
+utuh. Smoke test kini memasangnya sebagai bagian dari baseline, sehingga uji itu jadi sedikit lebih
+ketat daripada sebelumnya — dulu ia lulus tanpa audio sama sekali.
+
+`--version` mencetak backend dan status ML (`Kin Galeri 0.1.0 (Qt 6.8.0, video: mpv, ml: on)`), dan
+itu yang dipakai CI sebagai bukti: bukan "seharusnya ikut", melainkan apa yang benar-benar ada di
+dalam binary — di AppImage (diperiksa juga di ubuntu:24.04 dan fedora:40), di `.deb` yang dipasang
+di container bersih, dan di runner CI yang membangunnya.
+
 Keempat artefak sekarang dibangun dan diperiksa oleh CI pada setiap perubahan
 (`.github/workflows/package.yml`, run `38673799398` semuanya hijau): AppImage di runner
 ubuntu-24.04 dengan Qt 6.8, `.deb` di `debian:trixie` lalu **dipasang di container trixie yang

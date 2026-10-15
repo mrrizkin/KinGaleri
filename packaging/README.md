@@ -52,14 +52,24 @@ downloads them on request rather than shipping them, which keeps the packages sm
 
 ## What the AppImage expects from the host
 
-An AppImage bundles Qt, the QML modules, the image-format and multimedia plugins
-and SQLite — but it deliberately does **not** bundle what linuxdeploy calls system
-libraries: libc, the X11/xcb stack, OpenGL (libglvnd), the font stack
-(fontconfig/freetype/harfbuzz/fribidi) and libdbus. Every Ubuntu or Fedora desktop
-already has all of them; a bare container has none, which is why a naked
-`ubuntu:24.04` image is the wrong smoke test. The CI job installs exactly that
-baseline and not a single `libqt6*` package, so the test still fails if a Qt
+An AppImage bundles Qt, the QML modules, the image-format and multimedia plugins,
+mpv/mpvqt, ONNX Runtime and SQLite — but it deliberately does **not** bundle what
+linuxdeploy calls system libraries: libc, the X11/xcb stack, OpenGL (libglvnd), the
+font stack (fontconfig/freetype/harfbuzz/fribidi), libdbus, and the **audio
+stack**. ALSA, JACK and PipeWire are in that last category for a reason: a sound
+client library has to match the sound server actually running on the machine, so
+shipping our own would be the wrong fix for a missing one. Ubuntu's libmpv links
+all three directly, which is why they only became a requirement when mpv was added.
+Every Ubuntu or Fedora desktop already has them; a bare container has none, which is
+why a naked `ubuntu:24.04` image is the wrong smoke test. The CI job installs exactly
+that baseline and not a single `libqt6*` package, so the test still fails if a Qt
 library ever stops being bundled.
+
+If "no manual dependencies" ever needs to be true without that asterisk, the answer
+is not to bundle ALSA but to build a **minimal libmpv** from source with the audio
+backends reduced to what a desktop certainly provides. That is a larger change than
+it sounds (mpv pulls in libass, libplacebo and friends), and it is the same work the
+Flatpak target would need.
 
 ## Why the AppImage is built on Ubuntu 24.04
 

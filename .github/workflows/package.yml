@@ -140,9 +140,15 @@ jobs:
       - name: Check the QML modules and run the GUI offscreen
         run: |
           set -x
+          # The artifact upload does not preserve the executable bit.
+          chmod +x Kin_Galeri*.AppImage
           ./Kin_Galeri*.AppImage --appimage-extract >/dev/null
           ls squashfs-root/usr/qml/QtMultimedia/qmldir
           ls squashfs-root/usr/plugins/multimedia/
+          ls squashfs-root/usr/plugins/iconengines/
+          # Qt Multimedia is QML-only from the app's side, so the linker drops it
+          # from DT_NEEDED; it has to arrive through the plugin above.
+          ls squashfs-root/usr/lib/libQt6Multimedia.so.6*
           timeout 12 ./Kin_Galeri*.AppImage --appimage-extract-and-run \
             --no-home-scan --db /tmp/gui.db --cache /tmp/gui-cache > /tmp/gui.log 2>&1 || true
           test -s /tmp/gui.db
@@ -191,17 +197,10 @@ jobs:
         env:
           CMAKE_ARGS: -DKG_ENABLE_MPV=OFF   # no mpvqt package in Debian
 
-      # Installing the freshly built package in the same container resolves its
-      # declared dependencies from the archive, so a missing Depends line shows
-      # up here instead of on the user's machine.
-      - name: Install and run the package
-        run: |
-          apt-get install -y ./build/kin-galeri_*_amd64.deb
-          QT_QPA_PLATFORM=offscreen kin-galeri --no-ui --no-home-scan \
-            --db /tmp/deb-smoke.db --cache /tmp/deb-smoke-cache
-          test -s /tmp/deb-smoke.db
-          desktop-file-validate /usr/share/applications/io.github.mrrizkin.KinGaleri.desktop
-          appstreamcli validate --no-net /usr/share/metainfo/io.github.mrrizkin.KinGaleri.metainfo.xml
+      # NOT installed here on purpose. This container has qt6-base-dev and friends,
+      # which provide every plugin and QML module the app loads at runtime, so an
+      # incomplete Depends line would stay invisible. The `deb-install` job below
+      # installs the artifact into a bare debian:trixie instead.
 
       - name: Upload .deb
         uses: actions/upload-artifact@v4
@@ -209,6 +208,81 @@ jobs:
           name: deb
           path: build/kin-galeri_*.deb
           if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # .deb install test in a clean container
+  #
+  # This is the job that caught the real bug: the first .deb built fine, installed
+  # fine and even printed --version, because it was tested next to the Qt
+  # development packages. What it could not do was run - the QSQLITE driver, the
+  # SVG plugin and every QML module reach the app through dlopen, so no
+  # dpkg-shlibdeps run can see that they are missing from Depends.
+  #
+  # So: start from a bare debian:trixie, install only what the package declares,
+  # and assert that the runtime plugins and QML modules all arrived that way.
+  # ---------------------------------------------------------------------------
+  deb-install:
+    name: .deb install test (clean Debian 13)
+    needs: [deb]
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+
+      - name: Nothing Qt may be present yet
+        run: |
+          set -eux
+          if dpkg -l | grep -E '^ii[[:space:]]+libqt6'; then
+            echo "::error::Qt is already installed in this container, so this test proves nothing"
+            exit 1
+          fi
+
+      - name: Install the package and its declared dependencies
+        run: |
+          set -eux
+          apt-get update
+          # Validators for the shipped desktop/metainfo files, not application
+          # dependencies - and the assertion after them proves neither pulls in Qt.
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            desktop-file-utils appstream
+          ! dpkg -l | grep -qE '^ii[[:space:]]+libqt6'
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ./kin-galeri_*_amd64.deb
+
+      - name: The plugins and QML modules must have come from the dependencies
+        run: |
+          set -eux
+          QTPLUG=/usr/lib/x86_64-linux-gnu/qt6/plugins
+          QMLDIR=/usr/lib/x86_64-linux-gnu/qt6/qml
+          ls $QTPLUG/sqldrivers/libqsqlite.so
+          ls $QTPLUG/imageformats/libqsvg.so
+          ls $QTPLUG/iconengines/libqsvgicon.so
+          ls $QTPLUG/multimedia/
+          ls $QMLDIR/QtQuick/Controls/qmldir
+          ls $QMLDIR/QtMultimedia/qmldir
+
+      - name: Headless run
+        run: |
+          set -eux
+          QT_QPA_PLATFORM=offscreen kin-galeri --no-ui --no-home-scan \
+            --db /tmp/deb-clean.db --cache /tmp/deb-clean-cache
+          test -s /tmp/deb-clean.db
+          kin-galeri --version
+
+      # --no-ui never loads QML, so it cannot catch a missing module or a QML file
+      # that no longer compiles. Run the real GUI offscreen and check the shipped
+      # metadata while we are here.
+      - name: GUI offscreen run and metadata validation
+        run: |
+          set -eux
+          timeout 12 kin-galeri --no-home-scan \
+            --db /tmp/gui.db --cache /tmp/gui-cache > /tmp/gui.log 2>&1 || true
+          test -s /tmp/gui.db
+          ! grep -E "is not installed|was not found|not a type|Driver not loaded|Cannot assign to non-existent|QQmlApplicationEngine failed" /tmp/gui.log
+          desktop-file-validate /usr/share/applications/io.github.mrrizkin.KinGaleri.desktop
+          appstreamcli validate --no-net /usr/share/metainfo/io.github.mrrizkin.KinGaleri.metainfo.xml
 
   # ---------------------------------------------------------------------------
   # Flatpak (KDE 6.8 runtime)
@@ -268,12 +342,17 @@ jobs:
           cp -r packaging/arch /home/builder/arch
           chown -R builder:builder /home/builder
           su builder -c 'cd /home/builder/arch && makepkg -sf --noconfirm' </dev/null
+          # The -debug package is ~12 MB and nothing consumes it; the release only
+          # needs the real one.
+          rm -f /home/builder/arch/*-debug-*.pkg.tar.zst
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: arch
-          path: packaging/arch/*.pkg.tar.zst
+          # makepkg writes next to its PKGBUILD, which lives in the builder's home
+          # (makepkg refuses to run as root, and the workspace is root-owned).
+          path: /home/builder/arch/*.pkg.tar.zst
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -282,7 +361,7 @@ jobs:
   release:
     name: Attach artifacts to the release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [appimage, smoke-appimage, deb, flatpak, arch]
+    needs: [appimage, smoke-appimage, deb, deb-install, flatpak, arch]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

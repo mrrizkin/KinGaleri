@@ -86,10 +86,19 @@ of the source tree.
   `CPACK_DEBIAN_PACKAGE_DEPENDS` therefore names `libqt6multimedia6` and
   `qml6-module-qtmultimedia` by hand - the same reason it names the QSQLITE
   driver, the SVG plugin and the `qml6-module-qtquick-*` modules.
-* An AppImage is only useful if it carries the QML modules: `usr/qml/QtQuick`, and
-  `usr/qml/QtMultimedia` plus `usr/plugins/multimedia/` once the Qt Multimedia
-  surface exists. linuxdeploy's Qt plugin discovers them from the app's QML
-  imports, so the smoke test checks those paths instead of trusting it.
+* An AppImage is only useful if it carries the QML modules: `usr/qml/QtQuick`,
+  `usr/qml/QtMultimedia`. linuxdeploy's Qt plugin finds those by scanning the
+  app's QML imports - but it does **not** find the plugins that module loads back
+  into C++. Measured on the first bundle that had the new video surface: the QML
+  module was there, while `usr/plugins/multimedia/`, `usr/plugins/iconengines/`
+  and `libQt6Multimedia.so.6` were all absent, because the app never references a
+  Multimedia symbol itself so the linker drops `Qt6::Multimedia` from
+  `DT_NEEDED`, leaving linuxdeploy no dependency graph to walk. That bundle could
+  compile the video surface, load it, and then play nothing.
+  `packaging/appimage/build.sh` therefore copies those two plugin categories into
+  the AppDir before linuxdeploy runs (the same trick it already uses for the
+  offscreen platform plugin), and the smoke test asserts they and the library are
+  present rather than trusting the scanner.
 * linuxdeploy and its Qt plugin are themselves AppImages. On a runner without
   FUSE, `APPIMAGE_EXTRACT_AND_RUN=1` makes the nested invocations work; the
   script already passes `--appimage-extract-and-run` to linuxdeploy itself.

@@ -92,6 +92,29 @@ if [[ -n "${qt_plugins_dir}" && -f "${qt_plugins_dir}/platforms/libqoffscreen.so
     echo "    bundled the offscreen platform plugin"
 fi
 
+# linuxdeploy-plugin-qt finds QML modules by scanning imports, so it does bring
+# QtMultimedia's QML files and libquickmultimediaplugin.so. What it does not bring
+# is the piece that module loads back into C++: plugins/multimedia (the FFmpeg
+# media plugin). And libQt6Multimedia is missing too, because the application never
+# references a Multimedia symbol itself - the import is QML-only, so the linker
+# drops Qt6::Multimedia from DT_NEEDED under --as-needed and linuxdeploy has no
+# dependency graph to follow. The result is a bundle whose video surface compiles,
+# loads, and then plays nothing at all.
+#
+# So copy both plugin categories in before linuxdeploy runs, exactly like the
+# offscreen platform plugin above: once they are files in the AppDir, linuxdeploy
+# resolves their dependencies (which is how libQt6Multimedia gets bundled).
+# iconengines comes too, because without the SVG icon engine the themed icons in
+# AppIcon.qml have no way to render.
+if [[ -n "${qt_plugins_dir}" ]]; then
+    for plugin_category in multimedia iconengines; do
+        [[ -d "${qt_plugins_dir}/${plugin_category}" ]] || continue
+        mkdir -p "${appdir}/usr/plugins/${plugin_category}"
+        cp -a "${qt_plugins_dir}/${plugin_category}/." "${appdir}/usr/plugins/${plugin_category}/"
+        echo "    bundled plugins/${plugin_category}"
+    done
+fi
+
 # linuxdeploy-plugin-qt deploys *every* plugin in a category it decides the binary
 # needs, so merely linking QtSql drags in every SQL driver in the Qt install:
 # PostgreSQL, MySQL, ODBC, Mimer, ... Each one needs a client library that is

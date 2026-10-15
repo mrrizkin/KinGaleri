@@ -1,8 +1,12 @@
 # AUR: `kin-galeri-git`
 
-`PKGBUILD` here is the AUR package. It is a `-git` package because the project has
-no release tags yet, so a versioned PKGBUILD would have nothing to point at;
-`pkgver()` derives a monotonically increasing version from the commit count.
+`PKGBUILD` here is the AUR package, and it is **not published to the AUR yet** —
+see "Publishing to the AUR" below. Until then, install the `.pkg.tar.zst` from the
+release page, or build it here with `makepkg -si`.
+
+It is a `-git` package because it tracks the moving `main` branch. `pkgver()`
+derives the version with `git describe`, so a build from a tagged commit is exactly
+that version and one between tags gets the `.r<count>.g<sha>` suffix Arch expects.
 
 The package is verified in CI: the `arch` job in
 [`package.yml`](../../.github/workflows/package.yml) builds it in an

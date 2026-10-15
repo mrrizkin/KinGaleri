@@ -30,7 +30,7 @@ satu basis data SQLite per pustaka.
 | Platform | Perintah |
 |---|---|
 | Debian/Ubuntu | `sudo apt install ./kin-galeri_*_amd64.deb` |
-| Arch | `pacman -U kin-galeri-git-*.pkg.tar.zst` (atau `yay -S kin-galeri-git`) |
+| Arch | `pacman -U kin-galeri-git-*.pkg.tar.zst` |
 | AppImage | `chmod +x Kin_Galeri-*.AppImage && ./Kin_Galeri-*.AppImage` |
 | Flatpak | `flatpak install flathub org.kde.Platform//6.8`<br>`flatpak install ./KinGaleri.flatpak` |
 

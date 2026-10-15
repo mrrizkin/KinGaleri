@@ -9,7 +9,7 @@ Alatnya tidak perlu ada di mesin developer: kalau `linuxdeploy`, `flatpak-builde
 | `.deb` | `debian:trixie` | mpv — `libmpvqt1` + `libmpv2` dari Debian | ON — `libonnxruntime1.21` dari Debian |
 | AppImage | `ubuntu-24.04` + Qt 6.8 (aqtinstall) | mpv — mpvqt 1.2.0 + ECM 6.15.0 dari sumber | ON — ONNX Runtime 1.20.1 dibundel |
 | Flatpak | runtime `org.kde.Platform` 6.8 | Qt Multimedia | ON — ONNX Runtime 1.20.1 sebagai modul |
-| Arch / AUR | `archlinux:base-devel` | mpv — `mpvqt` dari `extra` | ON — ONNX Runtime 1.20.1 dibundel |
+| Arch | `archlinux:base-devel` | mpv — `mpvqt` dari `extra` | ON — ONNX Runtime 1.20.1 dibundel |
 
 ## Kenapa begini
 
@@ -32,11 +32,15 @@ di samping mpvqt yang tetap harus dibangun sendiri. Qt Multimedia adalah backend
 default PRD dan sudah berfungsi penuh, jadi pilihannya sadar: satu target memakai
 backend berbeda, bukan satu target tanpa pemutaran video.
 
-**AUR memakai paket distro.** `PKGBUILD` (`kin-galeri-git`) bergantung pada
+**PKGBUILD Arch memakai paket distro.** `PKGBUILD` (`kin-galeri-git`) bergantung pada
 `libmpvqt1`-nya Arch (`mpvqt`) dan hanya membundel ONNX Runtime, karena Arch
 tidak punya paket onnxruntime sama sekali. `pkgver()` memakai `git describe`,
 jadi build dari tag tepat `2026.42.0` dan build di antaranya mendapat sufiks
 `.r<n>.g<sha>`.
+
+**Paket ini belum diterbitkan ke AUR.** `packaging/arch/README.md` berisi langkah
+menerbitkannya; sampai itu dilakukan, paket Arch dipasang dari `.pkg.tar.zst` di
+halaman rilis, atau dibangun sendiri dengan `cd packaging/arch && makepkg -si`.
 
 ## Pelajaran yang mahal: dependensi yang tidak terlihat
 

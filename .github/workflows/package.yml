@@ -181,9 +181,12 @@ jobs:
 
       # An AppImage is not self-contained: by design it bundles the Qt runtime
       # and the application, but it relies on the base system for libc, X11,
-      # OpenGL and the font stack. linuxdeploy deliberately refuses to bundle
-      # those (it calls them "system libraries"), so a bare `ubuntu:24.04` image
-      # fails on libGLX.so.0 / libfontconfig.so.1 before Qt is even reached.
+      # OpenGL, the font stack and the audio stack. linuxdeploy deliberately
+      # refuses to bundle those (it calls them "system libraries"), so a bare
+      # `ubuntu:24.04` image fails on libGLX.so.0 / libfontconfig.so.1 before Qt
+      # is even reached. ALSA is in the same category: libmpv links libasound
+      # directly, and bundling a host's ALSA in an AppImage is exactly what you
+      # must not do, because it has to match the machine's audio setup.
       #
       # That is the expected contract, and every desktop install of Ubuntu or
       # Fedora already satisfies it - so the smoke test installs exactly that
@@ -202,13 +205,15 @@ jobs:
               libx11-6 libx11-xcb1 libxcb1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 \
               libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-render0 libxcb-shm0 \
               libxcb-xfixes0 libxcb-image0 libxcb-randr0 libxcb-sync1 libxcb-xkb1 \
-              libxrender1 libsm6 libice6 libglib2.0-0
+              libxrender1 libsm6 libice6 libglib2.0-0 \
+              libasound2t64
           else
             dnf install -y -q --setopt=install_weak_deps=False \
               libglvnd-glx libglvnd-opengl libglvnd-egl mesa-libGL \
               fontconfig freetype harfbuzz fribidi dbus-libs \
               libX11 libX11-xcb libxcb libxkbcommon libxkbcommon-x11 \
-              xcb-util-cursor xcb-util-keysyms xcb-util-image libXrender libSM libICE glib2
+              xcb-util-cursor xcb-util-keysyms xcb-util-image libXrender libSM libICE glib2 \
+              alsa-lib
           fi
 
       # `--no-ui` never loads QML, so on its own it cannot catch a missing QML

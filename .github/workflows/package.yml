@@ -1,0 +1,288 @@
+# Builds the release artifacts (AppImage, .deb, Flatpak, Arch package), smoke
+# tests them, and attaches them to a GitHub release when the trigger is a v* tag.
+#
+# Why the hosts are what they are:
+#   * AppImage      -> ubuntu-24.04 runner with Qt 6.8 from aqtinstall. The glibc
+#                     baseline for AppImages is the oldest distro we want to
+#                     support, and Ubuntu 24.04's own Qt is 6.4.2 (below the
+#                     project minimum), so Qt is installed next to it instead of
+#                     taken from the distro.
+#   * .deb          -> Debian 13 container; its Qt 6.8.2 is the stack the package
+#                     depends on at runtime.
+#   * Flatpak       -> KDE 6.8 runtime, which already carries Qt Quick/Sql/
+#                     Multimedia and the codecs.
+#   * Arch package  -> archlinux:base-devel, built with makepkg as a non-root user
+#                     because makepkg refuses to run as root.
+#
+# DoD note: PRD §9 asks for an AppImage that runs on Ubuntu 24.04 *and* Fedora 40
+# with no manual dependencies. Only that pair of containers proves it, so the
+# smoke job runs the artifact in both.
+name: Package
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Nested AppImages (linuxdeploy and its Qt plugin) otherwise need FUSE, which
+  # the GitHub runners do not have.
+  APPIMAGE_EXTRACT_AND_RUN: '1'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # AppImage
+  # ---------------------------------------------------------------------------
+  appimage:
+    name: AppImage (Qt 6.8 on Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            libsqlite3-dev libgl1-mesa-dev libegl1-mesa-dev \
+            libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
+            libdbus-1-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libfontconfig1-dev libfreetype-dev \
+            libx11-xcb-dev libxcb-cursor-dev libxcb-icccm4-dev \
+            libxcb-keysyms1-dev libxcb-shape0-dev \
+            patchelf file wget curl python3-pip
+          # A modern AppImage toolchain still probes FUSE on some paths; the
+          # t64-suffixed name is the one Ubuntu 24.04 uses.
+          sudo apt-get install -y --no-install-recommends libfuse2t64 || true
+
+      - name: Install Qt 6.8 (aqtinstall)
+        run: |
+          python3 -m pip install --user --break-system-packages aqtinstall
+          # Only genuinely optional modules are listed: qtsvg and qttools ship
+          # inside the base linux_gcc_64 archive and asking for them again makes
+          # aqt abort with "packages not found".
+          "$HOME/.local/bin/aqt" install-qt linux desktop 6.8.0 linux_gcc_64 \
+            -m qtmultimedia qtimageformats -O "$HOME/Qt"
+          echo "$HOME/Qt/6.8.0/gcc_64/bin" >> "$GITHUB_PATH"
+
+      - name: Build AppImage
+        run: packaging/appimage/build.sh
+        env:
+          # aqtinstall's Qt ships the MySQL/PostgreSQL/ODBC SQL drivers, whose
+          # client libraries the runner does not have; see the script's comment.
+          PRUNE_QT_SQLDRIVERS: '1'
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: Kin_Galeri*.AppImage
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # AppImage smoke test - the actual DoD claim
+  # ---------------------------------------------------------------------------
+  smoke-appimage:
+    name: AppImage smoke test (${{ matrix.image }})
+    needs: [appimage]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:24.04', 'fedora:40']
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: appimage
+
+      # An AppImage is not self-contained: by design it bundles the Qt runtime
+      # and the application, but it relies on the base system for libc, X11,
+      # OpenGL and the font stack. linuxdeploy deliberately refuses to bundle
+      # those (it calls them "system libraries"), so a bare `ubuntu:24.04` image
+      # fails on libGLX.so.0 / libfontconfig.so.1 before Qt is even reached.
+      #
+      # That is the expected contract, and every desktop install of Ubuntu or
+      # Fedora already satisfies it - so the smoke test installs exactly that
+      # baseline (no Qt packages, nothing from the app's own dependency list) and
+      # then checks that the bundle carries everything else itself. If this step
+      # ever needs a `libqt6*` package, the AppImage is genuinely broken.
+      - name: Install the desktop baseline (not the app's dependencies)
+        run: |
+          set -eux
+          if command -v apt-get >/dev/null; then
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends \
+              libglx0 libopengl0 libegl1 libgl1 \
+              libfontconfig1 libfreetype6 libharfbuzz0b libfribidi0 libdbus-1-3 \
+              libx11-6 libx11-xcb1 libxcb1 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 \
+              libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-render0 libxcb-shm0 \
+              libxcb-xfixes0 libxcb-image0 libxcb-randr0 libxcb-sync1 libxcb-xkb1 \
+              libxrender1 libsm6 libice6 libglib2.0-0
+          else
+            dnf install -y -q --setopt=install_weak_deps=False \
+              libglvnd-glx libglvnd-opengl libglvnd-egl mesa-libGL \
+              fontconfig freetype harfbuzz fribidi dbus-libs \
+              libX11 libX11-xcb libxcb libxkbcommon libxkbcommon-x11 \
+              xcb-util-cursor xcb-util-keysyms xcb-util-image libXrender libSM libICE glib2
+          fi
+
+      # `--appimage-extract-and-run` needs no FUSE; `--no-ui` keeps it headless,
+      # and the offscreen platform (bundled by packaging/appimage/build.sh) means
+      # no X server either. This is what proves the bundle carries the Qt runtime,
+      # the QML modules and the plugins.
+      - name: Run headless
+        run: |
+          set -x
+          chmod +x Kin_Galeri*.AppImage
+          ./Kin_Galeri*.AppImage --appimage-extract-and-run \
+            --no-ui --no-home-scan \
+            --db /tmp/smoke.db --cache /tmp/smoke-cache
+          test -s /tmp/smoke.db
+          ./Kin_Galeri*.AppImage --appimage-extract-and-run --version
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_MEDIA_BACKEND: ffmpeg
+
+  # ---------------------------------------------------------------------------
+  # .deb (Debian 13)
+  # ---------------------------------------------------------------------------
+  deb:
+    name: .deb (Debian 13)
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build ca-certificates \
+            pkg-config libsqlite3-dev \
+            qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
+            qt6-svg-dev qt6-multimedia-dev qt6-l10n-tools \
+            libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
+            dpkg-dev fakeroot file desktop-file-utils appstream
+
+      - name: Build .deb
+        run: packaging/deb/build-deb.sh
+        env:
+          CMAKE_ARGS: -DKG_ENABLE_MPV=OFF   # no mpvqt package in Debian
+
+      # Installing the freshly built package in the same container resolves its
+      # declared dependencies from the archive, so a missing Depends line shows
+      # up here instead of on the user's machine.
+      - name: Install and run the package
+        run: |
+          apt-get install -y ./build/kin-galeri_*_amd64.deb
+          QT_QPA_PLATFORM=offscreen kin-galeri --no-ui --no-home-scan \
+            --db /tmp/deb-smoke.db --cache /tmp/deb-smoke-cache
+          test -s /tmp/deb-smoke.db
+          desktop-file-validate /usr/share/applications/io.github.mrrizkin.KinGaleri.desktop
+          appstreamcli validate --no-net /usr/share/metainfo/io.github.mrrizkin.KinGaleri.metainfo.xml
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: build/kin-galeri_*.deb
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Flatpak (KDE 6.8 runtime)
+  # ---------------------------------------------------------------------------
+  flatpak:
+    name: Flatpak (org.kde.Platform 6.8)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          # elfutils provides eu-strip, which flatpak-builder needs to compress
+          # debuginfo. librsvg2-common provides the SVG rasterizer that
+          # `appstreamcli compose` needs; without it the export step fails with
+          # "Unrecognized image file format" on a perfectly valid SVG icon, while
+          # `appstreamcli validate` still reports the metadata as fine.
+          sudo apt-get install -y --no-install-recommends \
+            flatpak flatpak-builder elfutils librsvg2-common
+
+      - name: Build bundle
+        run: |
+          flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --force-clean --repo=repo \
+            --install-deps-from=flathub \
+            build-flatpak packaging/flatpak/io.github.mrrizkin.KinGaleri.yml
+          flatpak build-bundle repo KinGaleri.flatpak io.github.mrrizkin.KinGaleri
+
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: KinGaleri.flatpak
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Arch package (also what AUR's kin-galeri-git builds)
+  # ---------------------------------------------------------------------------
+  arch:
+    name: Arch package (makepkg)
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+
+      # makepkg refuses to run as root, so the build happens as a normal user.
+      # `makepkg -s` resolves depends/makedepends through pacman, which is why
+      # that user gets passwordless sudo; the alternative would be duplicating the
+      # dependency list here and letting it drift from the PKGBUILD.
+      - name: Build package
+        run: |
+          pacman -Syu --noconfirm --needed git cmake ninja sudo
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          cp -r packaging/arch /home/builder/arch
+          chown -R builder:builder /home/builder
+          su builder -c 'cd /home/builder/arch && makepkg -sf --noconfirm' </dev/null
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: packaging/arch/*.pkg.tar.zst
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Release
+  # ---------------------------------------------------------------------------
+  release:
+    name: Attach artifacts to the release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [appimage, smoke-appimage, deb, flatpak, arch]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Show what will be published
+        run: find dist -type f -printf '%P  %s bytes\n' | sort
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Kin Galeri $GITHUB_REF_NAME" \
+            --generate-notes \
+            $(find dist -type f | sort)

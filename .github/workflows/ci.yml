@@ -1,0 +1,65 @@
+# Build, test and run the repo's own gates.
+#
+# Everything runs inside a Debian 13 (trixie) container because that is the
+# oldest distro with a Qt 6.5+ stack we can rely on: Ubuntu 24.04 still ships Qt
+# 6.4.2, which is below this project's minimum (CMakeLists `find_package(Qt6 6.5
+# REQUIRED ...)`), so a distro-Qt build there simply fails.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build, test and lint (Debian 13)
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build git ca-certificates python3 \
+            pkg-config libsqlite3-dev \
+            qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
+            qt6-declarative-dev-tools qt6-svg-dev qt6-multimedia-dev \
+            libavformat-dev libavcodec-dev libavutil-dev libswscale-dev
+
+      # mpvqt has no Debian package, so the mpv backend is off here and playback
+      # goes through Qt Multimedia's FFmpeg backend (the PRD 10.1 default).
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DKG_BUILD_TESTS=ON \
+            -DKG_ENABLE_MPV=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+      # The lint gate is the project's own script, not a bare `qmllint`: it picks
+      # the Qt 6 binary (distros also ship a Qt 5 one on PATH) and adds -W 0.
+      - name: QML lint
+        run: ./scripts/qml-lint.sh
+
+      # Guards the gap that let ~a quarter of the QML strings go untranslated
+      # without any test failing (Qt falls back to the source text).
+      - name: Translation coverage
+        run: python3 scripts/i18n-audit.py

@@ -16,10 +16,22 @@ if ! command -v dpkg-deb >/dev/null 2>&1 || ! command -v dpkg-shlibdeps >/dev/nu
     echo "       Install 'dpkg' and 'dpkg-dev' (Debian/Ubuntu) to build the .deb." >&2
     exit 1
 fi
+# CPACK_DEBIAN_PACKAGE_SHLIBDEPS is ON, and CPackDeb derives the shared-library
+# dependencies by shelling out to `file`. Without it CPack dies deep inside
+# CPackDeb.cmake with an unhelpful message, so say what is actually wrong here.
+if ! command -v file >/dev/null 2>&1; then
+    echo "error: the 'file' utility is missing." >&2
+    echo "       CPack needs it to compute the .deb dependencies (install 'file')." >&2
+    exit 1
+fi
 
+# Extra CMake arguments, e.g. CMAKE_ARGS="-DKG_ENABLE_MPV=OFF" on a distro without
+# mpvqt (Debian). Word-split on purpose so several options can be passed.
+# shellcheck disable=SC2086
 cmake -S "${root}" -B "${build_dir}" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
-    -DKG_BUILD_TESTS=OFF
+    -DKG_BUILD_TESTS=OFF \
+    ${CMAKE_ARGS:-}
 cmake --build "${build_dir}"
 
 cd "${build_dir}"

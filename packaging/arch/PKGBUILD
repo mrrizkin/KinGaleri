@@ -1,0 +1,68 @@
+# Maintainer: mrrizkin <io.github.mrrizkin>
+#
+# AUR package for the VCS checkout. There are no release tags yet, so a
+# versioned package would have nothing to point at; `pkgver()` derives the
+# version from the clone instead, which is the standard -git pattern.
+#
+# Build locally with:  makepkg -si
+# Push to AUR with:    makepkg --printsrcinfo > .SRCINFO
+pkgname=kin-galeri-git
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Fast local photo and video library for Linux, built with Qt 6/QML'
+arch=('x86_64' 'aarch64')
+url='https://github.com/mrrizkin/KinGaleri'
+license=('GPL3')
+depends=(
+    'qt6-base'
+    'qt6-declarative'
+    'qt6-svg'
+    'qt6-multimedia'
+    'sqlite'
+    'ffmpeg'
+)
+makedepends=(
+    'cmake'
+    'ninja'
+    'git'
+    # Arch packages mpvqt, so the mpv backend is built in here. It is the
+    # preferred backend (and the only one that can seek precisely), but the app
+    # falls back to Qt Multimedia when it is missing.
+    'mpvqt'
+)
+optdepends=(
+    'libheif: heif-convert, used for HEIC/HEIF thumbnails'
+    'mpv: libmpv itself, pulled in by mpvqt'
+)
+provides=('kin-galeri')
+conflicts=('kin-galeri')
+source=("$pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    # No tags exist yet, so describe() cannot be used; the commit count still
+    # makes the version increase monotonically for AUR.
+    printf '0.1.0.r%s.g%s' \
+        "$(git rev-list --count HEAD)" \
+        "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    # Tests are built here rather than in check() so the object files are shared.
+    cmake -S "$pkgname" -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DKG_BUILD_TESTS=ON
+    cmake --build build
+}
+
+check() {
+    # The test harness already forces QT_QPA_PLATFORM=offscreen per test.
+    ctest --test-dir build --output-on-failure
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+    install -Dm644 "$pkgname/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -1,0 +1,84 @@
+# Packaging
+
+Four targets, all **built and run** for real. The workflow in
+[`.github/workflows/package.yml`](../.github/workflows/package.yml) encodes the
+same steps, but it has not run yet (nothing has been pushed or tagged), so the
+results below come from running the same commands in Docker containers on the dev
+machine. None of them need a local toolchain if you just want the artifacts: push
+a `v*` tag and the workflow attaches them to the release.
+
+| Target | Built on | How it was verified |
+|---|---|---|
+| AppImage | Ubuntu 24.04 + Qt 6.8 (aqtinstall) — 99.5 MB | Ran headless in `ubuntu:24.04` **and** `fedora:40` containers with `--appimage-extract-and-run --no-ui`: exit 0, database created, `--version` = `Kin Galeri 0.1.0 (Qt 6.8.0)` |
+| `.deb` | Debian 13 (`debian:trixie`, Qt 6.8.2) — 914 KB | `apt-get install ./kin-galeri_*.deb` in a clean container, then run headless (exit 0, 8 migrations); `desktop-file-validate` + `appstreamcli validate --no-net` |
+| Flatpak | KDE 6.8 runtime — 638 KB bundle | `flatpak-builder` → `flatpak build-bundle` → `flatpak install` → `flatpak run --command=kin-galeri … --version` = `Kin Galeri 0.1.0 (Qt 6.8.3)` |
+| Arch | `archlinux:base-devel` — 874 KB | `makepkg -sf` as a non-root user, against the real GitHub URL (see `arch/README.md` for AUR) |
+
+## What the AppImage expects from the host
+
+An AppImage bundles Qt, the QML modules, the image-format and multimedia plugins
+and SQLite — but it deliberately does **not** bundle what linuxdeploy calls system
+libraries: libc, the X11/xcb stack, OpenGL (libglvnd), the font stack
+(fontconfig/freetype/harfbuzz/fribidi) and libdbus. Every Ubuntu or Fedora desktop
+already has all of them; a bare container has none, which is why a naked
+`ubuntu:24.04` image is the wrong smoke test. The CI job installs exactly that
+baseline and not a single `libqt6*` package, so the test still fails if a Qt
+library ever stops being bundled.
+
+## Why the AppImage is built on Ubuntu 24.04
+
+An AppImage inherits the glibc of the machine that built it, so it has to be built
+on the *oldest* supported distro. Ubuntu 24.04 is that baseline, but its distro Qt
+is 6.4.2 — below this project's minimum of 6.5. The build therefore installs Qt
+6.8 with `aqtinstall` and lets linuxdeploy bundle it, instead of linking the
+distro's Qt.
+
+The `.deb` goes the other way: it links the distro's Qt on purpose, so it is built
+on Debian 13 (Qt 6.8.2) and declares the matching runtime dependencies. A `.deb`
+from a Qt 6.8 host will not install on a Qt 6.4 distro — that is what the AppImage
+and Flatpak are for.
+
+## Local builds
+
+```bash
+packaging/appimage/build.sh      # needs Qt 6.5+ on PATH + network on first run
+packaging/deb/build-deb.sh       # needs dpkg-deb, dpkg-shlibdeps and file
+CMAKE_ARGS=-DKG_ENABLE_MPV=OFF packaging/deb/build-deb.sh   # on a distro without mpvqt
+
+flatpak-builder --user --force-clean --repo=repo \
+    --install-deps-from=flathub build-flatpak packaging/flatpak/io.github.mrrizkin.KinGaleri.yml
+
+cd packaging/arch && makepkg -si
+```
+
+`build.sh` and `build-deb.sh` both honour `BUILD_DIR=` to keep the artifacts out
+of the source tree.
+
+## Notes that cost time to learn
+
+* The AppImage has to bundle the `offscreen` platform plugin itself:
+  linuxdeploy's Qt plugin ships `xcb` only, which makes the documented `--no-ui`
+  mode impossible without an X server.
+* `PRUNE_QT_SQLDRIVERS=1` keeps only `libqsqlite.so`. Without it the Qt plugin
+  tries to deploy every SQL driver and dies on the first missing client library
+  (`libpq.so.5`, `libmimerapi.so`, ...). It has to run *after* configure, because
+  `Qt6SqlConfig.cmake` references files that would have been deleted.
+* Qt must be on `LD_LIBRARY_PATH` when it lives outside the system prefix,
+  otherwise linuxdeploy reports a missing `libQt6QuickControls2.so.6`.
+* `flatpak-builder` needs its state dir on the same filesystem as the build and
+  repo dirs (`--state-dir`), and `appstreamcli compose` needs an SVG rasterizer
+  (`librsvg2-common` on Debian/Ubuntu) — without it, compose fails on a perfectly
+  valid SVG icon while `appstreamcli validate` still passes.
+* CPack's `SHLIBDEPS` needs the `file` utility, otherwise CPack fails with a
+  misleading `CPackDeb.cmake` message — `build-deb.sh` checks for it up front.
+* `makepkg` needs `-s` to pull dependencies, and `archlinux:base-devel` has no
+  `git`, so the Arch job installs it and relaxes `safe.directory` for the
+  bind-mounted source.
+* `mpvqt` is an Arch package; Debian and the KDE runtime do not ship it. Those
+  builds pass `-DKG_ENABLE_MPV=OFF` and play video through Qt Multimedia's FFmpeg
+  backend, which is the PRD 10.1 default anyway.
+* linuxdeploy and its Qt plugin are themselves AppImages. On a runner without
+  FUSE, `APPIMAGE_EXTRACT_AND_RUN=1` makes the nested invocations work; the
+  script already passes `--appimage-extract-and-run` to linuxdeploy itself.
+* `makepkg` refuses to run as root, which is why the Arch job creates a
+  `builder` user rather than building in the container's default root shell.

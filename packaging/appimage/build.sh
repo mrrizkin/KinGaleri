@@ -154,6 +154,17 @@ if [[ -n "${ort_lib}" && -e "${ort_lib}" ]]; then
     echo "    bundled libonnxruntime (${ort_lib_dir})"
 fi
 
+# libmpv and mpvqt, when the build had them. Both are genuine DT_NEEDED entries
+# (unlike Qt Multimedia and ONNX Runtime, which are dlopen'd), so linuxdeploy can
+# resolve and bundle them - but again only if the dynamic loader can find them at
+# deploy time. libmpv comes from the distribution and is already on the default
+# path; libMpvQt almost never is, because it is a small KDE library that most
+# distributions do not package at all, so whoever built it has to point here.
+if [[ -n "${KG_MPV_LIB_DIR:-}" ]]; then
+    export LD_LIBRARY_PATH="${KG_MPV_LIB_DIR}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    echo "    libMpvQt on the loader path (${KG_MPV_LIB_DIR})"
+fi
+
 # linuxdeploy-plugin-qt deploys *every* plugin in a category it decides the binary
 # needs, so merely linking QtSql drags in every SQL driver in the Qt install:
 # PostgreSQL, MySQL, ODBC, Mimer, ... Each one needs a client library that is

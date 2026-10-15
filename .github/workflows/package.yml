@@ -49,6 +49,10 @@ jobs:
           # dependencies of the libraries linuxdeploy resolves: QtMultimedia links
           # libpulse, and FFmpeg's plugin links the audio stack. Without them
           # deployment stops at "ERROR: Could not find dependency: libpulse.so.0".
+          # libmpv comes from Ubuntu here. mpvqt - the Qt wrapper this app
+          # actually drives mpv through - is not packaged for 24.04, and the
+          # extra-cmake-modules it needs is 5.115 there (it wants >= 6.0), so both
+          # are built from pinned upstream sources in the next step.
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake ninja-build pkg-config \
             libsqlite3-dev libgl1-mesa-dev libegl1-mesa-dev \
@@ -58,6 +62,7 @@ jobs:
             libx11-xcb-dev libxcb-cursor-dev libxcb-icccm4-dev \
             libxcb-keysyms1-dev libxcb-shape0-dev \
             libpulse0 libasound2t64 libsndfile1 libasyncns0 \
+            libmpv-dev \
             patchelf file wget curl python3-pip
           # A modern AppImage toolchain still probes FUSE on some paths; the
           # t64-suffixed name is the one Ubuntu 24.04 uses.
@@ -87,6 +92,40 @@ jobs:
           tar -xzf /tmp/ort.tgz -C "$GITHUB_WORKSPACE/build-tools"
           echo "ORT_ROOT=$GITHUB_WORKSPACE/build-tools/onnxruntime-linux-x64-1.20.1" >> "$GITHUB_ENV"
 
+      # Debian 13, Fedora and Arch all package mpvqt; Ubuntu 24.04 does not, so it
+      # is built from the pinned 40 KB upstream release along with the ECM it
+      # requires. Neither is statically linked: libmpv comes from the distribution
+      # and libMpvQt is linked dynamically, which is also the simpler LGPL
+      # arrangement (static linking would drag in the relinking obligation).
+      - name: Build mpvqt
+        run: |
+          set -eux
+          tools="$GITHUB_WORKSPACE/build-tools"
+          mkdir -p "$tools"
+          curl -fL --retry 3 -o /tmp/ecm.tar.xz \
+            https://download.kde.org/stable/frameworks/6.15/extra-cmake-modules-6.15.0.tar.xz
+          echo "f7cd022095a9e6bdbe5897720a24bfda81d211757b7c08b173061962bf2ee0b2  /tmp/ecm.tar.xz" | sha256sum -c -
+          tar -xJf /tmp/ecm.tar.xz -C "$tools"
+          curl -fL --retry 3 -o /tmp/mpvqt.tar.xz \
+            https://download.kde.org/stable/mpvqt/mpvqt-1.2.0.tar.xz
+          echo "8660ad79c0d60fed77f29b36e1742841466af5405de702c81a121e6eeb625ebb  /tmp/mpvqt.tar.xz" | sha256sum -c -
+          tar -xJf /tmp/mpvqt.tar.xz -C "$tools"
+
+          cmake -S "$tools/extra-cmake-modules-6.15.0" -B /tmp/ecm-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$tools/ecm" \
+            -DBUILD_TESTING=OFF
+          cmake --build /tmp/ecm-build
+          cmake --install /tmp/ecm-build
+
+          cmake -S "$tools/mpvqt-1.2.0" -B /tmp/mpvqt-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$tools/mpvqt" \
+            -DCMAKE_PREFIX_PATH="$tools/ecm;$HOME/Qt/6.8.0/gcc_64" \
+            -DBUILD_TESTING=OFF
+          cmake --build /tmp/mpvqt-build
+          cmake --install /tmp/mpvqt-build
+
+          echo "MPVQT_PREFIX=$tools/mpvqt" >> "$GITHUB_ENV"
+
       - name: Build AppImage
         run: packaging/appimage/build.sh
         env:
@@ -96,14 +135,19 @@ jobs:
           # ...and the GStreamer multimedia backend, which is never selected but
           # would need the whole GStreamer stack to be deployable.
           PRUNE_QT_GSTREAMER: '1'
-          CMAKE_ARGS: "-DKG_ENABLE_ML=ON -DKG_ORT_ROOT=${{ env.ORT_ROOT }}"
+          CMAKE_ARGS: "-DKG_ENABLE_ML=ON -DKG_ORT_ROOT=${{ env.ORT_ROOT }} -DKG_ENABLE_MPV=ON -DCMAKE_PREFIX_PATH=${{ env.MPVQT_PREFIX }}"
+          # libmpv comes from the Ubuntu package and is already on the loader
+          # path; libMpvQt was just installed into a prefix the loader does not
+          # know, and linuxdeploy resolves DT_NEEDED entries with the loader.
+          KG_MPV_LIB_DIR: ${{ env.MPVQT_PREFIX }}/lib
 
       # The version line names the build's optional features, so it is also the
       # cheapest way to prove this AppImage was not built without them.
-      - name: Confirm face grouping is really in the binary
+      - name: Confirm the optional features are really in the binary
         run: |
           set -eux
           ./build-appimage/kin-galeri --version | grep 'ml: on'
+          ./build-appimage/kin-galeri --version | grep 'video: mpv'
           ./build-appimage/kin-galeri --version
 
       - name: Upload AppImage
@@ -181,13 +225,16 @@ jobs:
           # since no target desktop ships a compatible one.
           ls squashfs-root/usr/lib/libonnxruntime.so.1*
           ls squashfs-root/usr/plugins/iconengines/
-          # Qt Multimedia is QML-only from the app's side, so the linker drops it
-          # from DT_NEEDED; it has to arrive through the plugin above.
-          ls squashfs-root/usr/lib/libQt6Multimedia.so.6*
+          # mpv: both are real DT_NEEDED entries, so linuxdeploy resolves them -
+          # this asserts that it did, and that the build did not quietly fall back
+          # to Qt Multimedia the way it used to when MpvQt was not found.
+          ls squashfs-root/usr/lib/libMpvQt.so.1*
+          ls squashfs-root/usr/lib/libmpv.so.2*
           timeout 12 ./Kin_Galeri*.AppImage --appimage-extract-and-run \
             --no-home-scan --db /tmp/gui.db --cache /tmp/gui-cache > /tmp/gui.log 2>&1 || true
           test -s /tmp/gui.db
           ./Kin_Galeri*.AppImage --appimage-extract-and-run --version | grep 'ml: on'
+          ./Kin_Galeri*.AppImage --appimage-extract-and-run --version | grep 'video: mpv'
           ! grep -E "is not installed|was not found|not a type|Driver not loaded|Cannot assign to non-existent|QQmlApplicationEngine failed" /tmp/gui.log
         env:
           # The bundle carries the offscreen platform plugin, but the platform has
@@ -230,17 +277,20 @@ jobs:
             qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
             qt6-svg-dev qt6-multimedia-dev qt6-l10n-tools \
             libonnxruntime-dev \
+            libmpv-dev libmpvqt-dev \
             libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
             dpkg-dev fakeroot file desktop-file-utils appstream
 
       - name: Build .deb
         run: packaging/deb/build-deb.sh
         env:
-          # No mpvqt package in Debian, so playback goes through Qt Multimedia.
+          # Debian 13 packages both mpvqt (libmpvqt-dev) and libmpv, so this
+          # package links the distribution's copies and just declares them as
+          # dependencies - no vendoring, unlike the AppImage.
           # Face grouping is ON: Debian 13 ships libonnxruntime1.21 and its headers,
           # so this package links the distro library and depends on it, rather than
           # shipping a private copy like the AppImage and the Flatpak have to.
-          CMAKE_ARGS: "-DKG_ENABLE_MPV=OFF -DKG_ENABLE_ML=ON"
+          CMAKE_ARGS: "-DKG_ENABLE_MPV=ON -DKG_ENABLE_ML=ON"
 
       # NOT installed here on purpose. This container has qt6-base-dev and friends,
       # which provide every plugin and QML module the app loads at runtime, so an
@@ -311,6 +361,12 @@ jobs:
           # binary links it directly.
           ls /usr/lib/x86_64-linux-gnu/libonnxruntime.so.1.21
           dpkg -s kin-galeri | grep -E '^Depends:.*libonnxruntime1.21'
+          # mpv: the wrapper and libmpv are both DT_NEEDED entries, so
+          # dpkg-shlibdeps derives them; these keep that honest.
+          ls /usr/lib/x86_64-linux-gnu/libMpvQt.so.1
+          ls /usr/lib/x86_64-linux-gnu/libmpv.so.2
+          dpkg -s kin-galeri | grep -E '^Depends:.*libmpvqt1'
+          dpkg -s kin-galeri | grep -E '^Depends:.*libmpv2'
 
       - name: Headless run
         run: |
@@ -320,6 +376,7 @@ jobs:
           test -s /tmp/deb-clean.db
           # No QT_QPA_PLATFORM on purpose: --version has to work without a display.
           kin-galeri --version | grep 'ml: on'
+          kin-galeri --version | grep 'video: mpv'
           kin-galeri --version
 
       # --no-ui never loads QML, so it cannot catch a missing module or a QML file

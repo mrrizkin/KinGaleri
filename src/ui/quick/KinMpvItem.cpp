@@ -1,5 +1,11 @@
 #include "ui/quick/KinMpvItem.h"
 
+// mpvqt 1.2.0 pulls mpvcontroller.h in from mpvabstractitem.h; 1.1.0 (the version
+// Debian 13 ships) only forward-declares MpvController, so including it here is
+// required to call setProperty()/observeProperty() and to connect to
+// propertyChanged(). Without this the file compiles only on Arch.
+#include <MpvQt/mpvcontroller.h>
+
 #ifdef KG_HAS_MPV
 
 #include <QDebug>

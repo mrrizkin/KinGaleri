@@ -184,7 +184,8 @@ Tiga hal yang baru kelihatan setelah benar-benar dibangun:
 ### 7.3 Flatpak — `packaging/flatpak/io.github.mrrizkin.KinGaleri.yml`
 
 Memakai `org.kde.Platform`/`Sdk` 6.8 (sudah berisi Qt6 + FFmpeg). Backend mpv dimatikan karena
-libmpv tidak ada di runtime; playback lewat Qt Multimedia (default PRD §10.1).
+libmpv tidak ada di runtime; playback lewat Qt Multimedia — surface `QtVideoSurface.qml`, yang belum
+ada saat subbagian ini pertama ditulis (§7.4).
 
 Dua catatan operasional: `flatpak-builder` menolak jalan kalau direktori state dan direktori
 build/repo berada di filesystem berbeda (pakai `--state-dir`), dan tahap `appstreamcli compose`
@@ -198,6 +199,59 @@ CPack `DEB` dengan `SHLIBDEPS ON`; skrip menolak jalan bila `dpkg-deb`/`dpkg-shl
 `SHLIBDEPS` juga memerlukan utilitas `file`; tanpa itu CPack gagal dengan pesan dari `CPackDeb.cmake`
 yang menyesatkan, jadi skrip memeriksanya di depan.
 
+**Yang tidak bisa dilihat `SHLIBDEPS`.** Paket pertama *kelihatan* baik — terbangun, terpasang, bahkan
+menjalankan `--version` — karena container pembangunnya kebetulan punya paket *pengembangan* Qt. Begitu
+dijalankan di container yang hanya berisi dependensi paket itu sendiri, ternyata rusak:
+`QSqlDatabase: QSQLITE driver not loaded`, dan QML tidak punya satu modul pun (`qml/` hanya berisi
+`builtins.qmltypes`). Sebabnya semua yang dimuat lewat `dlopen` tidak pernah muncul di `ldd`:
+
+- driver `QSQLITE` ada di paket terpisah `libqt6sql6-sqlite` di Debian — di Arch ia ikut `qt6-base`,
+  dan itulah yang membuat 12/12 test lulus lokal sementara CI gagal (`tst_mediagridmodel`,
+  `tst_librarymaintenance`, `tst_folderindexer`, `tst_grouping` semuanya "driver not loaded");
+- plugin gambar SVG ada di `qt6-svg-plugins`, **bukan** `libqt6svg6` (yang hanya pustakanya);
+- modul QML: tanpa `qml6-module-qtquick*` binary terpasang tanpa cara memuat satu pun berkas QML.
+
+Semuanya sekarang dinamai eksplisit di `CPACK_DEBIAN_PACKAGE_DEPENDS` — CPack *menggabungkan* daftar itu
+dengan hasil SHLIBDEPS, bukan menggantinya — dan diverifikasi dengan memasang paket baru di container
+`debian:trixie` **bersih** (0 paket `libqt6*` di awal): `libqsqlite.so` ada, `qml/` berisi
+`Qt QtQml QtQuick`, GUI offscreen hidup >8 detik tanpa error, DB terbentuk.
+
+**Temuan kedua, yang lebih serius: backend video tidak ada.** PRD §10.1 menetapkan **Qt Multimedia
+(backend FFmpeg)** sebagai default dan libmpv sebagai opsi, tetapi yang ada di kode hanya mpv:
+`MpvVideoSurface.qml` adalah satu-satunya surface, `ViewerOverlay` hanya mengaktifkannya bila
+`app.videoBackend === "mpv"`, dan macro `KG_ENABLE_MULTIMEDIA` — walau `Qt6::Multimedia` tetap
+ditautkan — **tidak dipakai di mana pun**. Jadi setiap paket yang dibangun tanpa mpvqt (`.deb`,
+Flatpak) *diam-diam* tidak bisa memutar video, sementara `packaging/README.md` dan §7.3 mengklaim
+sebaliknya. Test headless tidak mungkin menangkapnya.
+
+Perbaikannya: `src/ui/qml/QtVideoSurface.qml` — `MediaPlayer` + `VideoOutput` + `AudioOutput`, dengan
+properti dan fungsi yang **persis sama namanya** seperti surface mpv (`filePath`, `posterUrl`,
+`autoplay`, `loop`, `muted`, `volume`, `hasVideo`, `loaded`, `ended`, `paused`, `position`,
+`duration`, `togglePause()`, `replay()`, `seekTo()`, `seekRelative()`, `stop()`, `adjustVolume()`,
+`toggleMute()`, `formatTime()`) termasuk bar transport yang sama. Berkas itu masuk modul QML hanya
+bila `KG_ENABLE_MULTIMEDIA` menyala, dan `ViewerOverlay` memilih surface lewat **nama berkas**, bukan
+tipe, karena impor QML bersifat statis dan merujuk tipe yang tidak ada akan menggagalkan seluruh
+berkas pada build tanpa modul itu.
+
+Dua kesalahan API yang ditemukan saat menulisnya, dicatat supaya tidak terulang: di Qt 6
+`QMediaPlayer` **tidak punya** `muted`/`volume` (keduanya milik objek `AudioOutput` terpisah), dan
+arah koneksi videonya sudah dibalik — `MediaPlayer.videoOutput: output`, bukan
+`VideoOutput.source: player` seperti di Qt 5. Keduanya hanya muncul sebagai error QML saat runtime,
+bukan saat build, jadi layar yang gagal memuat akan terlihat seperti poster yang "diam".
+
+Verifikasi (build `-DKG_ENABLE_MPV=OFF`, GUI di X11): klip H.264 12 detik diputar, timecode di dalam
+frame maju antar tangkapan, bar transport tampil lengkap (putar/jeda, posisi, seek, durasi, mute,
+volume, kecepatan), dan pada EOF frame terakhir tetap terlihat dengan tombol putar-ulang ↻ **tanpa**
+spinner — perilaku yang sama dengan yang diwajibkan M2-REPORT §6 untuk mpv. Pintasan papan tombol
+diuji dengan instrumentasi sementara: Space melaporkan `playbackState` 1 lalu 2, M membalik `muted`,
+Panah Kanan/Kiri mengirim `+5000/-5000`; instrumentasinya sudah dibuang. `./scripts/qml-lint.sh` 0
+peringatan di **kedua** konfigurasi (mpv dan qtmultimedia) dan `scripts/i18n-audit.py` 351/351.
+
+Karena surface baru mengimpor `QtMultimedia`, paket yang dibangun tanpa mpv sekarang juga butuh modul
+QML dan plugin multimedia itu — ditambahkan ke `CPACK_DEBIAN_PACKAGE_DEPENDS`, dan smoke test AppImage
+diperketat: ia mengekstrak bundle dan memastikan `usr/qml/QtMultimedia/qmldir` serta
+`usr/plugins/multimedia/` ada, lalu menjalankan GUI offscreen dan gagal bila log memuat error QML.
+
 ### 7.5 Hasil: dibangun dan dijalankan di container, karena alatnya tidak ada di mesin dev
 
 `linuxdeploy`, `flatpak-builder`, `dpkg-deb`, dan `rpmbuild` tidak terpasang di mesin dev (Artix,
@@ -207,7 +261,7 @@ tanpa `sudo`), jadi verifikasinya dilakukan di container Docker — seperti prof
 | Artefak | Hasil |
 |---|---|
 | AppImage | `Kin_Galeri-x86_64.AppImage` **99,5 MB**, Qt 6.8.0 (aqtinstall) terbundel, plugin `offscreen`+`xcb`, hanya `libqsqlite.so` di `sqldrivers/`. Dijalankan di `ubuntu:24.04` **dan** `fedora:40`: `--version` benar, `--no-ui` exit 0, DB terbentuk |
-| `.deb` | `kin-galeri_0.1.0_amd64.deb` **914 KB** di `debian:trixie`; `apt-get install ./…deb` di container bersih lalu headless exit 0 (8 migrasi), `--version` = Qt 6.8.2; `desktop-file-validate` + `appstreamcli validate` lolos |
+| `.deb` | `kin-galeri_0.1.0_amd64.deb` **914 KB** di `debian:trixie`; dipasang di container debian:trixie **bersih** (dependensi saja, tanpa paket dev Qt) lalu headless exit 0 (8 migrasi) dan GUI offscreen hidup, `--version` = Qt 6.8.2; `desktop-file-validate` + `appstreamcli validate` lolos |
 | Flatpak | bundle **638 KB** dari runtime KDE 6.8; `flatpak install` + `flatpak run --command=kin-galeri … --version` → **"Kin Galeri 0.1.0 (Qt 6.8.3)"** |
 | Arch (AUR) | `makepkg -sf` di `archlinux:base-devel` → `kin-galeri-git-0.1.0.r15…-x86_64.pkg.tar.zst` 874 KB; `--printsrcinfo` benar |
 
@@ -217,12 +271,15 @@ libc/X11/OpenGL/font/dbus — itu memang kontraknya, dan setiap desktop Ubuntu/F
 Smoke test CI memasang tepat stack baseline itu (tanpa paket `libqt6*`) sebagai bukti bahwa sisanya
 memang ikut terbundel; kalau suatu saat perlu satu paket `libqt6*`, berarti AppImage-nya rusak.
 
-Dua hal yang tetap belum: belum ada tag/rilis yang diterbitkan (CI baru berjalan setelah di-push),
-dan Flatpak memunculkan satu warning kosmetik dari runtime-nya sendiri
+Satu hal yang tetap belum: belum ada tag/rilis yang diterbitkan (CI baru berjalan setelah di-push).
+Ada pula satu warning kosmetik
 (`setHighDpiScaleFactorRoundingPolicy must be called before creating the QGuiApplication instance`)
-yang tidak berasal dari kode kita — `grep` di `src/` tidak menemukan pemanggilan itu dan build native
-Qt 6.12 tidak memicunya. Nilai yang kita minta (`QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, PRD
-F-3.10) dipasang sebagai variabel lingkungan sebelum `QGuiApplication`, jadi tetap berlaku.
+yang **tidak** berasal dari kode ini: `grep` di `src/` tidak menemukan pemanggilan itu sama sekali.
+Penyebabnya sempat saya salah tebak sebagai runtime KDE, dan pemeriksaan lanjutan membantahnya —
+container `debian:trixie` bersih dengan Qt 6.8.2 polos memunculkannya juga, sementara build native
+Qt 6.12 tidak. Jadi ini perilaku Qt 6.8 saat QML diinisialisasi. Nilai yang kita minta
+(`QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough`, PRD F-3.10) dipasang sebagai variabel lingkungan
+sebelum `QGuiApplication`, jadi tetap berlaku.
 
 ## 8. Profiling performa (PRD §4.1)
 

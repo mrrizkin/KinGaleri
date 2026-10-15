@@ -1336,6 +1336,29 @@
         <translation>Kecepatan putar</translation>
     </message>
 </context>
+    <context>
+        <name>QtVideoSurface</name>
+        <message>
+            <source>Replay (Space)</source>
+            <translation>Putar ulang (Space)</translation>
+        </message>
+        <message>
+            <source>Audio only — this file has no video track</source>
+            <translation>Hanya audio — file ini tidak punya track video</translation>
+        </message>
+        <message>
+            <source>Play / pause (Space)</source>
+            <translation>Putar / jeda (Space)</translation>
+        </message>
+        <message>
+            <source>Mute (M)</source>
+            <translation>Bisukan (M)</translation>
+        </message>
+        <message>
+            <source>Playback speed</source>
+            <translation>Kecepatan putar</translation>
+        </message>
+    </context>
 <context>
     <name>MediaGrid</name>
     <message>

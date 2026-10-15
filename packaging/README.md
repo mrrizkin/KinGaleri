@@ -75,8 +75,21 @@ of the source tree.
   `git`, so the Arch job installs it and relaxes `safe.directory` for the
   bind-mounted source.
 * `mpvqt` is an Arch package; Debian and the KDE runtime do not ship it. Those
-  builds pass `-DKG_ENABLE_MPV=OFF` and play video through Qt Multimedia's FFmpeg
-  backend, which is the PRD 10.1 default anyway.
+  builds pass `-DKG_ENABLE_MPV=OFF` and play video through `QtVideoSurface.qml`
+  (`MediaPlayer` + `VideoOutput` + `AudioOutput`), which is the PRD 10.1 default.
+  Keep it in step with `MpvVideoSurface.qml`: `ViewerOverlay` drives both through
+  the same property and function names and picks between them by
+  `app.videoBackend`.
+* Qt Multimedia loads its QML module and its FFmpeg plugin with `dlopen`, so
+  `dpkg-shlibdeps` cannot see them and linking `Qt6::Multimedia` is not enough
+  either (the linker drops it under `--as-needed` when no C++ symbol uses it).
+  `CPACK_DEBIAN_PACKAGE_DEPENDS` therefore names `libqt6multimedia6` and
+  `qml6-module-qtmultimedia` by hand - the same reason it names the QSQLITE
+  driver, the SVG plugin and the `qml6-module-qtquick-*` modules.
+* An AppImage is only useful if it carries the QML modules: `usr/qml/QtQuick`, and
+  `usr/qml/QtMultimedia` plus `usr/plugins/multimedia/` once the Qt Multimedia
+  surface exists. linuxdeploy's Qt plugin discovers them from the app's QML
+  imports, so the smoke test checks those paths instead of trusting it.
 * linuxdeploy and its Qt plugin are themselves AppImages. On a runner without
   FUSE, `APPIMAGE_EXTRACT_AND_RUN=1` makes the nested invocations work; the
   script already passes `--appimage-extract-and-run` to linuxdeploy itself.

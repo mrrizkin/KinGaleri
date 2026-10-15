@@ -35,10 +35,14 @@ jobs:
             pkg-config libsqlite3-dev \
             qt6-base-dev qt6-base-dev-tools qt6-declarative-dev \
             qt6-declarative-dev-tools qt6-svg-dev qt6-multimedia-dev \
-            libavformat-dev libavcodec-dev libavutil-dev libswscale-dev
+            libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
+            libqt6sql6-sqlite qt6-l10n-tools
 
-      # mpvqt has no Debian package, so the mpv backend is off here and playback
-      # goes through Qt Multimedia's FFmpeg backend (the PRD 10.1 default).
+      # mpvqt has no Debian package, so the mpv backend is off here. The
+      # translation catalogs need qt6-l10n-tools (without LinguistTools the build
+      # succeeds but ships no .qm), and the QSQLITE driver lives in its own
+      # package on Debian - without libqt6sql6-sqlite four test binaries fail with
+      # "QSQLITE driver not loaded", which is exactly how this line was found.
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \

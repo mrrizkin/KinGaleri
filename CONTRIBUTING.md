@@ -100,6 +100,34 @@ be read directly, so this is the real tree rather than a guess from the source.
 Run it after touching anything interactive: an unnamed or `role=label` control
 is a bug, not a cosmetic detail.
 
+## Video surfaces
+
+There are two implementations of the same surface, chosen at runtime by
+`AppSettings::videoBackend`:
+
+| File | Backend | Built when |
+|---|---|---|
+| `src/ui/qml/MpvVideoSurface.qml` | libmpv via mpvqt | `-DKG_ENABLE_MPV=ON` |
+| `src/ui/qml/QtVideoSurface.qml` | Qt Multimedia (the PRD default) | `-DKG_ENABLE_MULTIMEDIA=ON` |
+
+They are separate files because QML imports are static: importing `QtMultimedia`
+from the mpv surface would break the whole file in a build without that module,
+and vice versa. `ViewerOverlay.qml` loads one by **file name**, not by type, for
+the same reason.
+
+Because both are driven by the same code in `ViewerOverlay.qml`, they must expose
+an identical interface: `filePath`, `posterUrl`, `autoplay`, `loop`, `muted`,
+`volume`, `hasVideo`, `loaded`, `ended`, `paused`, `position`, `duration`, and the
+functions `togglePause()`, `replay()`, `seekTo()`, `seekRelative()`, `stop()`,
+`adjustVolume()`, `toggleMute()`, `formatTime()`. Change one, change the other, and
+check both configurations build - a missing property or a renamed function shows
+up only at runtime, as a surface that silently fails to load.
+
+Two Qt 6 traps worth remembering, both of which cost a debugging round: the player
+object has no `muted`/`volume` (they live on a separate `AudioOutput`), and the
+video connection is `MediaPlayer.videoOutput: output` rather than Qt 5's
+`VideoOutput.source: player`.
+
 ## Code style
 
 - C++20, Qt 6 conventions. Match the style of the file you are editing.

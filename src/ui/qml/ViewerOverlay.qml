@@ -45,6 +45,19 @@ Popup {
     readonly property bool isVideo: viewer.payload && viewer.payload.kind === "video"
     readonly property bool isSynthetic: viewer.payload && viewer.payload.isSynthetic
 
+    /// Which video surface this build can play. The backend is resolved at
+    /// configure time (mpv when mpvqt is present, Qt Multimedia otherwise, PRD
+    /// 10.1). It is deliberately a *string* rather than a type: QML imports are
+    /// static, so referencing MpvVideoSurface or QtVideoSurface by type here
+    /// would make this whole file unloadable in a build that has the other one
+    /// (or neither). Replay/pause keys are dispatched into `videoLoader.item`,
+    /// which both surfaces implement with the same names.
+    readonly property string videoSurfaceFile: viewer.app.videoBackend === "mpv"
+                                               ? "MpvVideoSurface.qml"
+                                               : viewer.app.videoBackend === "qtmultimedia"
+                                                 ? "QtVideoSurface.qml"
+                                                 : ""
+
     readonly property string sourceUrl: {
         if (!viewer.payload)
             return ""
@@ -241,17 +254,18 @@ Popup {
     }
 
     // ---- video playback -----------------------------------------------------
-    // Only loaded for the mpv backend. QML imports are static, so the mpv item
-    // lives in its own component: importing KinGaleri.Mpv here would break this
-    // whole file in a build without mpvqt.
+    // Only loaded for the active backend. QML imports are static, so each video
+    // item lives in its own component: importing KinGaleri.Mpv or QtMultimedia
+    // here would break this whole file in a build without that module.
     Loader {
         id: videoLoader
         anchors.top: topBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: bottomBar.top
-        active: viewer.opened && viewer.isVideo && !viewer.isSynthetic && viewer.app.videoBackend === "mpv"
-        source: "MpvVideoSurface.qml"
+        active: viewer.opened && viewer.isVideo && !viewer.isSynthetic
+                && viewer.videoSurfaceFile.length > 0
+        source: viewer.videoSurfaceFile
         // Bound rather than assigned once, so navigating to the next item with
         // the arrow keys swaps the playing file.
         //

@@ -276,6 +276,13 @@ if(KG_ENABLE_MPV)
     list(APPEND KG_QML_FILES src/ui/qml/MpvVideoSurface.qml)
 endif()
 
+# Same reasoning for the Qt Multimedia surface: it imports QtMultimedia, which is
+# only resolvable when that module is part of the build. ViewerOverlay picks
+# between the two by `app.videoBackend` and never imports either directly.
+if(KG_ENABLE_MULTIMEDIA)
+    list(APPEND KG_QML_FILES src/ui/qml/QtVideoSurface.qml)
+endif()
+
 # All QML_FILES above live directly in src/ui/qml/ (no subdirectories), so the
 # QTP0004 NEW/OLD split makes no functional difference here - it only matters
 # for cross-subdirectory implicit imports. Set it explicitly anyway to silence
@@ -414,6 +421,40 @@ set(CPACK_PACKAGE_CONTACT "io.github.mrrizkin")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+# CPackDeb *combines* this with the SHLIBDEPS list rather than replacing it, so the
+# explicitly linked libraries (libqt6core6t64 and friends) stay listed. What has to
+# be named here is everything Qt loads with dlopen, because shlibdeps cannot see it:
+#
+#   libqt6sql6-sqlite         the QSQLITE driver. On Debian it is its own package,
+#                             so without it the app starts and then dies with
+#                             "Driver not loaded"; the library is dlopen'd, never
+#                             linked, so shlibdeps has no way to infer it.
+#   qt6-svg-plugins           the SVG image *plugin*. `libqt6svg6` is only the
+#                             library - the plugin is a separate package - and the
+#                             app renders every icon through QIcon/QtSvg.
+#   qt6-image-formats-plugins webp/tiff/icns/tga decoding for the thumbnailer.
+#   qml6-module-qtquick-*     the QML modules. A .deb without these installs a
+#                             binary whose only QML file is builtins.qmltypes.
+#
+# Found the hard way: the first .deb built and installed fine, passed CI's build
+# and even ran --version, because the builder container happened to have the Qt
+# *development* packages installed. It was only run in a container holding nothing
+# but the package's own dependencies that the missing driver and the missing QML
+# modules showed up.
+set(_kg_deb_depends
+    "libqt6sql6-sqlite, qt6-svg-plugins, qt6-image-formats-plugins, \
+qml6-module-qtqml, qml6-module-qtqml-workerscript, qml6-module-qtquick, \
+qml6-module-qtquick-templates, qml6-module-qtquick-controls, \
+qml6-module-qtquick-layouts, qml6-module-qtquick-window, \
+qml6-module-qtquick-dialogs")
+if(KG_ENABLE_MULTIMEDIA)
+    # The Qt Multimedia QML module and its FFmpeg plugin are dlopen'd by the QML
+    # engine, and libQt6Multimedia is linked but dropped by --as-needed because no
+    # C++ symbol refers to it, so shlibdeps sees none of it.
+    string(APPEND _kg_deb_depends
+        ", libqt6multimedia6, qml6-module-qtmultimedia")
+endif()
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${_kg_deb_depends}")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_GENERATOR "DEB")
 include(CPack)

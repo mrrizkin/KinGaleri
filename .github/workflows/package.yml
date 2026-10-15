@@ -93,10 +93,15 @@ jobs:
           echo "ORT_ROOT=$GITHUB_WORKSPACE/build-tools/onnxruntime-linux-x64-1.20.1" >> "$GITHUB_ENV"
 
       # Debian 13, Fedora and Arch all package mpvqt; Ubuntu 24.04 does not, so it
-      # is built from the pinned 40 KB upstream release along with the ECM it
-      # requires. Neither is statically linked: libmpv comes from the distribution
-      # and libMpvQt is linked dynamically, which is also the simpler LGPL
-      # arrangement (static linking would drag in the relinking obligation).
+      # is built from upstream along with the ECM it requires. Neither is
+      # statically linked: libmpv comes from the distribution and libMpvQt is
+      # linked dynamically, which is also the simpler LGPL arrangement (static
+      # linking would drag in the relinking obligation).
+      #
+      # 1.1.0 and not 1.2.0: 1.2.0's mpvrenderer.cpp opens with
+      # Q_STATIC_LOGGING_CATEGORY, which the Qt 6.8 headers do not define, and it
+      # is what Haruna's Flathub build compiles against Qt 6.11. 1.1.0 is the
+      # version Debian ships, so the AppImage and the .deb build the same code.
       - name: Build mpvqt
         run: |
           set -eux
@@ -107,8 +112,8 @@ jobs:
           echo "f7cd022095a9e6bdbe5897720a24bfda81d211757b7c08b173061962bf2ee0b2  /tmp/ecm.tar.xz" | sha256sum -c -
           tar -xJf /tmp/ecm.tar.xz -C "$tools"
           curl -fL --retry 3 -o /tmp/mpvqt.tar.xz \
-            https://download.kde.org/stable/mpvqt/mpvqt-1.2.0.tar.xz
-          echo "8660ad79c0d60fed77f29b36e1742841466af5405de702c81a121e6eeb625ebb  /tmp/mpvqt.tar.xz" | sha256sum -c -
+            https://download.kde.org/stable/mpvqt/mpvqt-1.1.0.tar.xz
+          echo "cd7a7c58b816e42bcbc0980bfe06062d6cf87f5254962ac6940f6d5f86fd0f71  /tmp/mpvqt.tar.xz" | sha256sum -c -
           tar -xJf /tmp/mpvqt.tar.xz -C "$tools"
 
           cmake -S "$tools/extra-cmake-modules-6.15.0" -B /tmp/ecm-build -G Ninja \
@@ -117,7 +122,7 @@ jobs:
           cmake --build /tmp/ecm-build
           cmake --install /tmp/ecm-build
 
-          cmake -S "$tools/mpvqt-1.2.0" -B /tmp/mpvqt-build -G Ninja \
+          cmake -S "$tools/mpvqt-1.1.0" -B /tmp/mpvqt-build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$tools/mpvqt" \
             -DCMAKE_PREFIX_PATH="$tools/ecm;$HOME/Qt/6.8.0/gcc_64" \
             -DBUILD_TESTING=OFF
@@ -361,12 +366,13 @@ jobs:
           # binary links it directly.
           ls /usr/lib/x86_64-linux-gnu/libonnxruntime.so.1.21
           dpkg -s kin-galeri | grep -E '^Depends:.*libonnxruntime1.21'
-          # mpv: the wrapper and libmpv are both DT_NEEDED entries, so
-          # dpkg-shlibdeps derives them; these keep that honest.
+          # mpv: the wrapper is a DT_NEEDED entry, so dpkg-shlibdeps derives it.
+          # libmpv is deliberately absent from Depends - the app never calls mpv's
+          # API directly, so --as-needed drops it and it arrives transitively via
+          # libmpvqt1; the ls above is what proves it is really installed.
           ls /usr/lib/x86_64-linux-gnu/libMpvQt.so.1
           ls /usr/lib/x86_64-linux-gnu/libmpv.so.2
           dpkg -s kin-galeri | grep -E '^Depends:.*libmpvqt1'
-          dpkg -s kin-galeri | grep -E '^Depends:.*libmpv2'
 
       - name: Headless run
         run: |

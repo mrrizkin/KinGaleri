@@ -135,13 +135,18 @@ if [[ -n "${qt_lib_dir:-}" ]]; then
     echo "    bundled libQt6Multimedia"
 fi
 
-# ONNX Runtime, when the build asked for face grouping. It *is* a DT_NEEDED of
-# the binary, so linuxdeploy would follow it, but copying the whole symlink chain
-# from the cache keeps the bundle the same whether or not that works out, and the
-# smoke test then asserts the file is there instead of trusting either step.
+# ONNX Runtime, when the build asked for face grouping. The binary lists it in
+# DT_NEEDED, and linuxdeploy resolves those with the dynamic loader - it does not
+# look inside the AppDir for the dependencies of files it deploys. So the ORT
+# directory has to be on LD_LIBRARY_PATH, or deployment dies with
+# "Could not find dependency: libonnxruntime.so.1". With it on the path linuxdeploy
+# bundles the whole soname chain by itself; the explicit copy keeps the bundle the
+# same if that resolution ever changes, and the smoke test asserts the file is
+# present rather than trusting either mechanism.
 ort_lib="$(sed -n 's/^KG_ORT_LIB:[^=]*=//p' "${build_dir}/CMakeCache.txt" 2>/dev/null | head -n1)"
 if [[ -n "${ort_lib}" && -e "${ort_lib}" ]]; then
     ort_lib_dir="$(dirname "$(readlink -f "${ort_lib}")")"
+    export LD_LIBRARY_PATH="${ort_lib_dir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
     for lib in "${ort_lib_dir}"/libonnxruntime*.so*; do
         [[ -e "${lib}" ]] || continue
         cp -a "${lib}" "${appdir}/usr/lib/"

@@ -70,7 +70,9 @@ void applyPreAppEnvironment(int argc, char *argv[])
     }
 
     // --software-render: PRD risk mitigation for broken Wayland/GPU drivers.
-    // Read straight from argv because QGuiApplication starts before parseCli().
+    // Read straight from argv because the variable has to be set before
+    // QGuiApplication is constructed, and that happens before the parsed options
+    // are available.
     for (int i = 1; i < argc; ++i) {
         if (qstrcmp(argv[i], "--software-render") == 0) {
             qputenv("QT_QUICK_BACKEND", "software");
@@ -90,19 +92,19 @@ int main(int argc, char *argv[])
 
     applyPreAppEnvironment(argc, argv);
 
-    QGuiApplication app(argc, argv);
-    QCoreApplication::setApplicationName(QStringLiteral(KG_APP_NAME));
-    QCoreApplication::setApplicationVersion(QStringLiteral(KG_APP_VERSION));
-    QCoreApplication::setOrganizationName(QStringLiteral("kin"));
-    QCoreApplication::setOrganizationDomain(QStringLiteral("io.github.mrrizkin"));
-
-    // The full argv, including the program name: QCommandLineParser skips
-    // element 0 itself. Passing a pre-trimmed list silently drops the first
-    // real argument.
-    const CliOptions options = parseCli(QCoreApplication::arguments());
+    // --help and --version are parsed *before* QGuiApplication exists so they work
+    // where no platform plugin ever could: a build container, an SSH session, a CI
+    // step. Constructing the application first made `kin-galeri --version` abort
+    // with "could not connect to display" - which is exactly how CI found this.
+    QStringList rawArgs;
+    rawArgs.reserve(argc);
+    for (int i = 0; i < argc; ++i) {
+        rawArgs << QString::fromLocal8Bit(argv[i]);
+    }
+    const CliOptions options = parseCli(rawArgs);
 
     if (options.helpRequested) {
-        printHelp(QCoreApplication::applicationName());
+        printHelp(QStringLiteral(KG_APP_NAME));
         return 0;
     }
     if (options.versionRequested) {
@@ -111,6 +113,12 @@ int main(int argc, char *argv[])
         out.flush();
         return 0;
     }
+
+    QGuiApplication app(argc, argv);
+    QCoreApplication::setApplicationName(QStringLiteral(KG_APP_NAME));
+    QCoreApplication::setApplicationVersion(QStringLiteral(KG_APP_VERSION));
+    QCoreApplication::setOrganizationName(QStringLiteral("kin"));
+    QCoreApplication::setOrganizationDomain(QStringLiteral("io.github.mrrizkin"));
 
     for (const QString &warning : options.warnings) {
         std::fprintf(stderr, "kin-galeri: %s\n", qUtf8Printable(warning));

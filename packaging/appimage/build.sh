@@ -106,13 +106,35 @@ fi
 # resolves their dependencies (which is how libQt6Multimedia gets bundled).
 # iconengines comes too, because without the SVG icon engine the themed icons in
 # AppIcon.qml have no way to render.
-if [[ -n "${qt_plugins_dir}" ]]; then
-    for plugin_category in multimedia iconengines; do
-        [[ -d "${qt_plugins_dir}/${plugin_category}" ]] || continue
-        mkdir -p "${appdir}/usr/plugins/${plugin_category}"
-        cp -a "${qt_plugins_dir}/${plugin_category}/." "${appdir}/usr/plugins/${plugin_category}/"
-        echo "    bundled plugins/${plugin_category}"
+if [[ -n "${qt_plugins_dir}" && -d "${qt_plugins_dir}/iconengines" ]]; then
+    mkdir -p "${appdir}/usr/plugins/iconengines"
+    cp -a "${qt_plugins_dir}/iconengines/." "${appdir}/usr/plugins/iconengines/"
+    echo "    bundled plugins/iconengines"
+fi
+
+# Only the FFmpeg media plugin. Qt 6.5+ prefers it on Linux, while the GStreamer
+# one would drag in a second plugin set and its own libraries for a backend this
+# app never selects.
+if [[ -n "${qt_plugins_dir}" && -d "${qt_plugins_dir}/multimedia" ]]; then
+    mkdir -p "${appdir}/usr/plugins/multimedia"
+    for plugin in "${qt_plugins_dir}"/multimedia/*ffmpeg*mediaplugin.so; do
+        [[ -e "${plugin}" ]] || continue
+        cp -a "${plugin}" "${appdir}/usr/plugins/multimedia/"
     done
+    echo "    bundled plugins/multimedia (ffmpeg)"
+fi
+
+# ...and the library it links. Dropping the plugin into the AppDir is not enough:
+# linuxdeploy resolves the dependencies of the binary and of the files it deploys
+# itself, not of files that appeared in the AppDir behind its back, so it never
+# notices libQt6Multimedia - the plugin is there, the thing it needs is not, and
+# video still does not play.
+if [[ -n "${qt_lib_dir:-}" ]]; then
+    for lib in "${qt_lib_dir}"/libQt6Multimedia.so.6*; do
+        [[ -e "${lib}" ]] || continue
+        cp -a "${lib}" "${appdir}/usr/lib/"
+    done
+    echo "    bundled libQt6Multimedia"
 fi
 
 # linuxdeploy-plugin-qt deploys *every* plugin in a category it decides the binary

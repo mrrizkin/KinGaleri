@@ -45,6 +45,10 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
+          # The list is mostly build inputs, but it also has to contain the runtime
+          # dependencies of the libraries linuxdeploy resolves: QtMultimedia links
+          # libpulse, and FFmpeg's plugin links the audio stack. Without them
+          # deployment stops at "ERROR: Could not find dependency: libpulse.so.0".
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake ninja-build pkg-config \
             libsqlite3-dev libgl1-mesa-dev libegl1-mesa-dev \
@@ -53,6 +57,7 @@ jobs:
             libfontconfig1-dev libfreetype-dev \
             libx11-xcb-dev libxcb-cursor-dev libxcb-icccm4-dev \
             libxcb-keysyms1-dev libxcb-shape0-dev \
+            libpulse0 libasound2t64 libsndfile1 libasyncns0 \
             patchelf file wget curl python3-pip
           # A modern AppImage toolchain still probes FUSE on some paths; the
           # t64-suffixed name is the one Ubuntu 24.04 uses.

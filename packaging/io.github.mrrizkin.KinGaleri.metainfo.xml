@@ -65,6 +65,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="2026.42.1" date="2026-10-15">
+      <description>
+        <p>Fixes the generated benchmark rows. They exist to measure a large
+        library, but the only button that added them lived in the empty view, so
+        it wrote 50,000 synthetic entries into a real library and there was then
+        no way to take them back out. Settings has a "Remove generated rows"
+        action, the command line has --clear-benchmark, and adding them asks for
+        confirmation first.</p>
+      </description>
+    </release>
     <release version="2026.42.0" date="2026-10-15">
       <description>
         <p>First public release: indexing, thumbnails, timeline grid, viewer,

@@ -7,7 +7,7 @@
 # Build locally with:  makepkg -si
 # Push to AUR with:    makepkg --printsrcinfo > .SRCINFO
 pkgname=kin-galeri-git
-pkgver=2026.42.0.r4.g4bbd62c
+pkgver=2026.42.1
 pkgrel=1
 pkgdesc='Fast local photo and video library for Linux, built with Qt 6/QML'
 # x86_64 only: the pinned ONNX Runtime archive is the x64 CPU build, and

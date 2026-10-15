@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(kin-galeri
-    VERSION 2026.42.0
+    VERSION 2026.42.1
     DESCRIPTION "Kin Galeri - fast local photo & video library for Linux"
     LANGUAGES CXX
 )

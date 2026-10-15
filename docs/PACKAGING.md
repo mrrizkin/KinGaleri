@@ -35,7 +35,7 @@ backend berbeda, bukan satu target tanpa pemutaran video.
 **PKGBUILD Arch memakai paket distro.** `PKGBUILD` (`kin-galeri-git`) bergantung pada
 `libmpvqt1`-nya Arch (`mpvqt`) dan hanya membundel ONNX Runtime, karena Arch
 tidak punya paket onnxruntime sama sekali. `pkgver()` memakai `git describe`,
-jadi build dari tag tepat `2026.42.0` dan build di antaranya mendapat sufiks
+jadi build dari tag tepat `2026.42.1` dan build di antaranya mendapat sufiks
 `.r<n>.g<sha>`.
 
 **Paket ini belum diterbitkan ke AUR, dan sekarang memang belum bisa:** registrasi

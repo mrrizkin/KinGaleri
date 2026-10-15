@@ -123,7 +123,10 @@ if [[ -n "${qt_plugins_dir}" && -d "${qt_plugins_dir}/multimedia" ]]; then
     done
     echo "    bundled plugins/multimedia (ffmpeg)"
 fi
-# ...and the QtMultimedia library itself (see the note above).
+# ...and the QtMultimedia library itself (see the note above). The QtMultimedia
+# library and ONNX Runtime both live in usr/lib, which nothing has created yet at
+# this point - linuxdeploy would, but it runs later.
+install -d "${appdir}/usr/lib"
 if [[ -n "${qt_lib_dir:-}" ]]; then
     for lib in "${qt_lib_dir}"/libQt6Multimedia.so.6*; do
         [[ -e "${lib}" ]] || continue

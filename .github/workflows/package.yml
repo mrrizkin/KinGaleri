@@ -181,6 +181,10 @@ jobs:
           test -s /tmp/gui.db
           ./Kin_Galeri*.AppImage --appimage-extract-and-run --version | grep 'ml: on'
           ! grep -E "is not installed|was not found|not a type|Driver not loaded|Cannot assign to non-existent|QQmlApplicationEngine failed" /tmp/gui.log
+        env:
+          # The bundle carries the offscreen platform plugin, but the platform has
+          # to be named: without a $DISPLAY Qt would pick xcb and abort.
+          QT_QPA_PLATFORM: offscreen
 
       # `--appimage-extract-and-run` needs no FUSE; `--no-ui` keeps it headless,
       # and the offscreen platform (bundled by packaging/appimage/build.sh) means
@@ -314,6 +318,12 @@ jobs:
       # that no longer compiles. Run the real GUI offscreen and check the shipped
       # metadata while we are here.
       - name: GUI offscreen run and metadata validation
+        env:
+          # The GUI needs a platform plugin. Here it is Qt's own offscreen plugin
+          # from the distro package - the point of this step is the QML, not the
+          # display. (The `--version` check above deliberately has no platform, to
+          # prove it works without one.)
+          QT_QPA_PLATFORM: offscreen
         run: |
           set -eux
           timeout 12 kin-galeri --no-home-scan \

@@ -1,8 +1,18 @@
 # AUR: `kin-galeri-git`
 
-`PKGBUILD` here is the AUR package, and it is **not published to the AUR yet** —
-see "Publishing to the AUR" below. Until then, install the `.pkg.tar.zst` from the
-release page, or build it here with `makepkg -si`.
+`PKGBUILD` here is the AUR package, and it is **not published to the AUR**: account
+registration there is currently closed while they deal with a flood of automated
+sign-ups, so the package cannot be created at all right now. That is not a defect
+here, and nothing in this directory has to change when registration reopens.
+
+Arch users are not blocked in the meantime - the package ships as
+`kin-galeri-git-<version>-x86_64.pkg.tar.zst` on the release page:
+
+```bash
+pacman -U kin-galeri-git-*.pkg.tar.zst
+```
+
+or build it here with `makepkg -si`.
 
 It is a `-git` package because it tracks the moving `main` branch. `pkgver()`
 derives the version with `git describe`, so a build from a tagged commit is exactly
@@ -24,6 +34,9 @@ makepkg -si          # -s pulls makedepends, -i installs
 the package build rather than shipping.
 
 ## Publishing to the AUR
+
+**Blocked until AUR registration reopens.** When it does, the only prerequisite is
+an account; the steps below have not been executed yet and are the whole job.
 
 One-time setup:
 

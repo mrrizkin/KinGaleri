@@ -38,9 +38,14 @@ tidak punya paket onnxruntime sama sekali. `pkgver()` memakai `git describe`,
 jadi build dari tag tepat `2026.42.0` dan build di antaranya mendapat sufiks
 `.r<n>.g<sha>`.
 
-**Paket ini belum diterbitkan ke AUR.** `packaging/arch/README.md` berisi langkah
-menerbitkannya; sampai itu dilakukan, paket Arch dipasang dari `.pkg.tar.zst` di
-halaman rilis, atau dibangun sendiri dengan `cd packaging/arch && makepkg -si`.
+**Paket ini belum diterbitkan ke AUR, dan sekarang memang belum bisa:** registrasi
+akun AUR sedang ditutup sementara (pihak AUR membatasi pendaftaran karena banjir akun
+otomatis), jadi paketnya tidak bisa dibuat di sana sama sekali — bukan karena ada yang
+perlu diperbaiki di sini. Saat pendaftaran dibuka kembali, satu-satunya prasyarat adalah
+akun, dan seluruh pekerjaannya hanya `git push` sekali (`packaging/arch/README.md`
+berisi langkahnya, belum pernah dijalankan). Sampai itu terjadi, paket Arch dipasang dari
+`.pkg.tar.zst` di halaman rilis, atau dibangun sendiri dengan
+`cd packaging/arch && makepkg -si`.
 
 ## Pelajaran yang mahal: dependensi yang tidak terlihat
 

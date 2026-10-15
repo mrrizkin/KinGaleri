@@ -516,26 +516,42 @@ jobs:
         with:
           path: dist
 
-      - name: Show what will be published
-        run: find dist -type f -printf '%P  %s bytes\n' | sort
+      # Each artifact arrives in its own directory, but a release asset is
+      # downloaded flat. Flattening first means the checksum list names the files
+      # the way a user actually has them, so `sha256sum -c SHA256SUMS` works in the
+      # download directory instead of only under CI's internal layout.
+      - name: Flatten the artifacts
+        run: |
+          set -eux
+          cd dist
+          find . -mindepth 2 -type f -exec mv -t . {} +
+          find . -mindepth 1 -maxdepth 1 -type d -empty -delete
+          find . -type f -printf '%P  %s bytes\n' | sort
 
-      # The AppImage is ~100 MB and the release is the only place the checksums
-      # can come from, so generate them here rather than after the fact.
+      # The AppImage is ~150 MB and the release is the practical place the
+      # checksums can come from, so they are generated and then verified here.
       - name: Write checksums
         run: |
           set -eux
           cd dist
-          find . -type f ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS
           sha256sum -c --quiet SHA256SUMS
           cat SHA256SUMS
 
-      - name: Create release
+      # Idempotent on purpose: a re-run after a failure has to be able to fix the
+      # release rather than trip over "release already exists".
+      - name: Create or update the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eux
-          gh release create "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Kin Galeri $GITHUB_REF_NAME" \
-            --generate-notes \
-            $(find dist -type f | sort)
+          files=$(find dist -type f | sort)
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber $files
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Kin Galeri $GITHUB_REF_NAME" \
+              --generate-notes \
+              $files
+          fi

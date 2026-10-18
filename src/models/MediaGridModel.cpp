@@ -6,6 +6,7 @@
 #include "core/grouping/DateGrouper.h"
 #include "core/grouping/EventClusterer.h"
 #include "core/grouping/GroupingService.h"
+#include "core/indexer/FolderIndexer.h"
 #include "core/model/SourceAlbum.h"
 
 #include <QDateTime>
@@ -883,6 +884,61 @@ QVariantMap MediaGridModel::itemAt(int itemIndex) const
     map.insert(QStringLiteral("durationMs"), item.durationMs);
     map.insert(QStringLiteral("orientation"), item.orientation);
     map.insert(QStringLiteral("thumbUrl"), buildThumbUrl(item.id, entry->revision));
+    return map;
+}
+
+QVariantMap MediaGridModel::itemForPath(const QString &path) const
+{
+    if (path.isEmpty()) {
+        return {};
+    }
+
+    const QFileInfo info(localPath(path));
+    const QString absolute = QDir::cleanPath(info.absoluteFilePath());
+    const QString canonical = info.canonicalFilePath();
+
+    qint64 id = -1;
+    if (m_database) {
+        // Two attempts on purpose: the indexer may have stored either the literal
+        // path or the symlink-resolved one, depending on the scan options.
+        const QString candidates[] = { canonical.isEmpty() ? absolute : canonical, absolute };
+        for (const QString &candidate : candidates) {
+            QSqlQuery query(m_database->connection());
+            query.prepare(QStringLiteral(
+                "SELECT id FROM media WHERE path = :path "
+                "ORDER BY (deleted_at IS NULL) DESC, id DESC LIMIT 1"));
+            query.bindValue(QStringLiteral(":path"), candidate);
+            if (query.exec() && query.next()) {
+                id = query.value(0).toLongLong();
+                break;
+            }
+        }
+    }
+
+    if (id >= 0) {
+        QVariantMap map = mediaDetail(id);
+        map.insert(QStringLiteral("mediaId"), id);
+        // mediaDetail resolves thumbUrl through the loaded grid, which is empty
+        // whenever the file is filtered out of it; build it directly instead.
+        map.insert(QStringLiteral("thumbUrl"), buildThumbUrl(id, m_thumbnailRevisions.value(id, 0)));
+        return map;
+    }
+
+    // Not indexed: build a minimal viewer payload straight from the file so an
+    // unindexed photo still opens (mediaId -1 disables model navigation).
+    QVariantMap map;
+    map.insert(QStringLiteral("mediaId"), qint64(-1));
+    map.insert(QStringLiteral("id"), qint64(-1));
+    map.insert(QStringLiteral("path"), absolute);
+    map.insert(QStringLiteral("fileName"), info.fileName());
+    map.insert(QStringLiteral("kind"),
+               FolderIndexer::isVideoExtension(info.suffix().toLower())
+                   ? QStringLiteral("video")
+                   : QStringLiteral("image"));
+    map.insert(QStringLiteral("isSynthetic"), false);
+    map.insert(QStringLiteral("isFavorite"), false);
+    map.insert(QStringLiteral("orientation"), 1);
+    map.insert(QStringLiteral("thumbUrl"), QString());
     return map;
 }
 

@@ -194,7 +194,7 @@ untuk menerapkannya segera.
 ## 9. Baris perintah
 
 ```
-kin-galeri [opsi]
+kin-galeri [opsi] [file...]
 
   -i, --index <folder>        Index folder (bisa diulang)
       --db <file>             Pakai file database lain
@@ -210,6 +210,11 @@ kin-galeri [opsi]
       --perf-overlay          Mulai dengan overlay frame-time
       --bench-scroll <s>      Benchmark gulir otomatis selama <s> detik
 ```
+
+Argumen `file...` membuka berkas gambar/video yang diberikan langsung di penampil, bukan di
+halaman Pustaka. Inilah yang dipakai desktop entry (`Exec=kin-galeri %F`), jadi **Open with → Kin
+Galeri** dari Thunar, Nautilus, atau file manager lain akan menampilkan berkas yang Anda klik
+meskipun berkas itu belum ada di pustaka.
 
 ## 10. Lokasi data
 

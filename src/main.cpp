@@ -228,6 +228,9 @@ int main(int argc, char *argv[])
     }
 
     controller.setStartupRequests(options.seedBenchmarkCount, options.indexFolders);
+    // Files handed over by a file manager (`Exec=kin-galeri %F`) are opened in the
+    // viewer after the startup chain, regardless of the --index/benchmark path.
+    controller.setStartupOpenPaths(options.openPaths);
     controller.setScrollBenchmarkSeconds(options.benchScrollSeconds);
     // Precedence: explicit --thumb-memory-cache pins the budget, otherwise the
     // persisted setting wins (0 = adaptive, sized from the visible grid).

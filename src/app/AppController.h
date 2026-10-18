@@ -162,6 +162,11 @@ public:
     /// Called from main() once the QML engine exists, using CLI options.
     void setStartupRequests(int seedRows, const QStringList &indexFolders);
 
+    /// Positional file arguments from the command line (a file manager's
+    /// `%F`). The first existing path is opened in the viewer once the startup
+    /// work is done, so the grid model it navigates from is already loaded.
+    void setStartupOpenPaths(const QStringList &paths) { m_startupOpenPaths = paths; }
+
     /// Enables/disables seeding a brand-new library with the home folder as its
     /// root. main() turns this off for benchmarks, seeding and explicit --index
     /// runs, where scanning a home directory would poison the measurement.
@@ -224,6 +229,11 @@ signals:
     /// `--no-ui` uses this to exit deterministically instead of guessing.
     void startupCompleted();
 
+    /// Emitted after the startup chain so QML can open the file(s) passed on the
+    /// command line in the viewer. Paths are absolute and still unfiltered; QML
+    /// resolves them through MediaGridModel::itemForPath().
+    void openFilesRequested(const QStringList &paths);
+
     /// Emitted after finishScrollBenchmark() has printed its report.
     void scrollBenchmarkFinished();
 
@@ -271,6 +281,8 @@ private:
 
     int m_startupSeedRows = 0;
     QStringList m_startupIndexFolders;
+    /// Files passed on the command line, opened once startup finishes.
+    QStringList m_startupOpenPaths;
     /// True while the initial CLI-requested job chain is still running.
     bool m_startupChainActive = false;
     /// True once the startup chain has handed off to a smart-grouping pass, so

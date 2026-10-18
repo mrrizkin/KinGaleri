@@ -80,6 +80,10 @@ Popup {
     }
 
     function step(delta) {
+        // A file opened from a file manager may not be in the current model (its
+        // mediaId is -1), in which case there is nothing to step through.
+        if (viewer.itemIndex < 0)
+            return
         const next = viewer.itemIndex + delta
         if (next < 0 || next >= viewer.model.itemCount)
             return

@@ -103,6 +103,15 @@ CliOptions parseCli(const QStringList &args)
     opts.databasePath = parser.value(optDb);
     opts.cachePath = parser.value(optCache);
 
+    // A file manager hands the selected file(s) over as plain positional
+    // arguments (`Exec=kin-galeri %F`). They are not options, so they survive in
+    // positionalArguments() and are collected here to be opened in the viewer.
+    for (const QString &argument : parser.positionalArguments()) {
+        if (!argument.isEmpty()) {
+            opts.openPaths.append(argument);
+        }
+    }
+
     bool ok = false;
     const QString seedRaw = parser.value(optSeed);
     if (!seedRaw.isEmpty()) {
@@ -167,7 +176,7 @@ CliOptions parseCli(const QStringList &args)
 void printHelp(const QString &programName)
 {
     QTextStream out(stdout);
-    out << "Usage: " << programName << " [options]\n\n";
+    out << "Usage: " << programName << " [options] [file...]\n\n";
     out << "Options:\n"
         << "  -h, --help                 Show this help.\n"
         << "  -v, --version              Show the version.\n"
@@ -186,6 +195,9 @@ void printHelp(const QString &programName)
         << "      --clear-benchmark      Delete the synthetic rows --seed-benchmark created, and exit.\n"
         << "      --software-render      Force the Qt Quick software renderer.\n"
         << "      --no-home-scan         Do not seed a fresh library with the home folder.\n\n";
+    out << "Files:\n"
+        << "  file...                    Open the given image/video in the viewer. This is\n"
+        << "                             what a file manager passes through `Exec=... %F`.\n\n";
     out << "Benchmark examples:\n"
         << "  # seed 50k synthetic rows, then measure sustained scrolling\n"
         << "  " << programName << " --db /tmp/kg-bench.db --cache /tmp/kg-cache \\\n"

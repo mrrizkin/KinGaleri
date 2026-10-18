@@ -41,6 +41,11 @@ struct CliOptions
     /// --index <folder>: scan a real folder. Repeatable.
     QStringList indexFolders;
 
+    /// Positional file arguments, i.e. what a file manager passes through the
+    /// desktop entry's `Exec=kin-galeri %F`. The first existing path opens in the
+    /// viewer instead of leaving the user at the library page.
+    QStringList openPaths;
+
     /// --db <file>
     QString databasePath;
 

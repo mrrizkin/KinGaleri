@@ -71,6 +71,22 @@ ApplicationWindow {
         function onSystemIconsChanged() { Theme.systemIcons = window.app.settings.systemIcons }
     }
 
+    // A file opened from a file manager arrives as a command-line argument and is
+    // surfaced here once the startup chain has finished loading the model. Only
+    // the first path is shown; %F can pass several but the viewer is single-item.
+    Connections {
+        target: window.app
+        function onOpenFilesRequested(paths) {
+            if (!paths || paths.length === 0)
+                return
+            const payload = window.app.model.itemForPath(paths[0])
+            if (payload && payload.path) {
+                viewer.payload = payload
+                viewer.open()
+            }
+        }
+    }
+
     // Keep the binding as the steady-state fallback for settings changes made
     // from QML and for bindings restored after component completion.
     Binding {

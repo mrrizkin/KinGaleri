@@ -27,6 +27,7 @@ private slots:
     void warnsOnUnknownOption();
     void resetAndRebuildFlags();
     void homeScanIsOnByDefaultAndOptOut();
+    void openPathsComeFromPositionalArguments();
 };
 
 void TestCliOptions::defaultsPreserveAdaptiveThumbnailBudget()
@@ -134,6 +135,27 @@ void TestCliOptions::homeScanIsOnByDefaultAndOptOut()
     QVERIFY(parseCli({QStringLiteral("kin-galeri")}).autoHomeScan);
     QVERIFY(!parseCli({QStringLiteral("kin-galeri"), QStringLiteral("--no-home-scan")})
                  .autoHomeScan);
+}
+
+void TestCliOptions::openPathsComeFromPositionalArguments()
+{
+    // A file manager invokes `kin-galeri %F`, which arrives as plain positional
+    // arguments. They must be collected without being mistaken for options.
+    const CliOptions opts = parseCli({QStringLiteral("kin-galeri"),
+                                      QStringLiteral("/tmp/photo one.jpg"),
+                                      QStringLiteral("/tmp/clip.mp4")});
+
+    QCOMPARE(opts.openPaths,
+             QStringList({QStringLiteral("/tmp/photo one.jpg"), QStringLiteral("/tmp/clip.mp4")}));
+    QVERIFY(opts.warnings.isEmpty());
+
+    // Options and files can be mixed in any order.
+    const CliOptions mixed = parseCli({QStringLiteral("kin-galeri"), QStringLiteral("/tmp/a.png"),
+                                       QStringLiteral("--no-home-scan")});
+    QCOMPARE(mixed.openPaths, QStringList({QStringLiteral("/tmp/a.png")}));
+    QVERIFY(!mixed.autoHomeScan);
+
+    QVERIFY(parseCli({QStringLiteral("kin-galeri")}).openPaths.isEmpty());
 }
 
 QTEST_MAIN(TestCliOptions)

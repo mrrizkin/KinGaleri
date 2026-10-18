@@ -638,6 +638,29 @@ void AppController::finishStartupChain()
     if (!m_startupChainActive) {
         return;
     }
+    // A file passed on the command line (file manager "Open with") is opened as
+    // soon as the model reflects whatever indexing had to happen first. This
+    // runs before the smart-grouping pass so a long grouping job cannot hide the
+    // file the user asked for behind a spinner.
+    if (!m_startupOpenPaths.isEmpty()) {
+        const QStringList requested = m_startupOpenPaths;
+        m_startupOpenPaths.clear();
+        QStringList existing;
+        for (const QString &item : requested) {
+            const QFileInfo info(localPath(item));
+            if (info.isFile()) {
+                existing.append(info.absoluteFilePath());
+            }
+        }
+        if (!existing.isEmpty()) {
+            if (qEnvironmentVariableIsSet("KG_DEBUG")) {
+                std::fprintf(stderr, "kin-galeri[debug]: opening %d command-line file(s), first='%s'\n",
+                             static_cast<int>(existing.size()),
+                             qUtf8Printable(existing.first()));
+            }
+            Q_EMIT openFilesRequested(existing);
+        }
+    }
     // The smart-grouping pass is the last step of the startup chain, and
     // startupCompleted() deliberately waits for it: otherwise --no-ui would exit
     // while Places/Events/faces were still being written.

@@ -245,6 +245,13 @@ public:
     /// Flattened item access for the row models and for QML tooltips.
     Q_INVOKABLE QVariantMap itemAt(int itemIndex) const;
 
+    /// Payload for a file path, used when a file is opened from the command line
+    /// (a file manager's "Open with"). Looks the path up in the library first so
+    /// the viewer can favourite/navigate it; when the file is not indexed it
+    /// still returns a payload with mediaId -1 built from the file itself, so an
+    /// unindexed photo opens instead of silently landing on the library page.
+    Q_INVOKABLE QVariantMap itemForPath(const QString &path) const;
+
     /// Day label of a grid row. The sticky section header asks for this as the
     /// user scrolls, so it has to be cheap: it only touches the row's first entry.
     Q_INVOKABLE QString rowDayLabel(int rowIndex) const;

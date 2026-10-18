@@ -65,6 +65,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="2026.42.3" date="2026-10-18">
+      <description>
+        <p>Opening a file from a file manager now enters that file's folder
+        album before showing it, so previous/next stay inside the same album
+        instead of walking the whole library.</p>
+      </description>
+    </release>
     <release version="2026.42.2" date="2026-10-18">
       <description>
         <p>Fixes "Open with": files passed by a file manager now open in the

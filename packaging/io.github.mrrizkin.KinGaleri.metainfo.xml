@@ -65,6 +65,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="2026.42.4" date="2026-10-18">
+      <description>
+        <p>"Open with" now scopes the grid and viewer to the file's exact
+        folder rather than its source album, and indexes only that folder
+        without recursing, so a file-manager launch no longer starts a
+        home/library scan. Previous/next stay among the folder's immediate
+        children.</p>
+      </description>
+    </release>
     <release version="2026.42.3" date="2026-10-18">
       <description>
         <p>Opening a file from a file manager now enters that file's folder

@@ -134,8 +134,8 @@ Versions follow `v<year>.<ISO week>.<patch>`, the scheme this author's other
 repositories use. The tag is the source of truth:
 
 ```bash
-scripts/next-version.sh            # v2026.42.3 - the tag to create
-scripts/next-version.sh --current  # 2026.42.3 - what the binary reports
+scripts/next-version.sh            # v2026.42.4 - the tag to create
+scripts/next-version.sh --current  # 2026.42.4 - what the binary reports
 ```
 
 The patch counts releases inside a single week, so it resets when the week rolls

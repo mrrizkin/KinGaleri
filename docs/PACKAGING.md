@@ -35,7 +35,7 @@ backend berbeda, bukan satu target tanpa pemutaran video.
 **PKGBUILD Arch memakai paket distro.** `PKGBUILD` (`kin-galeri-git`) bergantung pada
 `libmpvqt1`-nya Arch (`mpvqt`) dan hanya membundel ONNX Runtime, karena Arch
 tidak punya paket onnxruntime sama sekali. `pkgver()` memakai `git describe`,
-jadi build dari tag tepat `2026.42.3` dan build di antaranya mendapat sufiks
+jadi build dari tag tepat `2026.42.4` dan build di antaranya mendapat sufiks
 `.r<n>.g<sha>`.
 
 **Paket ini belum diterbitkan ke AUR, dan sekarang memang belum bisa:** registrasi
@@ -110,8 +110,8 @@ sekarang). Versi di `CMakeLists.txt` mengalir ke `--version`, `CPACK_PACKAGE_VER
 dan `pkgver`.
 
 ```bash
-./scripts/next-version.sh            # v2026.42.3
-git tag v2026.42.3 && git push origin v2026.42.3
+./scripts/next-version.sh            # v2026.42.4
+git tag v2026.42.4 && git push origin v2026.42.4
 ```
 
 Tag `v*` memicu `package.yml`: keempat artefak dibangun, smoke test dijalankan,

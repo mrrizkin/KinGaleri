@@ -79,11 +79,18 @@ ApplicationWindow {
         function onOpenFilesRequested(paths) {
             if (!paths || paths.length === 0)
                 return
-            const payload = window.app.model.itemForPath(paths[0])
-            if (payload && payload.path) {
-                viewer.payload = payload
-                viewer.open()
-            }
+            const model = window.app.model
+            const payload = model.itemForPath(paths[0])
+            if (!payload || !payload.path)
+                return
+            // Enter the file's folder album first, exactly like clicking an
+            // album card, so the viewer's prev/next stay inside that folder
+            // instead of walking every photo. Unindexed files (mediaId < 0)
+            // have no album to enter and simply open on their own.
+            if (payload.mediaId >= 0 && payload.sourceAlbum)
+                window.openAlbum("source", 0, payload.sourceAlbum)
+            viewer.payload = payload
+            viewer.open()
         }
     }
 

@@ -134,6 +134,7 @@ private slots:
     void albumNameIsCaseInsensitive();
     void albumCardsMergeManualAndSource();
     void albumCoverUrlTracksRevision();
+    void itemForPathCarriesAlbumForScopedViewer();
 
     void renameMovesFileAndUndoRestoresIt();
     void renameRejectsPathSeparatorAndCollision();
@@ -345,6 +346,46 @@ void TestMediaGridModel::albumCrudAndFiltering()
     // Deleting the album being viewed clears the filter.
     QCOMPARE(model.albumId(), 0);
     QCOMPARE(model.itemCount(), 2);
+}
+
+void TestMediaGridModel::itemForPathCarriesAlbumForScopedViewer()
+{
+    LibraryFixture fixture;
+    QString error;
+    QVERIFY2(fixture.open(&error), qUtf8Printable(error));
+    const qint64 a = fixture.addMedia(QStringLiteral("a.png"), kJan2020,
+                                      QStringLiteral("vacation"), false,
+                                      QStringLiteral("vacation"));
+    const qint64 b = fixture.addMedia(QStringLiteral("b.png"), kJun2020,
+                                      QStringLiteral("vacation"), false,
+                                      QStringLiteral("vacation"));
+    const qint64 c = fixture.addMedia(QStringLiteral("c.png"), kJun2020,
+                                      QStringLiteral("work"), false,
+                                      QStringLiteral("work"));
+    QVERIFY(a > 0 && b > 0 && c > 0);
+
+    MediaGridModel model;
+    model.attachDatabase(fixture.db.get());
+    model.reload();
+    QCOMPARE(model.itemCount(), 3);
+
+    // This is what Main.qml's "Open with" handler reads: the payload has to
+    // carry both the id and the source album used to scope the viewer.
+    const QVariantMap payload = model.itemForPath(fixture.pathOf(QStringLiteral("a.png"),
+                                                                 QStringLiteral("vacation")));
+    QCOMPARE(payload.value(QStringLiteral("mediaId")).toLongLong(), a);
+    QCOMPARE(payload.value(QStringLiteral("sourceAlbum")).toString(),
+             QStringLiteral("vacation"));
+
+    // Entering that album filters the grid, and the opened file is inside it,
+    // so the viewer can step to its album neighbours instead of walking the
+    // whole library.
+    model.setSourceAlbum(payload.value(QStringLiteral("sourceAlbum")).toString());
+    QCOMPARE(model.itemCount(), 2);
+    const int index = model.indexOfId(a);
+    QVERIFY(index >= 0);
+    const QVariantMap next = model.itemAt(index == 0 ? 1 : 0);
+    QCOMPARE(next.value(QStringLiteral("sourceAlbum")).toString(), QStringLiteral("vacation"));
 }
 
 void TestMediaGridModel::albumNameIsCaseInsensitive()

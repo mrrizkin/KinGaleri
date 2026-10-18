@@ -222,7 +222,9 @@ kin-galeri [opsi] [file...]
 Argumen `file...` membuka berkas gambar/video yang diberikan langsung di penampil, bukan di
 halaman Pustaka. Inilah yang dipakai desktop entry (`Exec=kin-galeri %F`), jadi **Open with → Kin
 Galeri** dari Thunar, Nautilus, atau file manager lain akan menampilkan berkas yang Anda klik
-meskipun berkas itu belum ada di pustaka.
+meskipun berkas itu belum ada di pustaka. Berkas yang sudah terindeks juga **membuka album
+folder-nya lebih dulu**, sehingga tombol ←/→ di penampil tetap berada di folder/album yang sama,
+bukan berpindah ke seluruh foto. Berkas yang belum terindeks tetap terbuka sendiri (tanpa album).
 
 ## 10. Lokasi data
 

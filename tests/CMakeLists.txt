@@ -49,6 +49,8 @@ add_library(kin-galeri-testcore STATIC
 
     ${CMAKE_SOURCE_DIR}/src/core/indexer/FolderIndexer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/indexer/FolderIndexer.h
+    ${CMAKE_SOURCE_DIR}/src/core/indexer/MediaSniffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/indexer/MediaSniffer.h
     ${CMAKE_SOURCE_DIR}/src/core/indexer/LibraryWatcher.cpp
     ${CMAKE_SOURCE_DIR}/src/core/indexer/LibraryWatcher.h
 
@@ -91,6 +93,7 @@ kg_add_test(tst_librarywatcher)
 kg_add_test(tst_mediagridmodel)
 kg_add_test(tst_librarymaintenance)
 kg_add_test(tst_folderindexer)
+kg_add_test(tst_mediasniffer)
 kg_add_test(tst_grouping)
 kg_add_test(tst_imageloader)
 kg_add_test(tst_faceclusterer)

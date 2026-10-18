@@ -87,7 +87,10 @@ private:
     struct Extracted;
 
     /// Reads EXIF + dimensions for one file. Pure: safe to call concurrently.
-    static Extracted extractOne(const QFileInfo &info);
+    /// When `sniffUnknown` is set, a file whose extension is off the allowlist
+    /// is identified from its header first; non-media files come back with
+    /// `media == false` and must not be upserted.
+    static Extracted extractOne(const QFileInfo &info, bool sniffUnknown);
 
     /// Capture date derived from the filename, or 0 when no pattern matches.
     static TakenAt deriveTakenAtFromFilename(const QString &fileName);

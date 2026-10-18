@@ -21,6 +21,7 @@ Item {
 
     /// Whether the editable built-in junk list is expanded in the Library tab.
     property bool junkExpanded: false
+    property bool sniffExpanded: false
 
     // Category rail model. Order matches componentFor() below.
     ListModel {
@@ -677,6 +678,88 @@ Item {
                     description: qsTr("Ignore node_modules, caches, toolchains and similar non-media trees. The exact list is editable below.")
                     checked: root.settings.ignoreJunk
                     onToggled: function (value) { root.settings.ignoreJunk = value }
+                }
+                ToggleRow {
+                    label: qsTr("Detect media by content")
+                    description: qsTr("For files with an ambiguous extension, read the file header to recognise images and videos. Clear-media extensions are never re-read, and unknown extensions that are not listed below are ignored without opening the file.")
+                    checked: root.settings.sniffUnknownExtensions
+                    onToggled: function (value) { root.settings.sniffUnknownExtensions = value }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    spacing: 8
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: qsTr("%1 ambiguous extension(s) checked by content")
+                                .arg(root.settings.sniffExtensions.length)
+                        color: Theme.textMuted
+                        font.pixelSize: 12
+                    }
+                    Button {
+                        text: root.sniffExpanded ? qsTr("Hide") : qsTr("Customize…")
+                        onClicked: root.sniffExpanded = !root.sniffExpanded
+                    }
+                }
+
+                Repeater {
+                    model: root.sniffExpanded ? root.settings.sniffExtensions : []
+
+                    delegate: RowLayout {
+                        required property string modelData
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Label {
+                            Layout.fillWidth: true
+                            text: "." + modelData
+                            color: Theme.text
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                        }
+                        Button {
+                            text: qsTr("Remove")
+                            onClicked: root.settings.removeSniffExtension(modelData)
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: root.sniffExpanded
+                    spacing: 8
+
+                    TextField {
+                        id: sniffExtensionField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Add extension (e.g. ts, jfif)")
+                        onAccepted: {
+                            root.settings.addSniffExtension(text)
+                            text = ""
+                        }
+                    }
+                    Button {
+                        text: qsTr("Add")
+                        onClicked: {
+                            root.settings.addSniffExtension(sniffExtensionField.text)
+                            sniffExtensionField.text = ""
+                        }
+                    }
+                    Button {
+                        text: qsTr("Reset")
+                        onClicked: root.settings.resetSniffExtensions()
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    visible: root.sniffExpanded
+                    text: qsTr("Extensions here are only checked while “Detect media by content” is on. Files without an extension are always checked. Remove “ts” to stop opening your TypeScript sources.")
+                    color: Theme.textFaint
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
                 }
 
                 RowLayout {

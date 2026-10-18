@@ -236,6 +236,8 @@ set(KG_SOURCES
 
     src/core/indexer/FolderIndexer.cpp
     src/core/indexer/FolderIndexer.h
+    src/core/indexer/MediaSniffer.cpp
+    src/core/indexer/MediaSniffer.h
     src/core/indexer/LibraryWatcher.cpp
     src/core/indexer/LibraryWatcher.h
 

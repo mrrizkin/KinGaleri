@@ -1,6 +1,7 @@
 #include "core/indexer/FolderIndexer.h"
 
 #include "core/db/Database.h"
+#include "core/indexer/MediaSniffer.h"
 #include "core/indexer/ScanPolicy.h"
 #include "core/metadata/ExifReader.h"
 #include "core/model/SourceAlbum.h"
@@ -85,6 +86,13 @@ struct FolderIndexer::Extracted
 {
     QFileInfo info;
     bool video = false;
+    /// False when a header sniffed candidate turned out not to be media at all.
+    bool media = true;
+    /// True when the extension was unknown and the format came from the header.
+    bool sniffed = false;
+    /// Effective lower-case extension and MIME type (sniffed or from the name).
+    QString ext;
+    QString mime;
     qint64 takenMs = 0;
     QString takenSource;
     int width = 0;
@@ -216,11 +224,29 @@ FolderIndexer::TakenAt FolderIndexer::deriveTakenAtFromFilename(const QString &f
     return {0, QString()};
 }
 
-FolderIndexer::Extracted FolderIndexer::extractOne(const QFileInfo &info)
+FolderIndexer::Extracted FolderIndexer::extractOne(const QFileInfo &info, bool sniffUnknown)
 {
     Extracted out;
     out.info = info;
-    out.video = isVideoExtension(info.suffix());
+    out.ext = info.suffix().toLower();
+    out.video = isVideoExtension(out.ext);
+
+    // Hybrid detection: a file that is not on the extension allowlist only gets
+    // in when its header says it is an image/video. This is the only extra read
+    // the hybrid path costs, and it never happens for known extensions.
+    if (sniffUnknown && !isSupportedExtension(out.ext)) {
+        const SniffResult sniffed = MediaSniffer::sniff(info.absoluteFilePath());
+        if (!sniffed.media) {
+            out.media = false;
+            return out;
+        }
+        out.sniffed = true;
+        out.ext = sniffed.extension;
+        out.video = sniffed.video;
+        out.mime = sniffed.mime;
+    } else {
+        out.mime = guessMimeType(out.ext);
+    }
 
     // PRD 8 fallback chain: EXIF -> filename pattern -> file mtime. The winning
     // source is persisted so the value can be audited later.
@@ -400,6 +426,7 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
     pending.reserve(kExtractBatchSize);
     int writesSinceFlush = 0;
     bool cancelled = false;
+    const bool sniffUnknown = m_scanOptions.sniffUnknownExtensions;
 
     auto drainPending = [&]() -> bool {
         if (pending.isEmpty()) {
@@ -412,7 +439,9 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
 
         const QList<Extracted> extracted =
             QtConcurrent::mapped(&pool, batch,
-                                 [](const QFileInfo &info) { return extractOne(info); })
+                                 [sniffUnknown](const QFileInfo &info) {
+                                     return extractOne(info, sniffUnknown);
+                                 })
                 .results();
 
         if (!beginIfNeeded()) {
@@ -422,11 +451,21 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
         for (const Extracted &item : extracted) {
             const QFileInfo &info = item.info;
 
+            // A candidate whose header turned out not to be media never gets a
+            // row, and is not counted as scanned.
+            if (!item.media) {
+                continue;
+            }
+            if (item.sniffed) {
+                ++result.scanned;
+                lastFile = info.absoluteFilePath();
+            }
+
             upsert.bindValue(QStringLiteral(":path"), info.absoluteFilePath());
             upsert.bindValue(QStringLiteral(":root"), rootId);
             upsert.bindValue(QStringLiteral(":filename"), info.fileName());
-            upsert.bindValue(QStringLiteral(":ext"), info.suffix().toLower());
-            upsert.bindValue(QStringLiteral(":mime"), guessMimeType(info.suffix()));
+            upsert.bindValue(QStringLiteral(":ext"), item.ext);
+            upsert.bindValue(QStringLiteral(":mime"), item.mime);
             upsert.bindValue(QStringLiteral(":size"), info.size());
             upsert.bindValue(QStringLiteral(":mtime"), info.lastModified().toMSecsSinceEpoch() * 1000000LL);
             upsert.bindValue(QStringLiteral(":taken"), item.takenMs);
@@ -550,16 +589,21 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
                 continue;
             }
 
-            if (!isSupportedExtension(entry.suffix())) {
+            const QString entryExt = entry.suffix().toLower();
+            const bool knownExtension = isSupportedExtension(entryExt);
+            // Second list: only extensions that may or may not be media get a
+            // header check. Anything else that is not clear media is ignored
+            // without opening the file at all. Extensionless files (camera dumps,
+            // downloads) are always candidates while sniffing is on.
+            const bool sniffCandidate = !knownExtension && sniffUnknown
+                && (entryExt.isEmpty() || m_scanOptions.sniffExtensions.contains(entryExt));
+            if (!knownExtension && !sniffCandidate) {
                 continue;
             }
 
-            ++result.scanned;
-            lastFile = entry.absoluteFilePath();
-
-            // `seen` drives the deletion reconcile after the loop, so every
-            // supported file that still exists has to land here, even the cheap
-            // skipped ones.
+            // `seen` drives the deletion reconcile after the loop. Sniff
+            // candidates are included so a file that was indexed under a
+            // sniffed format is not reconciled away on the next pass.
             seen.insert(entry.absoluteFilePath());
 
             // Incremental scan (PRD F-1.3): an unchanged mtime+size means none of
@@ -570,8 +614,16 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
             if (unchangedQuery.exec() && unchangedQuery.next()
                 && unchangedQuery.value(0).toLongLong() == mtimeNs
                 && unchangedQuery.value(1).toLongLong() == entry.size()) {
+                // A row exists, so the file counted as media when it was indexed.
+                ++result.scanned;
+                lastFile = entry.absoluteFilePath();
                 ++result.unchanged;
                 continue;
+            }
+
+            if (knownExtension) {
+                ++result.scanned;
+                lastFile = entry.absoluteFilePath();
             }
 
             pending.append(entry);

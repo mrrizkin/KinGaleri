@@ -316,6 +316,26 @@
         <translation>Abaikan node_modules, cache, toolchain, dan pohon non-media serupa. Daftar persisnya dapat diedit di bawah.</translation>
     </message>
     <message>
+        <source>Detect media by content</source>
+        <translation>Deteksi media dari isi berkas</translation>
+    </message>
+    <message>
+        <source>For files with an ambiguous extension, read the file header to recognise images and videos. Clear-media extensions are never re-read, and unknown extensions that are not listed below are ignored without opening the file.</source>
+        <translation>Untuk berkas dengan ekstensi ambigu, baca header berkas untuk mengenali gambar dan video. Ekstensi media yang jelas tidak pernah dibaca ulang, dan ekstensi tak dikenal yang tidak terdaftar di bawah diabaikan tanpa membuka berkasnya.</translation>
+    </message>
+    <message>
+        <source>%1 ambiguous extension(s) checked by content</source>
+        <translation>%1 ekstensi ambigu diperiksa dari isi</translation>
+    </message>
+    <message>
+        <source>Add extension (e.g. ts, jfif)</source>
+        <translation>Tambah ekstensi (mis. ts, jfif)</translation>
+    </message>
+    <message>
+        <source>Extensions here are only checked while “Detect media by content” is on. Files without an extension are always checked. Remove “ts” to stop opening your TypeScript sources.</source>
+        <translation>Ekstensi di sini hanya diperiksa saat “Deteksi media dari isi berkas” aktif. Berkas tanpa ekstensi selalu diperiksa. Hapus “ts” agar sumber TypeScript Anda tidak dibuka.</translation>
+    </message>
+    <message>
         <source>%1 built-in junk pattern(s)</source>
         <translation>%1 pola sampah bawaan</translation>
     </message>

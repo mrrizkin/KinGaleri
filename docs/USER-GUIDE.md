@@ -156,7 +156,13 @@ tersimpan, tidak ada tombol Apply.
 - **Library** — daftar folder pustaka dengan jumlah item dan tombol **Remove**, **Add folder…**,
   **Rescan now**; pantau perubahan berkas otomatis; pindai ulang saat mulai; opsi pemindaian:
   ikuti symlink, sertakan folder tersembunyi, lewati folder sampah (daftar polanya terlihat & bisa
-  diedit lewat tombol **Customize…**: tambah pola, hapus per baris, atau **Reset** ke bawaan). Di
+  diedit lewat tombol **Customize…**: tambah pola, hapus per baris, atau **Reset** ke bawaan), serta
+  **Detect media by content**. Deteksi pakai dua daftar: **allow list** (ekstensi media yang
+  jelas, mis. `png`/`jpg`/`mp4`) diindeks langsung tanpa membaca berkas, dan **sniff list**
+  (ekstensi ambigu, mis. `ts` yang bisa MPEG-TS *atau* TypeScript) dibaca header-nya dulu;
+  ekstensi di luar keduanya **diabaikan tanpa dibuka**. Daftar sniff bisa diedit lewat
+  **Customize…** (tambah/hapus/**Reset**); berkas tanpa ekstensi selalu dicek. Mematikan opsi ini
+  membuat pemindaian murni mengandalkan allow list. Di
   bawahnya ada **folder yang
   diabaikan** (tambah lewat dialog, tombol Remove per baris; seluruh isi folder ikut dilewati) dan
   **pola nama** (glob dipisah koma, mis. `Screenshots`, `backup*`). Junk diatur oleh toggle **Lewati
@@ -175,7 +181,9 @@ thumbnail di bilah status. Nyalakan hanya jika Anda ingin alat diagnostik itu; f
 
 Preferensi disimpan di `~/.config/kin/Kin Galeri.conf`. Opsi pemindaian (symlink/tersembunyi/sampah,
 termasuk folder & pola yang diabaikan) berlaku pada pemindaian berikutnya; tekan **Rescan now**
-untuk menerapkannya segera.
+untuk menerapkannya segera. Mengubah **Detect media by content** atau daftar sniff-nya langsung
+memicu pemindaian ulang agar berkas yang baru dikenali (atau tidak lagi dikenali) segera
+muncul/hilang.
 
 ## 8. Papan tombol
 

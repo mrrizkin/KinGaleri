@@ -42,6 +42,8 @@ constexpr auto kGridDisplayLimitKey = "library/grid_limit";
 constexpr auto kFollowSymlinksKey = "library/follow_symlinks";
 constexpr auto kIncludeHiddenKey = "library/include_hidden";
 constexpr auto kIgnoreJunkKey = "library/ignore_junk";
+constexpr auto kSniffUnknownKey = "library/sniff_unknown";
+constexpr auto kSniffExtensionsKey = "library/sniff_extensions";
 constexpr auto kJunkPatternsKey = "library/junk_patterns";
 constexpr auto kIgnoredFoldersKey = "library/ignored_folders";
 constexpr auto kIgnoredPatternsKey = "library/ignored_patterns";
@@ -147,6 +149,9 @@ void AppSettings::load()
     m_followSymlinks = value(kFollowSymlinksKey, false).toBool();
     m_includeHidden = value(kIncludeHiddenKey, false).toBool();
     m_ignoreJunk = value(kIgnoreJunkKey, true).toBool();
+    m_sniffUnknownExtensions = value(kSniffUnknownKey, true).toBool();
+    m_sniffExtensions = normaliseExtensions(
+        value(kSniffExtensionsKey, scan::defaultSniffExtensions()).toStringList());
     m_junkPatterns = normaliseIgnoredPatterns(
         value(kJunkPatternsKey, scan::defaultJunkPatterns()).toStringList());
     m_ignoredFolders = normaliseIgnoredFolders(
@@ -285,6 +290,23 @@ QStringList AppSettings::normaliseIgnoredPatterns(const QStringList &patterns)
     for (const QString &raw : patterns) {
         const QString trimmed = raw.trimmed();
         if (trimmed.isEmpty() || out.contains(trimmed)) {
+            continue;
+        }
+        out.append(trimmed);
+    }
+    return out;
+}
+
+QStringList AppSettings::normaliseExtensions(const QStringList &extensions)
+{
+    QStringList out;
+    for (const QString &raw : extensions) {
+        QString trimmed = raw.trimmed().toLower();
+        while (trimmed.startsWith(QLatin1Char('.'))) {
+            trimmed.remove(0, 1);
+        }
+        // A separator would only be a typo in a comma/space separated list.
+        if (trimmed.isEmpty() || trimmed.contains(QLatin1Char(' ')) || out.contains(trimmed)) {
             continue;
         }
         out.append(trimmed);
@@ -521,6 +543,50 @@ void AppSettings::setIgnoreJunk(bool value)
     m_ignoreJunk = value;
     writeSetting(kIgnoreJunkKey, m_ignoreJunk);
     Q_EMIT ignoreJunkChanged();
+}
+
+void AppSettings::setSniffUnknownExtensions(bool value)
+{
+    if (value == m_sniffUnknownExtensions) {
+        return;
+    }
+    m_sniffUnknownExtensions = value;
+    writeSetting(kSniffUnknownKey, m_sniffUnknownExtensions);
+    Q_EMIT sniffUnknownExtensionsChanged();
+}
+
+void AppSettings::setSniffExtensions(const QStringList &extensions)
+{
+    const QStringList normalised = normaliseExtensions(extensions);
+    if (normalised == m_sniffExtensions) {
+        return;
+    }
+    m_sniffExtensions = normalised;
+    writeSetting(kSniffExtensionsKey, m_sniffExtensions);
+    Q_EMIT sniffExtensionsChanged();
+}
+
+void AppSettings::addSniffExtension(const QString &extension)
+{
+    QStringList updated = m_sniffExtensions;
+    updated.append(extension);
+    setSniffExtensions(updated);
+}
+
+void AppSettings::removeSniffExtension(const QString &extension)
+{
+    QStringList updated = m_sniffExtensions;
+    for (int i = updated.size() - 1; i >= 0; --i) {
+        if (updated.at(i).compare(extension, Qt::CaseInsensitive) == 0) {
+            updated.removeAt(i);
+        }
+    }
+    setSniffExtensions(updated);
+}
+
+void AppSettings::resetSniffExtensions()
+{
+    setSniffExtensions(scan::defaultSniffExtensions());
 }
 
 void AppSettings::setJunkPatterns(const QStringList &patterns)

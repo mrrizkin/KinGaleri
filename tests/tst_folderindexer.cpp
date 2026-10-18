@@ -73,6 +73,9 @@ private slots:
     void ignoredPatternsPruneByName();
     void junkPatternsAreEditable();
     void emptyFolderIsNotAnError();
+    void sniffsUnknownExtensionsWhenEnabled();
+    void ambiguousSniffListIsTheOnlyGate();
+    void skipsUnknownExtensionsWhenDisabled();
 };
 
 void TestFolderIndexer::supportedExtensionsCoverPhotosAndVideos()
@@ -331,6 +334,110 @@ void TestFolderIndexer::junkPatternsAreEditable()
     QCOMPARE(pathCount(db, dir.filePath(QStringLiteral("node_modules/nm.png"))), 1);
     QCOMPARE(pathCount(db, dir.filePath(QStringLiteral("MyJunk/junk.png"))), 0);
     QCOMPARE(mediaCount(db), 2);
+}
+
+void TestFolderIndexer::sniffsUnknownExtensionsWhenEnabled()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QVERIFY(writePng(dir.filePath(QStringLiteral("a.png")), 4));
+    // A real PNG whose name carries no usable extension: only the header can
+    // tell the indexer what it is.
+    const QString mystery = dir.filePath(QStringLiteral("mystery.blob"));
+    QVERIFY(QFile::copy(dir.filePath(QStringLiteral("a.png")), mystery));
+    QFile text(dir.filePath(QStringLiteral("notes.txt")));
+    QVERIFY(text.open(QIODevice::WriteOnly));
+    text.write("hello");
+    text.close();
+
+    Database db(dir.filePath(QStringLiteral("library.db")));
+    QString error;
+    QVERIFY2(db.open(&error), qUtf8Printable(error));
+    QVERIFY2(db.migrate(&error), qUtf8Printable(error));
+
+    FolderIndexer indexer(&db);
+    FolderIndexer::ScanOptions options;
+    options.sniffUnknownExtensions = true;
+    options.sniffExtensions = {QStringLiteral("blob")};
+    indexer.setScanOptions(options);
+    const FolderIndexer::Result result = indexer.run(dir.path());
+
+    QVERIFY2(result.ok(), qUtf8Printable(result.error));
+    // Both the named and the header-only PNG count; the text file does not.
+    QCOMPARE(result.scanned, 2);
+    QCOMPARE(mediaCount(db), 2);
+    QCOMPARE(pathCount(db, mystery), 1);
+
+    // The row carries the sniffed format, not the on-disk extension.
+    QSqlQuery query(db.connection());
+    query.prepare(QStringLiteral("SELECT ext, kind FROM media WHERE path = ?"));
+    query.addBindValue(mystery);
+    QVERIFY(query.exec());
+    QVERIFY(query.next());
+    QCOMPARE(query.value(0).toString(), QStringLiteral("png"));
+    QCOMPARE(query.value(1).toString(), QStringLiteral("image"));
+}
+
+void TestFolderIndexer::ambiguousSniffListIsTheOnlyGate()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QVERIFY(writePng(dir.filePath(QStringLiteral("a.png")), 4));
+    // In the sniff list: a media file hiding behind an ambiguous extension.
+    const QString disguised = dir.filePath(QStringLiteral("clip.ts"));
+    QVERIFY(QFile::copy(dir.filePath(QStringLiteral("a.png")), disguised));
+    // NOT in the sniff list: never opened, even though the bytes are media.
+    const QString unlisted = dir.filePath(QStringLiteral("mystery.blob"));
+    QVERIFY(QFile::copy(dir.filePath(QStringLiteral("a.png")), unlisted));
+    // In the sniff list but not media: rejected by the header check.
+    QFile source(dir.filePath(QStringLiteral("app.ts")));
+    QVERIFY(source.open(QIODevice::WriteOnly));
+    source.write("export const x = 1;\n");
+    source.close();
+
+    Database db(dir.filePath(QStringLiteral("library.db")));
+    QString error;
+    QVERIFY2(db.open(&error), qUtf8Printable(error));
+    QVERIFY2(db.migrate(&error), qUtf8Printable(error));
+
+    FolderIndexer indexer(&db);
+    FolderIndexer::ScanOptions options;
+    options.sniffUnknownExtensions = true;
+    options.sniffExtensions = {QStringLiteral("ts")};
+    indexer.setScanOptions(options);
+    const FolderIndexer::Result result = indexer.run(dir.path());
+
+    QVERIFY2(result.ok(), qUtf8Printable(result.error));
+    QCOMPARE(result.scanned, 2);
+    QCOMPARE(mediaCount(db), 2);
+    QCOMPARE(pathCount(db, disguised), 1);
+    QCOMPARE(pathCount(db, unlisted), 0);
+    QCOMPARE(pathCount(db, dir.filePath(QStringLiteral("app.ts"))), 0);
+}
+
+void TestFolderIndexer::skipsUnknownExtensionsWhenDisabled()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QVERIFY(writePng(dir.filePath(QStringLiteral("a.png")), 4));
+    const QString mystery = dir.filePath(QStringLiteral("mystery.blob"));
+    QVERIFY(QFile::copy(dir.filePath(QStringLiteral("a.png")), mystery));
+
+    Database db(dir.filePath(QStringLiteral("library.db")));
+    QString error;
+    QVERIFY2(db.open(&error), qUtf8Printable(error));
+    QVERIFY2(db.migrate(&error), qUtf8Printable(error));
+
+    FolderIndexer indexer(&db);
+    FolderIndexer::ScanOptions options;
+    options.sniffUnknownExtensions = false;
+    indexer.setScanOptions(options);
+    const FolderIndexer::Result result = indexer.run(dir.path());
+
+    QVERIFY2(result.ok(), qUtf8Printable(result.error));
+    QCOMPARE(result.scanned, 1);
+    QCOMPARE(mediaCount(db), 1);
+    QCOMPARE(pathCount(db, mystery), 0);
 }
 
 void TestFolderIndexer::emptyFolderIsNotAnError()

@@ -61,6 +61,12 @@ class AppSettings : public QObject
     Q_PROPERTY(bool followSymlinks READ followSymlinks WRITE setFollowSymlinks NOTIFY followSymlinksChanged)
     Q_PROPERTY(bool includeHidden READ includeHidden WRITE setIncludeHidden NOTIFY includeHiddenChanged)
     Q_PROPERTY(bool ignoreJunk READ ignoreJunk WRITE setIgnoreJunk NOTIFY ignoreJunkChanged)
+    /** Hybrid media detection: for a file whose extension is unknown, read its
+     *  header to recognise images/videos. Known extensions are never re-read. */
+    Q_PROPERTY(bool sniffUnknownExtensions READ sniffUnknownExtensions WRITE setSniffUnknownExtensions NOTIFY sniffUnknownExtensionsChanged)
+    /** Ambiguous extensions (e.g. "ts") that get a header check; editable by
+     *  the user. Every other unknown extension is ignored without any I/O. */
+    Q_PROPERTY(QStringList sniffExtensions READ sniffExtensions NOTIFY sniffExtensionsChanged)
     /** Editable built-in junk patterns (node_modules, caches, toolchains...).
      *  Applied only while ignoreJunk is on. */
     Q_PROPERTY(QStringList junkPatterns READ junkPatterns NOTIFY junkPatternsChanged)
@@ -171,6 +177,16 @@ public:
     bool ignoreJunk() const { return m_ignoreJunk; }
     void setIgnoreJunk(bool value);
 
+    bool sniffUnknownExtensions() const { return m_sniffUnknownExtensions; }
+    void setSniffUnknownExtensions(bool value);
+
+    QStringList sniffExtensions() const { return m_sniffExtensions; }
+    void setSniffExtensions(const QStringList &extensions);
+    Q_INVOKABLE void addSniffExtension(const QString &extension);
+    Q_INVOKABLE void removeSniffExtension(const QString &extension);
+    /// Restores the list shipped with the app.
+    Q_INVOKABLE void resetSniffExtensions();
+
     QStringList junkPatterns() const { return m_junkPatterns; }
     void setJunkPatterns(const QStringList &patterns);
     Q_INVOKABLE void addJunkPattern(const QString &pattern);
@@ -241,6 +257,8 @@ public:
     static QStringList normaliseIgnoredFolders(const QStringList &folders);
     /// Trims/dedupes glob patterns, dropping empties.
     static QStringList normaliseIgnoredPatterns(const QStringList &patterns);
+    /// Lower-cases, strips a leading dot, trims and de-duplicates extensions.
+    static QStringList normaliseExtensions(const QStringList &extensions);
 
     /// Accent names offered by the settings page, in display order.
     static QStringList accentNames();
@@ -269,6 +287,8 @@ signals:
     void followSymlinksChanged();
     void includeHiddenChanged();
     void ignoreJunkChanged();
+    void sniffUnknownExtensionsChanged();
+    void sniffExtensionsChanged();
     void junkPatternsChanged();
     void ignoredFoldersChanged();
     void ignoredPatternsChanged();
@@ -306,6 +326,8 @@ private:
     bool m_followSymlinks = false;
     bool m_includeHidden = false;
     bool m_ignoreJunk = true;
+    bool m_sniffUnknownExtensions = true;
+    QStringList m_sniffExtensions = scan::defaultSniffExtensions();
     QStringList m_junkPatterns = scan::defaultJunkPatterns();
     QStringList m_ignoredFolders;
     QStringList m_ignoredPatterns;

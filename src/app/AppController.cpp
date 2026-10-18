@@ -153,6 +153,10 @@ bool AppController::initialise(const QString &databasePath, int thumbnailEdge, Q
     connect(m_settings, &AppSettings::followSymlinksChanged, this, &AppController::applyWatcherSettings);
     connect(m_settings, &AppSettings::ignoredFoldersChanged, this, &AppController::applyWatcherSettings);
     connect(m_settings, &AppSettings::ignoredPatternsChanged, this, &AppController::applyWatcherSettings);
+    // Hybrid detection changes which files qualify, so re-index to pick up (or
+    // drop) header-detected items right away.
+    connect(m_settings, &AppSettings::sniffUnknownExtensionsChanged, this, &AppController::rescanLibrary);
+    connect(m_settings, &AppSettings::sniffExtensionsChanged, this, &AppController::rescanLibrary);
     // Turning smart grouping on (or asking for auto analysis) should produce a
     // result without the user having to press the rebuild button as well.
     connect(m_settings, &AppSettings::smartChanged, this, &AppController::maybeRunSmartGrouping);
@@ -534,6 +538,8 @@ FolderIndexer::ScanOptions AppController::currentScanOptions() const
         options.followSymlinks = m_settings->followSymlinks();
         options.includeHidden = m_settings->includeHidden();
         options.ignoreJunk = m_settings->ignoreJunk();
+        options.sniffUnknownExtensions = m_settings->sniffUnknownExtensions();
+        options.sniffExtensions = m_settings->sniffExtensions();
         options.junkPatterns = m_settings->junkPatterns();
         const QStringList ignoredFolders = m_settings->ignoredFolders();
         for (const QString &path : ignoredFolders) {

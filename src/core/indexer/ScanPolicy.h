@@ -72,6 +72,30 @@ inline bool matchesAnyGlob(const QStringList &patterns, const QString &name)
     return QDir::match(lowered, name.toLower());
 }
 
+/// Extensions that are plausibly media but not on the clear-media allowlist.
+/// The motivating case is `.ts`: MPEG transport stream to a camera, TypeScript
+/// source to a developer. Only these extensions (plus extensionless files) are
+/// opened for a header check when hybrid detection is on; every other unknown
+/// extension is ignored without any I/O. The user can edit this list, so treat
+/// it as a seed/default.
+inline QStringList defaultSniffExtensions()
+{
+    return {
+        QStringLiteral("ts"),
+        // JPEG container aliases seen in the wild.
+        QStringLiteral("jfif"),
+        QStringLiteral("jpe"),
+        QStringLiteral("jif"),
+        QStringLiteral("jfi"),
+        QStringLiteral("pjpeg"),
+        // Still frames whose extension alone does not say "clearly media".
+        QStringLiteral("apng"),
+        QStringLiteral("avifs"),
+        QStringLiteral("heics"),
+        QStringLiteral("heifs"),
+    };
+}
+
 /**
  * User-tunable pruning knobs, driven by AppSettings. Defaults reproduce the
  * conservative home-scan behaviour (skip hidden + junk).
@@ -83,6 +107,15 @@ struct Options
     /// Descend into symlinked directories. Off by default: a home directory can
     /// contain links back into itself, which would duplicate rows and loop.
     bool followSymlinks = false;
+    /// Hybrid detection: when a file's extension is not on the allowlist, read
+    /// its header to recognise images/videos anyway. Known extensions never pay
+    /// this extra read. On by default so a JPEG that lost its name still lands in
+    /// the library, while the common case stays I/O-free.
+    bool sniffUnknownExtensions = true;
+    /// The only unknown extensions worth a header check. Matched case-
+    /// insensitively against the extension without the dot. Extensionless files
+    /// are always treated as candidates while sniffUnknownExtensions is on.
+    QStringList sniffExtensions = defaultSniffExtensions();
     /// Absolute, cleaned paths the user explicitly excluded. A directory matching
     /// one of these (or living under one) is pruned.
     QSet<QString> ignoredPaths;

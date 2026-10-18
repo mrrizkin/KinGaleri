@@ -28,6 +28,7 @@ private slots:
     void normalisesStartupPage();
     void normalisesNumericRanges();
     void normalisesIgnoredLists();
+    void normalisesSniffExtensions();
     void explicitThemeDrivesDarkFlag();
     void choicePersistsAcrossInstances();
     void garbageFallsBackToSystem();
@@ -134,6 +135,27 @@ void TestAppSettings::normalisesIgnoredLists()
     QVERIFY(!settings.junkPatterns().contains(QStringLiteral("MyJunk")));
     settings.resetJunkPatterns();
     QCOMPARE(settings.junkPatterns(), junk);
+}
+
+void TestAppSettings::normalisesSniffExtensions()
+{
+    // Lower-cases, strips leading dots, trims, drops empties and de-duplicates.
+    const QStringList normalised = AppSettings::normaliseExtensions(
+        {".TS", " JFIF ", ".jfif", "", "  ", "JIF"});
+    QCOMPARE(normalised, QStringList({"ts", "jfif", "jif"}));
+
+    AppSettings settings;
+    const QStringList defaults = settings.sniffExtensions();
+    QVERIFY(defaults.contains(QStringLiteral("ts")));
+    QVERIFY(defaults.contains(QStringLiteral("jfif")));
+    QVERIFY(!defaults.contains(QString()));
+
+    settings.addSniffExtension(QStringLiteral(".webm2"));
+    QCOMPARE(settings.sniffExtensions().count(QStringLiteral("webm2")), 1);
+    settings.removeSniffExtension(QStringLiteral("TS"));
+    QVERIFY(!settings.sniffExtensions().contains(QStringLiteral("ts")));
+    settings.resetSniffExtensions();
+    QCOMPARE(settings.sniffExtensions(), defaults);
 }
 
 void TestAppSettings::explicitThemeDrivesDarkFlag()

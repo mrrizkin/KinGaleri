@@ -1213,13 +1213,22 @@ ApplicationWindow {
     Popup {
         id: detailsSheet
 
-        visible: window.detailsVisible
         width: Math.min(560, window.width - 60)
         height: Math.min(window.height - 100, content.implicitHeight + 30)
         anchors.centerIn: parent
         modal: true
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        // The popup lifecycle, not a `visible:` binding, is what keeps
+        // window.detailsVisible in step. Binding `visible` to it looked simpler
+        // but the popup writes `visible` itself when the user clicks outside or
+        // presses Escape; that assignment destroyed the binding and left
+        // detailsVisible stuck at true. From then on showDetails() was a no-op
+        // (same value, no change signal) so the sheet never reopened, and the
+        // stale modal overlay swallowed the right-click that should have opened
+        // the context menu.
+        onClosed: window.detailsVisible = false
 
         background: Rectangle {
             color: Theme.surface
@@ -1313,6 +1322,25 @@ ApplicationWindow {
                     onClicked: window.detailsVisible = false
                 }
             }
+        }
+    }
+
+    // Drives the details sheet from window.detailsVisible through the popup
+    // lifecycle. Opening it one event-loop turn later matters when the request
+    // came from a context menu: the Menu is still playing its close transition
+    // in the same turn, and stacking a second modal popup on top of it can leave
+    // the menu's overlay in place, which is what made the next right-click feel
+    // dead.
+    Connections {
+        target: window
+        function onDetailsVisibleChanged() {
+            if (window.detailsVisible)
+                Qt.callLater(function () {
+                    if (window.detailsVisible)
+                        detailsSheet.open()
+                })
+            else
+                detailsSheet.close()
         }
     }
 

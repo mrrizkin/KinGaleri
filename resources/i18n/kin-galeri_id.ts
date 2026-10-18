@@ -703,6 +703,14 @@
 <context>
     <name>Main</name>
     <message>
+        <source>Empty recycle bin</source>
+        <translation>Kosongkan tong sampah</translation>
+    </message>
+    <message>
+        <source>Removes %1 item(s) from the library. Files on disk are not deleted.</source>
+        <translation>Menghapus %1 item dari library. File di disk tidak dihapus.</translation>
+    </message>
+    <message>
         <source>Add a folder with your photos to get started.</source>
         <translation>Tambahkan folder berisi foto Anda untuk memulai.</translation>
     </message>

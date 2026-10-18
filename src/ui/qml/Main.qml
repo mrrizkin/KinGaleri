@@ -371,6 +371,22 @@ ApplicationWindow {
                 ToolTip.visible: hovered
             }
 
+            // Emptying the bin lives here, in the recycle-bin view itself, rather
+            // than in the sidebar: it is contextual and this keeps the sidebar to
+            // navigation only. Emptying removes library rows, never files on disk,
+            // and the confirmation says so (PRD 4.3).
+            ToolButton {
+                visible: window.libraryPage === "photos" && window.app.model.trashOnly
+                text: qsTr("Empty recycle bin")
+                enabled: window.app.model.trashCount > 0
+                onClicked: window.confirmThen(
+                               qsTr("Removes %1 item(s) from the library. Files on disk are not deleted.")
+                                   .arg(window.app.model.trashCount),
+                               function () { window.app.model.emptyTrash() })
+                ToolTip.text: qsTr("Empty recycle bin")
+                ToolTip.visible: hovered
+            }
+
             ToolSeparator {}
 
             ToolButton {
@@ -435,8 +451,6 @@ ApplicationWindow {
             app: window.app
             developerMode: window.developerMode
             currentPage: window.libraryPage
-            onAddFolderRequested: folderDialog.open()
-            onClearThumbnailCacheRequested: window.app.clearThumbnailCache()
             onAlbumsRequested: window.libraryPage = "albums"
             onPhotosRequested: window.libraryPage = "photos"
             onSettingsRequested: window.libraryPage = "settings"

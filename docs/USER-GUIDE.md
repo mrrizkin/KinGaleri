@@ -28,7 +28,7 @@ Cara membangun paket ada di `packaging/`, `PACKAGING.md` dan `../packaging/READM
 
 ## 2. Menambahkan foto
 
-Klik **Tambah folder…** di bilah kiri bawah dan pilih folder berisi foto. Pemindaian berjalan di latar
+Klik **Tambah folder…** di **Pengaturan → Library** dan pilih folder berisi foto. Pemindaian berjalan di latar
 belakang dan bisa dibatalkan lewat tombol **Cancel** di header.
 
 Folder yang sudah ditambahkan akan dipantau (`inotify`): menambah, mengubah, atau menghapus file di
@@ -225,7 +225,7 @@ meskipun berkas itu belum ada di pustaka.
 | Konfigurasi | `~/.config/kin/Kin Galeri.conf` |
 
 Database dan cache **terpisah** dari folder foto, jadi menghapusnya tidak menyentuh file asli. Cache
-thumbnail bisa dibersihkan dari sidebar (**Bersihkan cache thumbnail**).
+thumbnail bisa dibersihkan dari **Pengaturan → Storage** (**Bersihkan cache thumbnail**).
 
 ## 11. Pemecahan masalah
 

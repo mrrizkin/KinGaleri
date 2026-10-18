@@ -7,8 +7,6 @@ Rectangle {
 
     required property var app
 
-    signal addFolderRequested()
-    signal clearThumbnailCacheRequested()
     signal albumsRequested()
     signal photosRequested()
     signal settingsRequested()
@@ -204,32 +202,6 @@ Rectangle {
             onTapped: root.settingsRequested()
         }
 
-        Button {
-            Layout.fillWidth: true
-            palette.button: Theme.surfaceAlt
-            palette.buttonText: Theme.text
-            palette.text: Theme.text
-            text: qsTr("Empty recycle bin")
-            enabled: root.app.model.trashCount > 0
-            onClicked: emptyConfirm.open()
-        }
-        Button {
-            Layout.fillWidth: true
-            palette.button: Theme.surfaceAlt
-            palette.buttonText: Theme.text
-            palette.text: Theme.text
-            text: qsTr("Add folder…")
-            onClicked: root.addFolderRequested()
-        }
-        Button {
-            Layout.fillWidth: true
-            palette.button: Theme.surfaceAlt
-            palette.buttonText: Theme.text
-            palette.text: Theme.text
-            text: qsTr("Clear thumbnail cache")
-            onClicked: root.clearThumbnailCacheRequested()
-        }
-
         Label {
             Layout.fillWidth: true
             visible: root.developerMode
@@ -240,26 +212,6 @@ Rectangle {
             topPadding: 6
         }
     }
-    }
-
-    // Emptying the bin only removes library rows; the files stay on disk, and the
-    // dialog says so explicitly so nobody assumes a destructive delete (PRD 4.3).
-    Dialog {
-        id: emptyConfirm
-        anchors.centerIn: Overlay.overlay
-        modal: true
-        width: 360
-        title: qsTr("Empty recycle bin?")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        Label {
-            width: 320
-            wrapMode: Text.WordWrap
-            text: qsTr("Removes %1 item(s) from the library. Files on disk are not deleted.")
-                    .arg(root.app.model.trashCount)
-        }
-
-        onAccepted: root.app.model.emptyTrash()
     }
 
     component NavEntry: Rectangle {

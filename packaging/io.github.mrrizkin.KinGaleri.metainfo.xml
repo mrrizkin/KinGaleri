@@ -65,6 +65,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="2026.42.2" date="2026-10-18">
+      <description>
+        <p>Fixes "Open with": files passed by a file manager now open in the
+        viewer instead of dropping the user on the grid. The details sheet can
+        be reopened after it is closed with Escape or a click outside, the
+        sidebar keeps only navigation, and scanning can recognise images and
+        videos by content for ambiguous extensions such as .ts, with the list of
+        ambiguous extensions editable in Settings.</p>
+      </description>
+    </release>
     <release version="2026.42.1" date="2026-10-15">
       <description>
         <p>Fixes the generated benchmark rows. They exist to measure a large

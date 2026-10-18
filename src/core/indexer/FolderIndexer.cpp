@@ -323,6 +323,21 @@ qint64 FolderIndexer::ensureRoot(const QString &folder, bool synthetic)
 
 FolderIndexer::Result FolderIndexer::run(const QString &folder, const std::atomic_bool *cancel)
 {
+    return runInternal(folder, cancel, /*recursive=*/true, QString(), /*reconcile=*/true);
+}
+
+FolderIndexer::Result FolderIndexer::runShallow(const QString &folder, const QString &coveringRoot,
+                                                const std::atomic_bool *cancel)
+{
+    // A shallow walk never sees the subdirectories, so reconciling would delete
+    // every row below this folder. Leave deletion to a full scan or the watcher.
+    return runInternal(folder, cancel, /*recursive=*/false, coveringRoot, /*reconcile=*/false);
+}
+
+FolderIndexer::Result FolderIndexer::runInternal(const QString &folder, const std::atomic_bool *cancel,
+                                                  bool recursive, const QString &coveringRoot,
+                                                  bool reconcile)
+{
     Result result;
     result.folder = folder;
 
@@ -340,7 +355,10 @@ FolderIndexer::Result FolderIndexer::run(const QString &folder, const std::atomi
         return result;
     }
 
-    const qint64 rootId = ensureRoot(folderInfo.absoluteFilePath(), false);
+    // Upsert under the covering root when the caller knows one, so a shallow
+    // "Open with" refresh of a subfolder does not add a duplicate library root.
+    const QString rootPath = coveringRoot.isEmpty() ? folderInfo.absoluteFilePath() : coveringRoot;
+    const qint64 rootId = ensureRoot(rootPath, false);
     if (rootId < 0) {
         result.error = QStringLiteral("Could not register library root '%1'").arg(folder);
         return result;
@@ -581,6 +599,10 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
                     }
                     visitedDirectories.insert(canonical);
                 }
+                // Shallow scans only look at the folder they were given.
+                if (!recursive) {
+                    continue;
+                }
                 directoryStack.append(entry.absoluteFilePath());
                 continue;
             }
@@ -661,7 +683,7 @@ WHERE media.mtime_ns <> excluded.mtime_ns OR media.size_bytes <> excluded.size_b
     // one by one" pass: it is O(rows) instead of O(rows * delete), and it stays
     // in SQLite's page cache. Reconcile also runs when the tree became empty -
     // otherwise an emptied folder would keep its ghosts forever.
-    if (result.error.isEmpty()) {
+    if (reconcile && result.error.isEmpty()) {
         QString reconcileError;
         if (!m_database->begin(&reconcileError)) {
             result.error = QStringLiteral("Could not start reconciliation: %1").arg(reconcileError);

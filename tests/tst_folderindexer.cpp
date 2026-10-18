@@ -44,6 +44,15 @@ int pathCount(Database &db, const QString &path)
     return -1;
 }
 
+int rootCount(Database &db)
+{
+    QSqlQuery query(db.connection());
+    if (query.exec(QStringLiteral("SELECT COUNT(*) FROM roots")) && query.next()) {
+        return query.value(0).toInt();
+    }
+    return -1;
+}
+
 } // namespace
 
 /**
@@ -76,6 +85,8 @@ private slots:
     void sniffsUnknownExtensionsWhenEnabled();
     void ambiguousSniffListIsTheOnlyGate();
     void skipsUnknownExtensionsWhenDisabled();
+    void shallowScanDoesNotRecurseOrReconcile();
+    void shallowScanReusesCoveringRoot();
 };
 
 void TestFolderIndexer::supportedExtensionsCoverPhotosAndVideos()
@@ -551,6 +562,65 @@ void TestFolderIndexer::ignoredPatternsPruneByName()
     QVERIFY2(result.ok(), qUtf8Printable(result.error));
     QCOMPARE(result.scanned, 1);
     QCOMPARE(mediaCount(db), 1);
+}
+
+void TestFolderIndexer::shallowScanDoesNotRecurseOrReconcile()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QVERIFY(writePng(dir.filePath(QStringLiteral("a.png")), 4));
+    QVERIFY(QDir().mkpath(dir.filePath(QStringLiteral("sub"))));
+    QVERIFY(writePng(dir.filePath(QStringLiteral("sub/b.png")), 4));
+
+    Database db(dir.filePath(QStringLiteral("library.db")));
+    QString error;
+    QVERIFY2(db.open(&error), qUtf8Printable(error));
+    QVERIFY2(db.migrate(&error), qUtf8Printable(error));
+
+    FolderIndexer indexer(&db);
+    QVERIFY(indexer.run(dir.path()).ok());
+    QCOMPARE(mediaCount(db), 2);
+    QCOMPARE(rootCount(db), 1);
+
+    // Touch the top-level file so the shallow pass actually has work.
+    QTest::qWait(20);
+    QVERIFY(writePng(dir.filePath(QStringLiteral("a.png")), 9));
+
+    const FolderIndexer::Result shallow = indexer.runShallow(dir.path());
+    QVERIFY2(shallow.ok(), qUtf8Printable(shallow.error));
+    // Only the folder given: sub/b.png is neither scanned nor reconciled away.
+    QCOMPARE(shallow.scanned, 1);
+    QCOMPARE(mediaCount(db), 2);
+    QCOMPARE(pathCount(db, dir.filePath(QStringLiteral("sub/b.png"))), 1);
+    // The folder did not become a second root.
+    QCOMPARE(rootCount(db), 1);
+}
+
+void TestFolderIndexer::shallowScanReusesCoveringRoot()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QVERIFY(writePng(dir.filePath(QStringLiteral("top.png")), 4));
+    const QString album = dir.filePath(QStringLiteral("album"));
+    QVERIFY(QDir().mkpath(album));
+    QVERIFY(writePng(album + QStringLiteral("/x.png"), 4));
+
+    Database db(dir.filePath(QStringLiteral("library.db")));
+    QString error;
+    QVERIFY2(db.open(&error), qUtf8Printable(error));
+    QVERIFY2(db.migrate(&error), qUtf8Printable(error));
+
+    FolderIndexer indexer(&db);
+    QVERIFY(indexer.run(dir.path()).ok());
+    QCOMPARE(rootCount(db), 1);
+
+    // Refreshing a subfolder must reuse the root that contains it, not register
+    // the subfolder as a new root.
+    const FolderIndexer::Result shallow = indexer.runShallow(album, dir.path());
+    QVERIFY2(shallow.ok(), qUtf8Printable(shallow.error));
+    QCOMPARE(shallow.scanned, 1);
+    QCOMPARE(rootCount(db), 1);
+    QCOMPARE(mediaCount(db), 2);
 }
 
 QTEST_MAIN(TestFolderIndexer)

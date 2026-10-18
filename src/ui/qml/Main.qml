@@ -83,12 +83,12 @@ ApplicationWindow {
             const payload = model.itemForPath(paths[0])
             if (!payload || !payload.path)
                 return
-            // Enter the file's folder album first, exactly like clicking an
-            // album card, so the viewer's prev/next stay inside that folder
-            // instead of walking every photo. Unindexed files (mediaId < 0)
-            // have no album to enter and simply open on their own.
-            if (payload.mediaId >= 0 && payload.sourceAlbum)
-                window.openAlbum("source", 0, payload.sourceAlbum)
+            // Scope the grid/viewer to the file's exact folder so prev/next stay
+            // inside that folder instead of walking every photo. The folder was
+            // indexed non-recursively before this signal fired, so its siblings
+            // are in the model already.
+            if (payload.mediaId >= 0 && payload.folderPath)
+                window.openFolder(payload.folderPath)
             viewer.payload = payload
             viewer.open()
         }
@@ -178,6 +178,7 @@ ApplicationWindow {
         model.eventId = 0
         model.smartCategory = ""
         model.tag = ""
+        model.folderPath = ""
         if (kind === "manual") {
             model.sourceAlbum = ""
             model.albumId = id
@@ -198,6 +199,7 @@ ApplicationWindow {
         model.filterKind = ""
         model.sourceAlbum = ""
         model.albumId = 0
+        model.folderPath = ""
         model.searchQuery = ""
         model.clearDateRange()
         model.clearSelection()
@@ -207,6 +209,31 @@ ApplicationWindow {
         model.eventId = item.kind === "event" ? item.id : 0
         model.smartCategory = item.kind === "smart" ? item.key : ""
         model.tag = item.kind === "tag" ? item.name : ""
+        window.libraryPage = "photos"
+    }
+
+    /// Scopes the photo grid to one exact folder (immediate children only) so
+    /// "Open with" can walk the file's folder instead of the whole library.
+    /// Mirrors openAlbum(): every other filter is cleared.
+    function openFolder(path) {
+        if (!path)
+            return
+        const model = window.app.model
+        model.trashOnly = false
+        model.favoritesOnly = false
+        model.filterKind = ""
+        model.sourceAlbum = ""
+        model.albumId = 0
+        model.placeId = 0
+        model.personId = 0
+        model.eventId = 0
+        model.smartCategory = ""
+        model.tag = ""
+        model.searchQuery = ""
+        model.clearDateRange()
+        model.clearSelection()
+        searchField.text = ""
+        model.folderPath = path
         window.libraryPage = "photos"
     }
 

@@ -362,6 +362,21 @@ void MediaGridModel::setSourceAlbum(const QString &album)
     reload();
 }
 
+void MediaGridModel::setFolderPath(const QString &path)
+{
+    // Clean and trim a trailing slash so the SQL prefix comparison below is
+    // unambiguous. "/" survives as the filesystem-root case.
+    QString cleaned = path.isEmpty() ? QString() : QDir::cleanPath(path);
+    if (cleaned.size() > 1 && cleaned.endsWith(QLatin1Char('/')))
+        cleaned.chop(1);
+    if (cleaned == m_folderPath) {
+        return;
+    }
+    m_folderPath = cleaned;
+    Q_EMIT filterChanged();
+    reload();
+}
+
 void MediaGridModel::setAlbumId(qint64 albumId)
 {
     const qint64 clamped = std::max<qint64>(0, albumId);
@@ -509,6 +524,7 @@ void MediaGridModel::clearFilters()
     m_filterKind.clear();
     m_favoritesOnly = false;
     m_sourceAlbum.clear();
+    m_folderPath.clear();
     m_searchQuery.clear();
     m_limit = 0;
     m_dateFrom = 0;
@@ -603,6 +619,15 @@ void MediaGridModel::reload()
     if (!m_sourceAlbum.isEmpty()) {
         sql += QStringLiteral("AND source_album = :album COLLATE NOCASE ");
     }
+    // Exact-folder scoping for "Open with": match only items whose *immediate*
+    // parent directory is m_folderPath. The prefix comparison is case-sensitive
+    // (paths on Linux are) and the instr() test rejects deeper descendants, so
+    // subfolders never leak into the viewer. LIKE is escaped because a folder
+    // name may legitimately contain % or _.
+    if (!m_folderPath.isEmpty()) {
+        sql += QStringLiteral("AND path LIKE :folderLike ESCAPE '\\' "
+                              "AND instr(substr(path, length(:folder) + 2), '/') = 0 ");
+    }
     // Capture-date range (PRD F-4.2). Bounds are epoch ms; 0 disables that side.
     // taken_at is nullable for rows with no EXIF/filename/mtime signal, and NULL
     // fails both comparisons, which is the honest behaviour: an item with no
@@ -689,6 +714,17 @@ void MediaGridModel::reload()
     }
     if (!m_sourceAlbum.isEmpty()) {
         query.bindValue(QStringLiteral(":album"), m_sourceAlbum);
+    }
+    if (!m_folderPath.isEmpty()) {
+        QString escaped;
+        escaped.reserve(m_folderPath.size() + 1);
+        for (const QChar &ch : m_folderPath) {
+            if (ch == QLatin1Char('\\') || ch == QLatin1Char('%') || ch == QLatin1Char('_'))
+                escaped += QLatin1Char('\\');
+            escaped += ch;
+        }
+        query.bindValue(QStringLiteral(":folder"), m_folderPath);
+        query.bindValue(QStringLiteral(":folderLike"), escaped + QLatin1Char('/') + QLatin1Char('%'));
     }
     if (m_dateFrom > 0) {
         query.bindValue(QStringLiteral(":dateFrom"), m_dateFrom);
@@ -815,6 +851,10 @@ void MediaGridModel::rebuildSummary()
     if (!m_sourceAlbum.isEmpty()) {
         filterText += QStringLiteral(" · ") + m_sourceAlbum;
     }
+    if (!m_folderPath.isEmpty()) {
+        const QString folderName = QFileInfo(m_folderPath).fileName();
+        filterText += QStringLiteral(" · ") + (folderName.isEmpty() ? m_folderPath : folderName);
+    }
     if (!m_searchQuery.isEmpty()) {
         filterText += tr(" · \"%1\"").arg(m_searchQuery);
     }
@@ -921,6 +961,9 @@ QVariantMap MediaGridModel::itemForPath(const QString &path) const
         // mediaDetail resolves thumbUrl through the loaded grid, which is empty
         // whenever the file is filtered out of it; build it directly instead.
         map.insert(QStringLiteral("thumbUrl"), buildThumbUrl(id, m_thumbnailRevisions.value(id, 0)));
+        // The exact folder, so "Open with" can scope the viewer to it.
+        if (!map.contains(QStringLiteral("folderPath")))
+            map.insert(QStringLiteral("folderPath"), QFileInfo(absolute).absolutePath());
         return map;
     }
 
@@ -930,6 +973,7 @@ QVariantMap MediaGridModel::itemForPath(const QString &path) const
     map.insert(QStringLiteral("mediaId"), qint64(-1));
     map.insert(QStringLiteral("id"), qint64(-1));
     map.insert(QStringLiteral("path"), absolute);
+    map.insert(QStringLiteral("folderPath"), info.absolutePath());
     map.insert(QStringLiteral("fileName"), info.fileName());
     map.insert(QStringLiteral("kind"),
                FolderIndexer::isVideoExtension(info.suffix().toLower())

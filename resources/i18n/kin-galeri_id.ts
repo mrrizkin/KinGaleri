@@ -1575,6 +1575,10 @@
         <translation>Memindai %1 folder…</translation>
     </message>
     <message>
+        <source>Scanning %1…</source>
+        <translation>Memindai %1…</translation>
+    </message>
+    <message>
         <source>Scanning… %1 seen, %2 indexed\n%3</source>
         <translation>Memindai… %1 terlihat, %2 terindeks\n%3</translation>
     </message>

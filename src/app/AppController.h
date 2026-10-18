@@ -188,6 +188,9 @@ public:
 
     Q_INVOKABLE void indexFolder(const QString &folder);
     Q_INVOKABLE void indexFolders(const QStringList &folders);
+    /// "Open with" variant: refresh each folder non-recursively under whatever
+    /// library root already contains it, instead of a full recursive scan.
+    void indexFolders(const QStringList &folders, bool shallow);
 
     Q_INVOKABLE void cancelCurrentJob();
 

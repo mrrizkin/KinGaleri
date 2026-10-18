@@ -134,6 +134,7 @@ private slots:
     void albumNameIsCaseInsensitive();
     void albumCardsMergeManualAndSource();
     void albumCoverUrlTracksRevision();
+    void folderPathFiltersToImmediateChildrenOnly();
     void itemForPathCarriesAlbumForScopedViewer();
 
     void renameMovesFileAndUndoRestoresIt();
@@ -348,6 +349,36 @@ void TestMediaGridModel::albumCrudAndFiltering()
     QCOMPARE(model.itemCount(), 2);
 }
 
+void TestMediaGridModel::folderPathFiltersToImmediateChildrenOnly()
+{
+    LibraryFixture fixture;
+    QString error;
+    QVERIFY2(fixture.open(&error), qUtf8Printable(error));
+    QVERIFY(fixture.addMedia(QStringLiteral("a.png"), kJan2020, QStringLiteral("album")) > 0);
+    QVERIFY(fixture.addMedia(QStringLiteral("deep.png"), kJan2020,
+                             QStringLiteral("album/sub")) > 0);
+    QVERIFY(fixture.addMedia(QStringLiteral("c.png"), kJan2020, QStringLiteral("other")) > 0);
+
+    MediaGridModel model;
+    model.attachDatabase(fixture.db.get());
+    model.reload();
+    QCOMPARE(model.itemCount(), 3);
+
+    const QString album = QFileInfo(fixture.pathOf(QStringLiteral("a.png"), QStringLiteral("album")))
+                              .absolutePath();
+    model.setFolderPath(album);
+
+    // Only the album's immediate children: the subfolder and the sibling folder
+    // are not part of this scope.
+    QCOMPARE(model.itemCount(), 1);
+    const QVariantMap only = model.itemAt(0);
+    QCOMPARE(only.value(QStringLiteral("fileName")).toString(), QStringLiteral("a.png"));
+
+    // Clearing the scope brings everything back.
+    model.setFolderPath(QString());
+    QCOMPARE(model.itemCount(), 3);
+}
+
 void TestMediaGridModel::itemForPathCarriesAlbumForScopedViewer()
 {
     LibraryFixture fixture;
@@ -376,6 +407,10 @@ void TestMediaGridModel::itemForPathCarriesAlbumForScopedViewer()
     QCOMPARE(payload.value(QStringLiteral("mediaId")).toLongLong(), a);
     QCOMPARE(payload.value(QStringLiteral("sourceAlbum")).toString(),
              QStringLiteral("vacation"));
+    // "Open with" scopes the viewer by this exact folder path.
+    QCOMPARE(payload.value(QStringLiteral("folderPath")).toString(),
+             QFileInfo(fixture.pathOf(QStringLiteral("a.png"), QStringLiteral("vacation")))
+                 .absolutePath());
 
     // Entering that album filters the grid, and the opened file is inside it,
     // so the viewer can step to its album neighbours instead of walking the

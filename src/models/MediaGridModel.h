@@ -106,6 +106,9 @@ class MediaGridModel : public QAbstractListModel
     Q_PROPERTY(QString filterKind READ filterKind WRITE setFilterKind NOTIFY filterChanged)
     Q_PROPERTY(bool favoritesOnly READ favoritesOnly WRITE setFavoritesOnly NOTIFY filterChanged)
     Q_PROPERTY(QString sourceAlbum READ sourceAlbum WRITE setSourceAlbum NOTIFY filterChanged)
+    /** Exact-file-folder filter used by "Open with": only items whose immediate
+     *  parent directory is this path. Empty = no folder filter. */
+    Q_PROPERTY(QString folderPath READ folderPath WRITE setFolderPath NOTIFY filterChanged)
     Q_PROPERTY(int limit READ limit WRITE setLimit NOTIFY filterChanged)
     Q_PROPERTY(QString searchQuery READ searchQuery WRITE setSearchQuery NOTIFY filterChanged)
     Q_PROPERTY(bool trashOnly READ trashOnly WRITE setTrashOnly NOTIFY filterChanged)
@@ -197,6 +200,9 @@ public:
 
     QString sourceAlbum() const { return m_sourceAlbum; }
     void setSourceAlbum(const QString &album);
+
+    QString folderPath() const { return m_folderPath; }
+    void setFolderPath(const QString &path);
 
     int limit() const { return m_limit; }
     void setLimit(int limit);
@@ -452,6 +458,7 @@ private:
     QString m_filterKind;
     bool m_favoritesOnly = false;
     QString m_sourceAlbum;
+    QString m_folderPath;
     QString m_searchQuery;
     bool m_trashOnly = false;
     qint64 m_albumId = 0;

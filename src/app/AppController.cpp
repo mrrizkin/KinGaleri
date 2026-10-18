@@ -701,6 +701,29 @@ void AppController::runStartupRequests()
         indexFolders(folders);
         return;
     }
+    // A file passed by a file manager ("Open with") wins over the automatic
+    // first-run home scan and the rescan-on-startup setting: index only the
+    // folders the files live in, non-recursively, so the viewer has their
+    // siblings without walking the whole library.
+    if (!m_startupOpenPaths.isEmpty()) {
+        QStringList folders;
+        for (const QString &item : m_startupOpenPaths) {
+            const QFileInfo info(localPath(item));
+            if (!info.isFile()) {
+                continue;
+            }
+            const QString folder = info.absolutePath();
+            if (!folder.isEmpty() && !folders.contains(folder)) {
+                folders.append(folder);
+            }
+        }
+        if (!folders.isEmpty()) {
+            setStatus(tr("Scanning %1…").arg(QDir::toNativeSeparators(folders.first())));
+            m_startupChainActive = true;
+            indexFolders(folders, /*shallow=*/true);
+            return;
+        }
+    }
     // Fresh library with no user roots: index the home folder by default so the
     // first launch shows photos immediately instead of an empty gallery. The
     // marker is written before scanning so a crash mid-scan does not re-trigger
@@ -892,6 +915,11 @@ void AppController::indexFolder(const QString &folder)
 
 void AppController::indexFolders(const QStringList &folders)
 {
+    indexFolders(folders, /*shallow=*/false);
+}
+
+void AppController::indexFolders(const QStringList &folders, bool shallow)
+{
     if (m_busy || folders.isEmpty() || !m_database) {
         return;
     }
@@ -929,7 +957,28 @@ void AppController::indexFolders(const QStringList &folders)
 
     Database *database = m_database.get();
     const FolderIndexer::ScanOptions scanOptions = currentScanOptions();
-    watch->setFuture(QtConcurrent::run([this, database, folders, scanOptions]() -> FolderIndexer::Result {
+    // Resolve each folder to the library root that already contains it, on this
+    // (GUI) thread where the model is safe to read. Empty = not in the library,
+    // in which case the shallow scan registers the folder itself.
+    QHash<QString, QString> coveringRoots;
+    if (shallow && m_model) {
+        const QStringList roots = m_model->rootPaths();
+        for (const QString &folder : folders) {
+            const QString cleaned = QDir::cleanPath(folder);
+            QString best;
+            for (const QString &root : roots) {
+                const QString candidate = QDir::cleanPath(root);
+                if (cleaned == candidate
+                    || cleaned.startsWith(candidate + QLatin1Char('/'))) {
+                    if (best.isEmpty() || candidate.size() > best.size()) {
+                        best = candidate;
+                    }
+                }
+            }
+            coveringRoots.insert(cleaned, best);
+        }
+    }
+    watch->setFuture(QtConcurrent::run([this, database, folders, scanOptions, shallow, coveringRoots]() -> FolderIndexer::Result {
         FolderIndexer indexer(database);
         indexer.setScanOptions(scanOptions);
 
@@ -953,7 +1002,12 @@ void AppController::indexFolders(const QStringList &folders)
 
         FolderIndexer::Result last;
         for (const QString &folder : folders) {
-            last = indexer.run(folder, &m_cancel);
+            if (shallow) {
+                last = indexer.runShallow(folder, coveringRoots.value(QDir::cleanPath(folder)),
+                                          &m_cancel);
+            } else {
+                last = indexer.run(folder, &m_cancel);
+            }
             if (!last.ok()) {
                 break;
             }

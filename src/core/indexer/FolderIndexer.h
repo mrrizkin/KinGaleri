@@ -61,6 +61,17 @@ public:
     /// null; set it to true from another thread to abort early.
     Result run(const QString &folder, const std::atomic_bool *cancel = nullptr);
 
+    /// Refreshes only the files directly inside `folder` (no recursion, no
+    /// deletion reconcile). Used by "Open with": a file manager launch must not
+    /// re-walk the whole library just to show one file, but the viewer still
+    /// needs the file's siblings indexed to step between them.
+    ///
+    /// `coveringRoot` is the existing library root that contains `folder`; rows
+    /// are upserted under it so no duplicate root appears. Empty means `folder`
+    /// is outside the library and is registered as a root of its own.
+    Result runShallow(const QString &folder, const QString &coveringRoot = QString(),
+                      const std::atomic_bool *cancel = nullptr);
+
     /// Extensions we currently index, lower-case, without the leading dot.
     static QStringList supportedExtensions();
     static bool isVideoExtension(const QString &extension);
@@ -82,6 +93,12 @@ private:
         qint64 epochMs = 0;
         QString source = QStringLiteral("mtime");
     };
+
+    /// Shared implementation behind run()/runShallow(). `recursive` controls the
+    /// directory descent, `reconcile` the post-walk deletion pass (only safe
+    /// after a complete recursive walk).
+    Result runInternal(const QString &folder, const std::atomic_bool *cancel, bool recursive,
+                       const QString &coveringRoot, bool reconcile);
 
     /// Everything the upsert needs for one file, filled off the DB thread.
     struct Extracted;

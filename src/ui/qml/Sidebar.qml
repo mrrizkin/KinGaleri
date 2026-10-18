@@ -28,6 +28,7 @@ Rectangle {
         root.app.model.personId = 0
         root.app.model.eventId = 0
         root.app.model.smartCategory = ""
+        root.app.model.folderPath = ""
         root.app.model.tag = ""
         root.app.model.favoritesOnly = favoritesOnly
         root.app.model.filterKind = kind
@@ -47,6 +48,7 @@ Rectangle {
         root.app.model.eventId = 0
         root.app.model.smartCategory = ""
         root.app.model.tag = ""
+        root.app.model.folderPath = ""
         root.app.model.trashOnly = true
     }
 
@@ -99,6 +101,7 @@ Rectangle {
                         && root.app.model.eventId === 0
                         && root.app.model.smartCategory === ""
                         && root.app.model.tag === ""
+                        && root.app.model.folderPath === ""
             onTapped: root.applyFilter("", false, "")
         }
         NavEntry {
